@@ -34,6 +34,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.getByRole('button', { name: '← 처음으로' }).click()
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
+    const dock = await page.evaluate(() => { const u = document.getElementById('ui'); u.scrollTop = 900; const r = [...document.querySelectorAll('.guide .btn')].pop().getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
+    if (!dock) errors.push('[desktop] 도감 「처음으로」가 아래에 고정되지 않음')
     await page.getByRole('button', { name: '← 처음으로' }).click()
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '3-chars.png' })
