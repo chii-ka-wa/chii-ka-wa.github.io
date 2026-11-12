@@ -93,6 +93,18 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/'
     }
   })
 
+  await run('help', { width: 1280, height: 800 }, async page => {   // 지원 아이템 — 파자마 파티즈 · 한잎이 두잎이가 나왔다가 사라지는지
+    await page.evaluate(() => window.__mjg.startGame(0))
+    await sim(page, 120, { god: true, walk: true })
+    const n = await page.evaluate(() => { const M = window.__mjg; for (const k of ['pajama', 'battery']) M.G.items.push({ x: M.pl.x, y: M.pl.y, k, t: 0 }); M.step(1 / 60); return M.G.help.length })
+    await sim(page, 124, { god: true })
+    await page.evaluate(() => window.__mjg.step(1 / 60)); await page.screenshot({ path: OUT + 'help.png' })
+    await sim(page, 140, { god: true })
+    const after = await page.evaluate(() => window.__mjg.G.help.length)
+    console.log('help', n, '->', after)
+    if (n !== 2 || after !== 0) errors.push(`[help] 도와주는 친구들: 먹은 뒤 ${n}, 끝난 뒤 ${after}`)
+  })
+
   await browser.close()
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'NO ERRORS')
   process.exit(errors.length ? 1 : 0)
