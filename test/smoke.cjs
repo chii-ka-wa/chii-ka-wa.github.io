@@ -2,7 +2,7 @@
 //   처음 화면 → 캐릭터 → 판 → 상자 → 최종보스까지 빨리 돌리기(무적) → 세이렌 → 클리어. 콘솔 에러가 하나라도 있으면 실패
 const { chromium } = require('playwright')
 const OUT = __dirname + '/shots/'; require('fs').mkdirSync(OUT, { recursive: true })
-const URL = process.env.URL || 'http://127.0.0.1:8765/'
+const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END = 30 * 60
 
 ;(async () => {
   const browser = await chromium.launch()
@@ -103,6 +103,17 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/'
     const after = await page.evaluate(() => window.__mjg.G.help.length)
     console.log('help', n, '->', after)
     if (n !== 2 || after !== 0) errors.push(`[help] 도와주는 친구들: 먹은 뒤 ${n}, 끝난 뒤 ${after}`)
+  })
+
+  await run('dark', { width: 1280, height: 800 }, async page => {   // 29분 검은 별똥별 — 나오고 · 스킬에 안 맞고 · 30분에 생존 클리어
+    await page.evaluate(() => { const M = window.__mjg; M.startGame(1); M.G.t = M.DARK_T - 5 })
+    await sim(page, M_DARK + 3, { god: true, walk: true })
+    const seen = await page.evaluate(() => !!window.__mjg.G.dark)
+    await page.evaluate(() => window.__mjg.step(1 / 60)); await page.screenshot({ path: OUT + 'dark.png' })
+    const r = await sim(page, M_END + 5, { god: true, walk: true })
+    const end = await page.evaluate(() => ({ mode: window.__mjg.mode, kind: window.__mjg.G.endKind, h: document.querySelector('.result .h')?.textContent }))
+    console.log('dark', seen, end)
+    if (!seen || end.mode !== 'over' || end.kind !== 'time') errors.push(`[dark] 검은 별똥별 ${seen} · 끝 ${JSON.stringify(end)}`)
   })
 
   await browser.close()
