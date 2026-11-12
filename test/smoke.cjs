@@ -82,6 +82,16 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/'
     console.log('phone end mode:', await page.evaluate(() => window.__mjg.mode))
   })
 
+  await run('cast', { width: 1280, height: 800 }, async page => {   // 캐릭터마다 2분씩 — 시작 스킬이 다 도는지
+    const n = await page.evaluate(() => document.querySelectorAll('.trio canvas').length)
+    for (let i = 0; i < n; i++) {
+      await page.evaluate(i => window.__mjg.startGame(i), i)
+      const r = await sim(page, 120, { god: true, walk: true }); console.log('cast', i, r.weapons, 'lvl', r.lvl)
+      await page.evaluate(() => window.__mjg.step(1 / 60))
+      await page.screenshot({ path: OUT + `c${i}.png` })
+    }
+  })
+
   await browser.close()
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'NO ERRORS')
   process.exit(errors.length ? 1 : 0)
