@@ -244,7 +244,7 @@ function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으�
  *     back 몸 뒤(꼬리 · 집게), cap 몸 안 무늬, ears 몸 테두리 위에 이어 붙는 것(귀 · 갈기), face, front 몸 앞, hold 보는 쪽 손에 든 것 */
 function mochi(g, o, p = {}) {
   const W = o.W || 25, H = o.H || 24, hw = W / 2, t = -1 - H, mid = o.mid || 0.42, S = mochiSegs(W, H, mid, o.wide, o.thin, o.bw, o.neck, o.jw), P = segPath(S), foot = p.foot || 0, arm = p.arm || 0, limb = o.limb || o.fur, af = o.armFill || limb
-  const thin = !!o.thin, L = thin ? 1.5 : 0, bob = p.bob || 0, J = o.neck && headJoin(W, H, o.neck, o.jw)   // 주인공 — 짧고 가는 팔다리, 몸을 다리 길이만큼 띄운다
+  const thin = !!o.thin, L = thin ? 1 : 0, bob = p.bob || 0, J = o.neck && headJoin(W, H, o.neck, o.jw)   // 주인공 — 짧고 가는 팔다리, 몸을 다리 길이만큼 띄운다
   const ay = thin ? (J ? J.yj + 0.5 : t + H * (mid + (1 - mid) * 0.42)) : t + H * 0.66
   const side = yy => { const [x0, y0, x1, y1, x2, y2, x3, y3] = S[1]; let bx = hw, bd = 1e9; for (let i = 0; i <= 24; i++) { const u = i / 24, q = 1 - u, Y = q * q * q * y0 + 3 * q * q * u * y1 + 3 * q * u * u * y2 + u * u * u * y3; if (Math.abs(Y - yy) < bd) { bd = Math.abs(Y - yy); bx = q * q * q * x0 + 3 * q * q * u * x1 + 3 * q * u * u * x2 + u * u * u * x3 } } return bx }   // 그 높이의 몸 옆선
   const ax = thin ? (J ? J.jx - 0.2 : side(ay) - 0.6) : hw * (1 - 0.2 * (ay - t - H * mid) / (H * (1 - mid))) - 0.3   // 팔 자리 — 몸 옆 테두리 위
@@ -252,13 +252,13 @@ function mochi(g, o, p = {}) {
     g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = edge ? OUT : col; g.lineWidth = edge ? w + LW * 2 : w
     g.beginPath(); g.moveTo(q[0], q[1]); g.quadraticCurveTo(q[2], q[3], q[4], q[5]); g.stroke()
   }
-  const hold = thin && o.hold, hx = thin ? ax + 2.3 : ax, hy = thin ? ay + 2.4 - arm * 0.8 : ay - arm * 1.1   // 쥔 손 자리
-  const legs = edge => { for (const s of [-1, 1]) { const ph = s * foot, up = Math.max(0, ph) * 1.2, dx = ph * 1.1; tube([s * 3.1, -3 - bob, s * 3.1 + dx * 0.5, L - 1.3 - bob - up * 0.5, s * 3.1 + dx, L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 걸을 때 번갈아 들어 가는 쪽으로 내딛는다
+  const hold = thin && o.hold, hx = thin ? ax + 1.7 : ax, hy = thin ? ay + 1.8 - arm * 0.6 : ay - arm * 1.1   // 쥔 손 자리
+  const legs = edge => { for (const s of [-1, 1]) { const ph = s * foot, up = Math.max(0, ph) * 0.9, dx = ph * 0.8; tube([s * 3.1, -2.6 - bob, s * 3.1 + dx * 0.5, L - 1.2 - bob - up * 0.5, s * 3.1 + dx, L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 걸을 때 번갈아 들어 가는 쪽으로 내딛는다
   const arms = edge => {
     for (const s of [-1, 1]) {
-      if (s > 0 && hold) { tube([ax, ay, ax + 2, ay + 0.6, hx, hy], 1.35, af, edge); continue }   // 든 손 쪽 팔
+      if (s > 0 && hold) { tube([ax, ay, ax + 1.4, ay + 0.5, hx, hy], 1.35, af, edge); continue }   // 든 손 쪽 팔
       if (o.arms === 'none') continue
-      const sw = -s * arm; tube([s * ax, ay, s * (ax + 1.6) + sw * 0.7, ay + 0.9, s * (ax + 2.2) + sw * 1.5, ay + 2.6 - Math.abs(sw) * 0.4], 1.35, af, edge)   // 늘어뜨린 팔 — 발과 엇갈려 흔든다
+      const sw = -s * arm; tube([s * ax, ay, s * (ax + 1.1) + sw * 0.5, ay + 0.6, s * (ax + 1.5) + sw * 1.1, ay + 1.8 - Math.abs(sw) * 0.3], 1.35, af, edge)   // 늘어뜨린 팔 — 발과 엇갈려 흔든다
     }
   }
   g.save(); g.translate(0, -L)
@@ -343,17 +343,22 @@ function rakko(g, p) {
     cap: g => { const P = new Path2D(); P.moveTo(-14, y(0.58)); P.quadraticCurveTo(0, y(0.7), 14, y(0.58)); P.lineTo(14, y(0.74)); P.quadraticCurveTo(0, y(0.86), -14, y(0.74)); P.closePath(); g.fillStyle = '#fff'; g.fill(P); g.strokeStyle = OUT; g.lineWidth = 0.6; g.stroke(P) },   // 하얀 목도리
     ears: g => { for (const s of [-1, 1]) topEar(g, s * 10.4, y(0.2), 1.6, black, s * 1.05) },
     face: (g, p) => {
-      g.save(); g.translate(-5.6, y(0.24)); g.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU - Math.PI / 2, R = i % 2 ? 0.5 : 1.7; g.lineTo(Math.cos(a) * R, Math.sin(a) * R) } g.closePath(); g.strokeStyle = '#8c6a55'; g.lineWidth = 0.5; g.stroke(); g.restore()   // 별 모양 흉터
-      if (p.hurt || p.blink) dotEyes(g, y(0.42), 4.4, 1.45, p)
-      else for (const s of [-1, 1]) {   // 다부진 눈매 — 윗눈꺼풀이 안쪽으로 내려간 까만 눈 · 반짝임
-        const ex = s * 4.4, ey = y(0.42), E = new Path2D(); E.ellipse(ex, ey, 1.55, 1.7, 0, 0, TAU)
-        g.save(); g.clip(E); g.fillStyle = '#231a1e'; g.fill(E); g.fillStyle = fur; g.beginPath(); g.moveTo(ex - 2, ey - 2.4); g.lineTo(ex + 2, ey - 2.4); g.lineTo(ex + s * -2, ey - 0.2); g.lineTo(ex + s * 2, ey - 1.5); g.closePath(); g.fill(); g.restore()
-        g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - s * 0.3, ey + 0.1, 0.42, 0, TAU); g.fill()
+      g.save(); g.translate(-6.2, y(0.25)); g.rotate(0.62)   // 네 갈래 반짝이 모양 흉터 — 오른쪽 위로 긴 한 갈래
+      const R = [3, 1.5, 1.9, 1.4]; g.beginPath(); for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, r = i % 2 ? 0.58 : R[i / 2]; g.lineTo(Math.cos(a) * r, Math.sin(a) * r) } g.closePath()
+      g.fillStyle = '#d8c19c'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.5; g.lineJoin = 'round'; g.stroke(); g.restore()
+      if (p.hurt || p.blink) dotEyes(g, y(0.42), 4.8, 1.45, p)
+      else for (const s of [-1, 1]) {   // 옆으로 넓은 까만 눈 · 위에 흰 반짝임 · 아래에 흰 초승달 줄
+        const ex = s * 4.8, ey = y(0.42)
+        g.fillStyle = '#1e1719'; g.beginPath(); g.ellipse(ex, ey, 2.05, 1.5, 0, 0, TAU); g.fill()
+        g.fillStyle = '#fff'; g.beginPath(); g.ellipse(ex, ey - 0.35, 1.15, 0.55, 0, 0, TAU); g.fill()
+        g.strokeStyle = '#fff'; g.lineWidth = 0.28; g.lineCap = 'round'; g.beginPath(); g.moveTo(ex - 0.9, ey + 0.72); g.quadraticCurveTo(ex, ey + 0.95, ex + 0.9, ey + 0.72); g.stroke()
       }
-      if (!p.hurt) { g.strokeStyle = 'rgba(61,48,43,.7)'; g.lineWidth = 0.5; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 6, y(0.335)); g.lineTo(s * 3, y(0.37)); g.stroke() } }   // 얇고 옅은 다부진 눈썹
-      hatch(g, y(0.5), 8, 0.85)
+      g.strokeStyle = OUT; g.lineCap = 'round'
+      if (!p.hurt) { g.lineWidth = 0.5; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 4.1, y(0.325)); g.lineTo(s * 3.3, y(0.35)); g.stroke() } }   // 눈 안쪽 위의 짧은 눈썹
+      g.lineWidth = 0.4; g.beginPath(); for (const s of [-1, 1]) { g.moveTo(s * 0.45, y(0.375)); g.lineTo(s * 0.5, y(0.4)) } g.stroke()   // 미간의 짧은 두 줄
+      hatch(g, y(0.5), 8.6, 0.95)
       if (p.hurt) catMouth(g, y(0.5), 1.1)
-      else { g.strokeStyle = OUT; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-1.2, y(0.515)); g.quadraticCurveTo(0, y(0.5), 1.2, y(0.515)); g.stroke() }   // 꾹 다문 입
+      else { catMouth(g, y(0.5), 0); g.fillStyle = OUT; g.beginPath(); g.ellipse(0, y(0.495), 0.45, 0.3, 0, 0, TAU); g.fill(); g.lineWidth = 0.45; g.beginPath(); g.moveTo(-0.55, y(0.56)); g.quadraticCurveTo(0, y(0.58), 0.55, y(0.56)); g.stroke() }   // ω 입 · 작은 코 · 아래 웃는 입
     },
     front: (g, p) => {   // 몸 앞을 치마처럼 덮는 하얀 망토 자락 · 매듭
       const w = (p.foot || 0) * 0.4, C = new Path2D(); C.moveTo(-7.4, y(0.76)); C.lineTo(-9.8 - w, y(0.99)); C.quadraticCurveTo(-5, y(1.03), 0, y(0.995)); C.quadraticCurveTo(5, y(1.03), 9.8 - w, y(0.99)); C.lineTo(7.4, y(0.76)); C.closePath()
