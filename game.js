@@ -139,6 +139,8 @@ try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
+//   크기는 배경음(save.bgm) · 효과음(save.sfx) 따로 0~1 — 🔊 단추를 누르면 나오는 작은 창에서
+if (save.bgm == null) { save.bgm = save.mute ? 0 : 0.7; save.sfx = save.mute ? 0 : 0.8 } delete save.mute
 const SND = (() => {
   let ac = null, out = null, mus = null, sfx = null, noise = null, theme = '', step = 0, at = 0, timer = 0, duck = 1
   const last = {}, mtof = n => 440 * 2 ** ((n - 69) / 12)
@@ -151,7 +153,7 @@ const SND = (() => {
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return
     ac = new C(); out = ac.createGain(); out.connect(ac.destination); mus = ac.createGain(); mus.connect(out); sfx = ac.createGain(); sfx.gain.value = 0.55; sfx.connect(out)
     const b = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; noise = b
-    mute(!!save.mute); if (theme) play(theme, true)
+    vol(); if (theme) play(theme, true)
   }
   /** 음 하나 — 파형 · 길이 · 크기 · (끝 음으로 미끄러지기) · (떨림) */
   function tone(f, t, len, type = 'square', vol = 0.2, bus = sfx, f2 = 0, vib = 0) {
@@ -178,13 +180,17 @@ const SND = (() => {
     clearInterval(timer); timer = 0; step = 0; at = ac.currentTime + 0.05
     if (name) timer = setInterval(tick, 30)
   }
-  function mute(m) { save.mute = m; persist(); if (out) out.gain.setTargetAtTime(m ? 0 : 0.9, ac.currentTime, 0.03); btn && (btn.textContent = m ? '🔇' : '🔊') }
-  const ok = (k, gap) => { if (!ac || save.mute) return false; const t = ac.currentTime; if (last[k] && t - last[k] < gap) return false; last[k] = t; return true }
+  function vol() {   // 배경음 · 효과음 크기를 따로(일시정지면 배경음을 줄인다)
+    if (ac) { out.gain.value = 0.9; mus.gain.setTargetAtTime(save.bgm * duck, ac.currentTime, 0.05); sfx.gain.setTargetAtTime(save.sfx * 0.6, ac.currentTime, 0.03) }
+    if (btn) btn.textContent = save.bgm || save.sfx ? '🔊' : '🔇'
+  }
+  const ok = (k, gap) => { if (!ac || !save.sfx) return false; const t = ac.currentTime; if (last[k] && t - last[k] < gap) return false; last[k] = t; return true }
   // 캐릭터 목소리 — 높이 · 파형 · 떨림이 다른 짧은 삐약 소리(기쁠 때는 올라가고, 아플 때는 내려간다)
   const VOICE = { chiikawa: [880, 'triangle', 30], hachiware: [700, 'sine', 14], usagi: [1050, 'square', 8], momonga: [820, 'sawtooth', 20], kurimanju: [430, 'triangle', 16], rakko: [360, 'square', 4], shisa: [640, 'triangle', 18], kani: [560, 'sine', 12] }
   const api = {
-    boot, play, mute, toggle: () => mute(!save.mute),
-    duck(on) { duck = on ? 0.35 : 1; if (mus) mus.gain.setTargetAtTime(duck, ac.currentTime, 0.1) },
+    boot, play,
+    set(k, v) { save[k] = Math.max(0, Math.min(1, v)); persist(); vol() },
+    duck(on) { duck = on ? 0.35 : 1; vol() },
     voice(id, mood = 'happy') {
       if (!ok('voice', 0.35)) return; const [f, type, vib] = VOICE[id] || VOICE.chiikawa, t = ac.currentTime
       if (mood === 'happy') { tone(f, t, 0.12, type, 0.16, sfx, f * 1.35, vib); tone(f * 1.2, t + 0.13, 0.16, type, 0.15, sfx, f * 1.6, vib) }
@@ -199,10 +205,18 @@ const SND = (() => {
     hurt(id) { if (!ok('hurt', 0.25)) return; tone(160, ac.currentTime, 0.14, 'square', 0.14, sfx, 70); api.voice(id, 'ouch') },
     boss() { if (!ok('boss', 1)) return; const t = ac.currentTime; tone(110, t, 0.45, 'sawtooth', 0.14, sfx, 82, 6); tone(98, t + 0.4, 0.6, 'sawtooth', 0.14, sfx, 70, 8); tone(55, t, 1, 'sine', 0.2, sfx) },   // 보스 — 낮은 으르렁 소리
     dark() { if (!ok('dark', 1)) return; const t = ac.currentTime; tone(70, t, 1.6, 'sawtooth', 0.16, sfx, 40, 3); hiss(t, 1.2, 0.18, 400) },
-    end(win) { play(''); if (!ac || save.mute) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
+    end(win) { play(''); if (!ac || !save.sfx) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
   }
   let btn = null
-  api.button = b => { btn = b; b.textContent = save.mute ? '🔇' : '🔊'; b.onclick = e => { e.stopPropagation(); boot(); api.toggle() } }
+  api.button = b => {   // 🔊 단추 — 누르면 배경음 · 효과음 크기를 조절하는 작은 창
+    btn = b; vol()
+    const row = (k, name) => { const v = h('b', {}, Math.round(save[k] * 100)), r = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(save[k] * 100), name: k, 'aria-label': `${name} 크기` })
+      r.oninput = () => { api.set(k, r.value / 100); v.textContent = r.value; if (k === 'sfx') api.kill() }; r.onchange = () => r.blur(); return h('label', {}, h('span', {}, name), r, v) }
+    const pop = h('div', { id: 'sndp', hidden: true }, h('p', {}, '소리 크기'), row('bgm', '🎵 배경음'), row('sfx', '🔔 효과음'))
+    document.body.append(pop)
+    b.onclick = e => { e.stopPropagation(); boot(); pop.hidden = !pop.hidden }
+    addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && e.target !== b) pop.hidden = true })
+  }
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, boot, { passive: true })
   return api
 })()
