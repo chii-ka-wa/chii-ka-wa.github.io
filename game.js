@@ -637,48 +637,44 @@ function chef(g, p = {}) {
     front: g => { for (const s of [-1, 1]) for (let k = -1; k <= 1; k++) { const yy = y(0.64) + k * 1.2; g.beginPath(); g.moveTo(s * 13, yy); g.lineTo(s * 15.8, yy + k * 0.5); g.lineTo(s * 13, yy + 0.8); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.4; g.strokeStyle = OUT; g.stroke() } },
   }, p)
 }
-// 파자마 파티즈 — 동물 잠옷(후드)을 입은 아이돌. 색마다 다른 후드 귀, 분홍 · 하양은 얼굴에 X 흉터, 분홍은 오른쪽 · 보라는 왼쪽 귀가 없다
-const PJ = [{ col: '#9ad6a8', ears: 'cow' }, { col: '#f7a8c4', ears: 'dog', scar: true, lose: -1 }, { col: '#f2f2f2', ears: 'shark', scar: true }, { col: '#bda8e6', ears: 'bear', lose: 1 }]
+// 파자마 파티즈 — 동물 잠옷(후드)을 입은 아이돌. 후드 앞은 얼굴이 보이지 않는 커다란 짙은 회색 타원 · 색마다 다른 후드 귀(초록 작은 귀 · 분홍 둥근 귀 · 하양 꼬부랑 뿔 · 보라 곰 귀) · 잠옷 앞 단추
+const PJ = [{ col: '#b6e0a4', ears: 'small' }, { col: '#f3a3bd', ears: 'round' }, { col: '#f4f3f0', ears: 'curl' }, { col: '#cbbdec', ears: 'bear' }]
 function pajama(g, p, o) {
   const H = 21, y = f => at(H, f)
   mochi(g, {
-    fur: o.col, W: 20, H,
+    fur: o.col, W: 20, H, mid: 0.4, thin: true,
     ears: g => {
-      if (o.ears === 'shark') return spike(g, [[-2.6, y(0.05)], [-0.6, y(-0.1)], [1.6, y(-0.26)], [2.2, y(-0.06)], [3, y(0.06)]], o.col)   // 상어 지느러미
-      for (const s of [-1, 1]) {
-        if (o.lose === s) continue
-        if (o.ears === 'dog') bump(g, s * 8.4, y(0.26), 2.2, 3.6, s * 0.35, o.col, s > 0 ? -1.4 : Math.PI - 1.9, s > 0 ? 1.9 : Math.PI + 1.4)   // 늘어진 개 귀
-        else topEar(g, s * 5.8, y(0.08), o.ears === 'cow' ? 2.2 : 2.6, o.col, s * 0.6)
-        if (o.ears === 'cow') { g.beginPath(); g.moveTo(s * 2.4, y(0.05)); g.lineTo(s * 3.4, y(-0.1)); g.lineTo(s * 4.4, y(0.04)); g.closePath(); g.fillStyle = '#fff3d6'; g.fill(); g.lineWidth = 0.5; g.strokeStyle = OUT; g.stroke() }   // 작은 소뿔
-      }
+      if (o.ears === 'curl') { g.lineCap = 'round'; for (const [c, w] of [[OUT, 2.3], [o.col, 1.1]]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(4, y(0.1)); g.quadraticCurveTo(6, y(0.02), 5.8, y(-0.1)); g.quadraticCurveTo(5.4, y(-0.18), 4.7, y(-0.1)); g.stroke() } return }   // 오른쪽 위 꼬부랑 뿔
+      for (const s of [-1, 1]) topEar(g, s * (o.ears === 'small' ? 4.2 : 5.8), y(0.07), o.ears === 'small' ? 1.6 : o.ears === 'bear' ? 2.6 : 2.1, o.col, s * 0.5)
     },
-    cap: g => blob(g, 0, y(0.52), 7.2, 6.2, '#fdf3ea', 0.6),   // 후드 사이로 보이는 얼굴
-    face: (g, p) => {
-      dotEyes(g, y(0.5), 3.4, 1.2, p); hatch(g, y(0.6), 5.2, 0.7); catMouth(g, y(0.58), 0.5)
-      if (o.scar) { g.strokeStyle = '#c0705a'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(2.4, y(0.32)); g.lineTo(4.4, y(0.42)); g.moveTo(4.4, y(0.32)); g.lineTo(2.4, y(0.42)); g.stroke() }   // X 흉터
+    face: () => {
+      blob(g, 0, y(0.42), 7.4, 6.5, '#5e5b61', 0.6)   // 얼굴이 보이지 않는 후드 속
+      for (const yy of [y(0.79), y(0.89)]) blob(g, 0, yy, 0.6, 0.6, '#fdfcf8', 0.4)   // 잠옷 단추
     },
   }, p)
 }
-// 한잎이 · 두잎이 — 회색빛 섬 주민. 머리 위 잎 개수로 구분(한잎이는 볼터치), 가슴까지 오는 긴 풀 치마. 얼굴은 그리지 않는다(원작에서도 드러나지 않는다)
-function leaf(g, x, y, rot) { g.save(); g.translate(x, y); g.rotate(rot); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-2.6, -3.4, 0, -6.6); g.quadraticCurveTo(2.6, -3.4, 0, 0); g.fillStyle = '#7cc25a'; g.fill(); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke(); g.beginPath(); g.moveTo(0, -0.6); g.lineTo(0, -5.4); g.lineWidth = 0.4; g.stroke(); g.restore() }
+// 한잎이 · 두잎이 — 회색빛 섬 주민. 크고 둥근 머리 · 머리 위 잎(한잎이 하나 · 두잎이 둘) · 아래가 퍼지는 치마 같은 몸(밑단에 술) · 한잎이만 볼에 /// . 얼굴은 드러나지 않는다
+const LF = '#9e8d8d'
+function leaf(g, x, y, rot) {
+  g.save(); g.translate(x, y); g.rotate(rot); g.beginPath(); g.moveTo(0, 0.4); g.bezierCurveTo(-3, -1, -2.4, -4.6, 0.6, -6.2); g.bezierCurveTo(2.2, -3.6, 2.4, -1, 0, 0.4); g.closePath(); g.fillStyle = '#b1a2a2'; g.fill(); g.lineWidth = 0.65; g.strokeStyle = OUT; g.stroke()
+  g.lineWidth = 0.4; g.beginPath(); g.moveTo(0, -0.2); g.quadraticCurveTo(0.2, -3, 0.5, -5.4); for (const k of [1.6, 2.8, 4]) { g.moveTo(0.15, -k); g.lineTo(-0.9, -k + 0.9); g.moveTo(0.3, -k - 0.2); g.lineTo(1.1, -k + 0.5) } g.stroke(); g.restore()
+}
 function leafKid(g, p, leaves) {
-  const H = 19, y = f => at(H, f)
-  mochi(g, {
-    fur: '#cfcbc6', W: 17, H, arms: 'none',
-    back: g => { if (leaves === 1) leaf(g, 0.6, y(0) + 0.8, 0.25); else for (const s of [-1, 1]) leaf(g, s * 1.8, y(0) + 0.9, s * 0.55) },
-    cap: g => {
-      g.fillStyle = '#93c46a'; g.beginPath(); g.moveTo(-10, y(0.42)); g.quadraticCurveTo(0, y(0.38), 10, y(0.42)); g.lineTo(10, -1.6)
-      for (let x = 10; x > -10; x -= 2.5) { g.lineTo(x - 1.25, -0.4); g.lineTo(x - 2.5, -1.8) }
-      g.closePath(); g.fill(); g.strokeStyle = '#6fa04a'; g.lineWidth = 0.4; g.beginPath(); for (let x = -7.5; x <= 7.5; x += 2.5) { g.moveTo(x, y(0.46)); g.lineTo(x, -2) } g.stroke()
-      g.strokeStyle = OUT; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-10, y(0.42)); g.quadraticCurveTo(0, y(0.38), 10, y(0.42)); g.stroke()
-    },
-    face: () => { if (leaves === 1) hatch(g, y(0.3), 4.6, 0.7) },
-  }, p)
+  const f = p.foot || 0, bob = p.bob || 0
+  g.save(); g.translate(0, bob * 0.6); g.rotate(f * 0.05)
+  const B = new Path2D(); B.moveTo(-6.2, -12); B.bezierCurveTo(-6.6, -7, -8.8, -3.4, -8.6, -1.2); B.quadraticCurveTo(0, 0.2, 8.6, -1.2); B.bezierCurveTo(8.8, -3.4, 6.6, -7, 6.2, -12); B.closePath()
+  for (const s of [-1, 1]) bump(g, s * 6.6, -9.4, 1.3, 2, s * 0.35, LF, s > 0 ? -1.6 : Math.PI - 1.6, s > 0 ? 1.6 : Math.PI + 1.6)   // 작은 팔
+  g.fillStyle = LF; g.fill(B); g.lineWidth = LW; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke(B)   // 치마 같은 몸
+  g.lineCap = 'round'; g.lineWidth = 0.5; g.beginPath(); for (let x = -6.6; x <= 6.7; x += 1.65) { g.moveTo(x, -1.2 - Math.abs(x) * 0.02); g.lineTo(x * 0.97, -3.4) } g.stroke()   // 밑단의 술
+  if (leaves === 1) leaf(g, 0.8, -24.4, 0.3); else for (const s of [-1, 1]) leaf(g, s * 0.6, -24.2, s * 0.85)   // 머리 위 잎
+  blob(g, 0, -17.6, 8.6, 7.4, LF, LW)   // 크고 둥근 머리
+  if (leaves === 1) { g.strokeStyle = OUT; g.lineWidth = 0.45; g.beginPath(); for (const s of [-1, 1]) for (let k = -1; k <= 1; k++) { const x = s * 4.6 + k * 0.85; g.moveTo(x - 0.35, -15.8); g.lineTo(x + 0.35, -16.9) } g.stroke() }   // 한잎이 볼 ///
+  g.restore()
 }
 function leafPair(g, p) {   // 손을 꼭 잡은 둘
-  g.save(); g.translate(-8.6, 0); leafKid(g, p, 1); g.restore()
-  g.save(); g.translate(8.6, 0); leafKid(g, { ...p, foot: -(p.foot || 0) }, 2); g.restore()
-  g.lineCap = 'round'; for (const [c, lw] of [[OUT, 2.2], ['#cfcbc6', 1.2]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-1.4, -8.6); g.quadraticCurveTo(0, -7.2, 1.4, -8.6); g.stroke() }
+  g.save(); g.translate(-9.2, 0); leafKid(g, p, 1); g.restore()
+  g.save(); g.translate(9.2, 0); leafKid(g, { ...p, foot: -(p.foot || 0) }, 2); g.restore()
+  g.lineCap = 'round'; for (const [c, lw] of [[OUT, 2.3], [LF, 1.1]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-3, -9.4); g.quadraticCurveTo(0, -6.6, 3, -9.4); g.stroke() }   // 맞잡은 손
 }
 // 치이카와 — 하얀 찹쌀떡(볼이 넓다) · 따로 떨어진 둥근 귀 · 짧은 눈썹 · 기분 좋게 감은 눈 · 분홍 사스마타
 function chiikawa(g, p) {
@@ -915,7 +911,7 @@ const ART = {
   spiker: [34, 34, maskChimera],
   bug: [28, 32, bug], beetle: [26, 32, beetle], star: [42, 30, starKid], fugu: [32, 28, fugu], octo: [26, 28, octo], parttimer: [36, 40, parttimer],
   rps: [96, 82, (g, p) => { big(g, 2.4); rps(g, p) }], chef: [88, 86, (g, p) => { big(g, 2.4); chef(g, p) }],
-  pj0: [30, 32, (g, p) => pajama(g, p, PJ[0])], pj1: [30, 32, (g, p) => pajama(g, p, PJ[1])], pj2: [30, 32, (g, p) => pajama(g, p, PJ[2])], pj3: [30, 32, (g, p) => pajama(g, p, PJ[3])], leafpair: [44, 34, leafPair],
+  pj0: [30, 34, (g, p) => pajama(g, p, PJ[0])], pj1: [30, 34, (g, p) => pajama(g, p, PJ[1])], pj2: [30, 34, (g, p) => pajama(g, p, PJ[2])], pj3: [30, 34, (g, p) => pajama(g, p, PJ[3])], leafpair: [46, 37, leafPair],
   dekatsu: [56, 45, (g, p) => { big(g, 1.6); chimera(g, p, { col: '#f0aac0', legs: true }) }],
   golden: [66, 56, (g, p) => { big(g, 1.7); goblin(g, p, { col: '#ffd34d', cloth: '#b8863b', crown: true }) }],
   dekatsuyo: [100, 90, (g, p) => { big(g, 2.6); dekatsuyo(g, p) }],
