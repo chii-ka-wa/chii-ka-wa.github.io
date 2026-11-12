@@ -214,10 +214,10 @@ function fluffOval(g, cx, cy, rx, ry, rot, fill, n = 28) {   // 복슬한 타원
 function mochiSegs(W, H, mid = 0.42, wide = 0, thin = false, bw = 0.74, neck = 0, jw = 0.9) {   // 옆선이 곧게 서지 않고 둥글게 — 위는 사분원, 볼 아래로 둥글게 좁아지고 바닥은 살짝 볼록
   const hw = W / 2, b = -1, t = b - H, m = t + H * mid, up = m - (m - t) * 0.56, lo = m + (b - m) * 0.56
   if (thin && neck) {   // 주인공 — 볼(mid)이 가장 넓은 큰 머리가 몸으로 이어지고, 팔이 붙는 높이(neck)에서만 옆선이 살짝 들어간다(너비 jw). 아래로 둥글게 좁아진다
-    const { jx, yj } = headJoin(W, H, neck, jw), rt = m - t, rb = (yj - m) / Math.sqrt(1 - jw * jw), aj = Math.acos(jw), be = hw * 0.44
+    const { jx, yj } = headJoin(W, H, neck, jw), rt = m - t, rb = (yj - m) / Math.sqrt(1 - jw * jw), aj = Math.acos(jw), be = hw * 0.36
     const arc = (a, c, ry) => { const k = 4 / 3 * Math.tan((c - a) / 4); return [hw * Math.cos(a), m + ry * Math.sin(a), hw * (Math.cos(a) - k * Math.sin(a)), m + ry * (Math.sin(a) + k * Math.cos(a)), hw * (Math.cos(c) + k * Math.sin(c)), m + ry * (Math.sin(c) - k * Math.cos(c)), hw * Math.cos(c), m + ry * Math.sin(c)] }   // 타원 조각(위 · 아래 반지름이 다르다)
     const P = Math.PI
-    return [arc(P - aj, P, rb), arc(P, P * 1.5, rt), arc(P * 1.5, P * 2, rt), arc(P * 2, P * 2 + aj, rb), [jx, yj, jx * 0.99, yj + (b - yj) * 0.5, hw * 0.7, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b], [-be, b, -hw * 0.7, b, -jx * 0.99, yj + (b - yj) * 0.5, -jx, yj]]
+    return [arc(P - aj, P, rb), arc(P, P * 1.5, rt), arc(P * 1.5, P * 2, rt), arc(P * 2, P * 2 + aj, rb), [jx, yj, jx * 1.08, yj + (b - yj) * 0.38, hw * 0.6, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b], [-be, b, -hw * 0.6, b, -jx * 1.08, yj + (b - yj) * 0.38, -jx, yj]]   // 팔 아래 몸은 살짝 부풀었다가(머리와의 경계) 바닥으로 점점 좁아진다
   }
   if (thin) {   // 주인공 — 볼 높이가 가장 넓고, 아래로 끊김 없이 매끄럽게 좁아지는 몸(bw 아래가 좁은 정도). 얼굴과 몸의 경계가 따로 없다
     const d = b - m, bc = hw * (bw + 0.1), be = hw * (bw - 0.32)   // 옆선이 끝까지 볼록 — 달걀처럼 아래로 둥글게 좁아진다
@@ -350,7 +350,7 @@ function rakko(g, p) {
         g.save(); g.clip(E); g.fillStyle = '#231a1e'; g.fill(E); g.fillStyle = fur; g.beginPath(); g.moveTo(ex - 2, ey - 2.4); g.lineTo(ex + 2, ey - 2.4); g.lineTo(ex + s * -2, ey - 0.2); g.lineTo(ex + s * 2, ey - 1.5); g.closePath(); g.fill(); g.restore()
         g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - s * 0.3, ey + 0.1, 0.42, 0, TAU); g.fill()
       }
-      if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.95; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 6.6, y(0.33)); g.lineTo(s * 2.6, y(0.375)); g.stroke() } }   // 날카로운 눈썹
+      if (!p.hurt) { g.strokeStyle = 'rgba(61,48,43,.7)'; g.lineWidth = 0.5; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 6, y(0.335)); g.lineTo(s * 3, y(0.37)); g.stroke() } }   // 얇고 옅은 다부진 눈썹
       hatch(g, y(0.5), 8, 0.85)
       if (p.hurt) catMouth(g, y(0.5), 1.1)
       else { g.strokeStyle = OUT; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-1.2, y(0.515)); g.quadraticCurveTo(0, y(0.5), 1.2, y(0.515)); g.stroke() }   // 꾹 다문 입
@@ -720,7 +720,7 @@ function hachiware(g, p) {
       g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); edge(); g.stroke()   // 무늬 경계선
     },
     ears: g => {   // 크게 선 뾰족한 귀
-      for (const s of [-1, 1]) spike(g, [[s * 10.6, y(0.16)], [s * 9.2, y(0.02)], [s * 7, y(-0.13)], [s * 5, y(-0.04)], [s * 2.8, y(0.04)]], blue)
+      for (const s of [-1, 1]) spike(g, [[s * 10.8, y(0.16)], [s * 10.4, y(0.0)], [s * 8.6, y(-0.1)], [s * 7.2, y(-0.18)], [s * 6, y(-0.11)], [s * 4, y(-0.03)], [s * 2.8, y(0.05)]], blue)   // 끝이 둥근 귀
     },
     face: (g, p) => {
       if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.5; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.4, y(0.33)); g.lineTo(s * 4.6, y(0.325)); g.stroke() } }
@@ -733,8 +733,8 @@ function hachiware(g, p) {
 function usagi(g, p) {
   const H = 26.5, y = f => at(H, f), fur = '#faefc6'
   mochi(g, {
-    fur, W: 26, H, mid: 0.6, thin: true, bw: 0.74,
-    back: g => fluffOval(g, -9.4, -4, 2.2, 2, 0, '#fff', 12),
+    fur, W: 24.5, H, mid: 0.4, thin: true, neck: 0.7, jw: 0.76,
+    back: g => fluffOval(g, -6.6, -4.4, 2.1, 1.9, 0, '#fff', 12),
     ears: g => { for (const s of [-1, 1]) { g.save(); g.translate(s * 2.3 + 0.3, y(0) - 4.4); g.rotate(0.08 + s * 0.05); bump(g, 0, 0, 1.9, 6, 0, fur, Math.PI * 0.66, Math.PI * 2.34); g.fillStyle = '#f8bcc6'; g.beginPath(); g.ellipse(0, 0.5, 0.9, 4.3, 0, 0, TAU); g.fill(); g.restore() } },
     face: (g, p) => {
       if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.6; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 1.8, y(0.15)); g.quadraticCurveTo(s * 7.4, y(0.1), s * 8.2, y(0.34)); g.stroke() } }   // 눈 위를 덮는 긴 둥근 눈썹
