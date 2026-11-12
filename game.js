@@ -339,7 +339,10 @@ function rakko(g, p) {
   const H = 26, y = f => at(H, f), fur = '#faf0d6', black = '#2f2a2a'
   mochi(g, {
     fur, W: 26, H, mid: 0.42, thin: true, neck: 0.68, jw: 0.84, fluffy: true, limb: black, arms: 'none',
-    back: (g, p) => { const w = (p.foot || 0) * 0.6; g.beginPath(); g.moveTo(-7.6, y(0.66)); g.quadraticCurveTo(-15.6, y(0.66) + w, -16.4, y(1) - w); g.lineTo(-14, y(0.92)); g.lineTo(-12.6, y(1.02) + w * 0.5); g.quadraticCurveTo(-10.4, y(0.9), -8.4, y(0.98)); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.65; g.strokeStyle = OUT; g.stroke() },   // 크게 펄럭이는 망토   // 망토 자락
+    back: (g, p) => {   // 하얀 망토 — 몸 뒤에서 양옆과 아래로 살짝 보이고, 뒤쪽 자락이 펄럭인다
+      const v = (p.foot || 0) * 0.4, C = new Path2D(); C.moveTo(-8, y(0.66)); C.lineTo(-11.2 - v, y(1.03)); C.quadraticCurveTo(-5.6, y(1.07), 0, y(1.04)); C.quadraticCurveTo(5.6, y(1.07), 11.2 - v, y(1.03)); C.lineTo(8, y(0.66)); C.closePath()
+      g.fillStyle = '#fff'; g.fill(C); g.lineWidth = 0.6; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke(C)
+      const w = (p.foot || 0) * 0.6; g.beginPath(); g.moveTo(-7.6, y(0.66)); g.quadraticCurveTo(-15.6, y(0.66) + w, -16.4, y(1) - w); g.lineTo(-14, y(0.92)); g.lineTo(-12.6, y(1.02) + w * 0.5); g.quadraticCurveTo(-10.4, y(0.9), -8.4, y(0.98)); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.65; g.strokeStyle = OUT; g.stroke() },   // 크게 펄럭이는 망토   // 망토 자락
     cap: g => { const P = new Path2D(); P.moveTo(-14, y(0.58)); P.quadraticCurveTo(0, y(0.7), 14, y(0.58)); P.lineTo(14, y(0.74)); P.quadraticCurveTo(0, y(0.86), -14, y(0.74)); P.closePath(); g.fillStyle = '#fff'; g.fill(P); g.strokeStyle = OUT; g.lineWidth = 0.6; g.stroke(P) },   // 하얀 목도리
     ears: g => { for (const s of [-1, 1]) topEar(g, s * 10.4, y(0.2), 1.6, black, s * 1.05) },
     face: (g, p) => {
@@ -360,12 +363,7 @@ function rakko(g, p) {
       if (p.hurt) catMouth(g, y(0.5), 1.1)
       else { catMouth(g, y(0.5), 0); g.fillStyle = OUT; g.beginPath(); g.ellipse(0, y(0.495), 0.45, 0.3, 0, 0, TAU); g.fill(); g.lineWidth = 0.45; g.beginPath(); g.moveTo(-0.55, y(0.56)); g.quadraticCurveTo(0, y(0.58), 0.55, y(0.56)); g.stroke() }   // ω 입 · 작은 코 · 아래 웃는 입
     },
-    front: (g, p) => {   // 몸 앞을 치마처럼 덮는 하얀 망토 자락 · 매듭
-      const w = (p.foot || 0) * 0.4, C = new Path2D(); C.moveTo(-7.4, y(0.76)); C.lineTo(-9.8 - w, y(0.99)); C.quadraticCurveTo(-5, y(1.03), 0, y(0.995)); C.quadraticCurveTo(5, y(1.03), 9.8 - w, y(0.99)); C.lineTo(7.4, y(0.76)); C.closePath()
-      g.fillStyle = '#fff'; g.fill(C); g.lineWidth = 0.6; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke(C)
-      g.lineWidth = 0.35; g.beginPath(); for (let x = -8; x <= 8.1; x += 2) { g.moveTo(x, y(0.975)); g.lineTo(x * 1.02, y(0.955)) } g.stroke()
-      blob(g, 0, y(0.79), 1.3, 0.95, black, 0.5)
-    },
+    front: g => blob(g, 0, y(0.79), 1.3, 0.95, black, 0.5),   // 목도리 매듭
     hold: (g, x, y) => {
       g.save(); g.translate(x, y); g.rotate(-1.35)   // 칼을 세워 든다
       g.beginPath(); g.moveTo(1.8, -1); g.lineTo(14.6, -1); g.lineTo(16.6, 0); g.lineTo(14.6, 1); g.lineTo(1.8, 1); g.closePath(); g.fillStyle = '#d6dde6'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.65; g.stroke()
