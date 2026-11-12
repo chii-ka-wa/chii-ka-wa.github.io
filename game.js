@@ -2113,11 +2113,12 @@ function hud(c) {
   txt(c, fmt(G.t), W / 2, 38, 26)
   const [nl, nc] = nextLine(); txt(c, nl, W / 2, 56, 12, nc)
   txt(c, `처치 ${G.kills}`, W / 2, 73, 12)
+  const top = W < 700 ? 84 : 44   // 좁은 화면(휴대폰)은 스킬 줄을 타이머 · 다음 보스 · 처치 글자 아래로 — 안 겹치게
   let x = 10
-  for (const w of G.weapons) { c.drawImage(SPR.E[w.id].c, x, 44, 26, 26); txt(c, String(w.lv), x + 22, 70, 11, w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
+  for (const w of G.weapons) { c.drawImage(SPR.E[w.id].c, x, top, 26, 26); txt(c, String(w.lv), x + 22, top + 26, 11, w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
   x = 10
-  for (const id in G.passives) { c.drawImage(SPR.E[id].c, x, 76, 20, 20); txt(c, String(G.passives[id]), x + 17, 96, 10); x += 22 }
-  let sy = 116
+  for (const id in G.passives) { c.drawImage(SPR.E[id].c, x, top + 32, 20, 20); txt(c, String(G.passives[id]), x + 17, top + 52, 10); x += 22 }
+  let sy = top + 72
   for (const id in G.sts) { const left = G.sts[id] - G.t; if (left > 0) { txt(c, `${STATUS[id].name} ${Math.ceil(left)}초 — ${STATUS[id].note}`, W / 2, sy + 2, 13, STATUS[id].col); sy += 18 } }
   for (const h of G.help) { txt(c, `${h.k === 'pajama' ? '♪ 파자마 파티즈 공연' : '한잎이 · 두잎이가 지키는 중'} ${Math.ceil(h.T - h.t)}초`, W / 2, sy + 2, 13, h.k === 'pajama' ? '#ffb3e6' : '#b9f09a'); sy += 18 }
   const boss = G.final ? alive(G.final.siren) : G.foes.find(e => e.boss && !e.dead)   // 보스 체력 — 아래에
