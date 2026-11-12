@@ -956,6 +956,28 @@ function sprite(w, h, ox, oy, paint, k = K) {
   const c = mk(w * k, h * k), g = c.getContext('2d'); g.scale(k, k); g.translate(ox, oy); g.lineJoin = g.lineCap = 'round'; paint(g)
   return { c, w, h, ox, oy }
 }
+// 주인공 그림 — assets/chars/<id>.png 가 있으면 코드 그림 대신 쓴다(7장이 같은 320px 틀 · 같은 배율 · 발끝 줄이 같다).
+//   움직임은 그림 한 장으로 — 걸을 때 몸을 뒤뚱 기울이고 늘였다 줄이며, 발 줄(맨 아래)을 가운데에서 둘로 나눠 번갈아 든다. 서 있으면 숨쉬듯, 맞으면 납작하게
+const IMG_CHARS = ['chiikawa', 'hachiware', 'usagi', 'momonga', 'kurimanju', 'rakko', 'shisa']
+const IMG_U = 0.14, IMG_BASE = 318, IMG_CX = 160, IMG_FOOT = 13   // 그림 1px = 0.14 단위 · 발끝 줄(px) · 가운데 · 발 줄 높이(px)
+const IMG_FLIP = { momonga: true }   // 꼬리가 보는 쪽 반대에 오게 뒤집어 쓴다(그림은 꼬리가 오른쪽)
+function imgPose(g, id, im, p) {
+  const U = IMG_U, f = p.foot || 0, bob = p.bob || 0, hurt = !!p.hurt
+  const sx = hurt ? 1.07 : bob ? 0.975 : p.blink ? 1.012 : 1, sy = hurt ? 0.92 : bob ? 1.035 : p.blink ? 0.985 : 1, rot = hurt ? -0.07 : f * 0.06, rise = bob ? -bob * 0.55 : 0
+  const ft = -IMG_FOOT * U, X = -IMG_CX * U, Y = -IMG_BASE * U, W = im.width * U, Hh = im.height * U
+  if (IMG_FLIP[id]) g.scale(-1, 1)
+  for (const s of [-1, 1]) {   // 두 발 — 내딛는 쪽을 든다
+    const lift = Math.max(0, s * f) * 1.15
+    g.save(); g.beginPath(); g.rect(s < 0 ? -40 : 0, ft, 40, -ft + 3); g.clip(); g.translate(0, -lift - rise * 0.3); g.drawImage(im, X, Y, W, Hh); g.restore()
+  }
+  g.save(); g.beginPath(); g.rect(-40, -60, 80, 60 + ft + 0.7); g.clip()   // 몸 — 발 줄 위
+  g.translate(0, ft - rise); g.rotate(rot); g.scale(sx, sy); g.translate(0, -ft); g.drawImage(im, X, Y, W, Hh); g.restore()
+}
+async function loadCharArt() {   // 그림이 없거나 못 읽으면 코드 그림 그대로
+  await Promise.all(IMG_CHARS.map(id => new Promise(ok => {
+    const im = new Image(); im.onload = () => { ART[id] = [Math.ceil(im.width * IMG_U) + 8, Math.ceil(IMG_BASE * IMG_U) + 7, (g, p) => imgPose(g, id, im, p)]; ok() }; im.onerror = () => ok(); im.src = `assets/chars/${id}.png`
+  })))
+}
 const artSprite = (id, k = K, p = {}) => { const [w, h, paint] = ART[id]; return sprite(w, h, w / 2, h - 3, g => paint(g, p), k) }
 const charSprites = id => ({ walk: WALK.map(p => artSprite(id, K, { ...p, look: LOOK })), idle: [artSprite(id, K, { look: LOOK }), artSprite(id, K, { look: LOOK, blink: true })], hurt: artSprite(id, K, { look: LOOK, hurt: true }) })
 function flip(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.scale(-1, 1); g.drawImage(s.c, -c.width, 0); return { ...s, c, ox: s.w - s.ox } }
@@ -2161,6 +2183,8 @@ function frame(ts) {
   if (mode === 'play' || !G || still-- > 0) render()   // 상자 · 일시정지 · 결과 동안은 다시 그리지 않는다 — 메뉴 연출이 부드럽게
   requestAnimationFrame(frame)
 }
+await loadCharArt()
+SPR = null; for (const k in PORT) delete PORT[k]   // 그림을 기다리는 사이 창 크기 이벤트로 먼저 만든 그림이 있으면 버리고 새로
 size()
 title()
 requestAnimationFrame(frame)
