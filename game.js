@@ -2170,7 +2170,7 @@ function chars() {
   mode = 'chars'; G = null
   show(h('div', { class: 'panel wide pick' },
     h('p', { class: 'h' }, '누구랑 토벌할까?'),
-    h('div', { class: 'chars' }, CHARS.map((ch, i) => {
+    h('div', { class: 'chars scroll' }, CHARS.map((ch, i) => {
       const W = WEAP[ch.w]
       return h('button', { type: 'button', class: `char${i === pickCi ? ' on' : ''}`, onclick: () => pickCi === i ? startGame(i) : pickChar(i) },
         portrait(ch.id), h('b', {}, ch.name), h('small', {}, `${W.icon} ${W.name}`), h('span', { class: 'trait' }, ch.trait), h('span', { class: 'note' }, ch.note),
@@ -2190,8 +2190,9 @@ function guide() {
   mode = 'guide'
   const li = (pic, name, note, extra) => h('li', {}, typeof pic === 'string' ? h('i', {}, pic) : pic, h('div', {}, h('b', {}, name), h('span', {}, note), extra && h('em', {}, extra)))
   const when = kind => [...PLAN.filter(p => p[1] === kind).map(p => `${fmt(p[0])}${p[2] ? '(중간)' : ''}`), ...(kind === 'siren' || kind === 'mermaid' ? [fmt(FINAL_T)] : [])].join(' · ')
-  show(h('div', { class: 'panel guide' },
+  show(h('div', { class: 'panel guide pick' },
     h('p', { class: 'h' }, '토벌 도감'),
+    h('div', { class: 'scroll' },
     h('h3', {}, '조작'),
     h('p', {}, '이동: 방향키 · WASD — 휴대폰은 화면 아무 데나 누르고 끌기. 공격은 알아서 나가요. 일시정지: Esc · P · 오른쪽 위 버튼'),
     h('h3', {}, '규칙'),
@@ -2219,7 +2220,7 @@ function guide() {
     h('h3', {}, '토벌 대상'),
     h('ul', { class: 'list' }, Object.entries(FOES).filter(([id]) => !(id in BOSS)).map(([id, f]) => li(portrait(id), f.name, f.note))),
     h('h3', {}, '보스'),
-    h('ul', { class: 'list' }, Object.entries(BOSS).map(([id, b]) => li(portrait(id), b.name, b.note, `나오는 때: ${when(id)}${b.st ? ` · 상태이상: ${STATUS[b.st].name}(${STATUS[b.st].note})` : ''}`)), li(portrait('darkstar'), '검은 별똥별', '쓰러뜨릴 수 없다 — 끝까지 쫓아오며(점점 빨라진다) 3초마다 별 조각을 사방으로 뿌린다. 30:00까지 도망치기', `나오는 때: ${fmt(DARK_T)}(세이렌을 못 쓰러뜨렸을 때)`)),
+    h('ul', { class: 'list' }, Object.entries(BOSS).map(([id, b]) => li(portrait(id), b.name, b.note, `나오는 때: ${when(id)}${b.st ? ` · 상태이상: ${STATUS[b.st].name}(${STATUS[b.st].note})` : ''}`)), li(portrait('darkstar'), '검은 별똥별', '쓰러뜨릴 수 없다 — 끝까지 쫓아오며(점점 빨라진다) 3초마다 별 조각을 사방으로 뿌린다. 30:00까지 도망치기', `나오는 때: ${fmt(DARK_T)}(세이렌을 못 쓰러뜨렸을 때)`))),
     h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }
 /** 지금 가진 스킬 · 아이템 — pick 을 주면 눌러서 자세히 볼 수 있는 단추로 */

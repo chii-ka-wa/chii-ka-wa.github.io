@@ -36,8 +36,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!(await page.evaluate(() => document.getElementById('sndm').hidden))) errors.push('[desktop] 소리 창이 바깥을 눌러도 안 닫힘')
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
-    const dock = await page.evaluate(() => { const u = document.getElementById('ui'); u.scrollTop = 900; const r = [...document.querySelectorAll('.guide .btn')].pop().getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
-    if (!dock) errors.push('[desktop] 도감 「처음으로」가 아래에 고정되지 않음')
+    const dock = await page.evaluate(() => { const g = document.querySelector('.guide > .scroll'); g.scrollTop = 900; const r = s => document.querySelector(s).getBoundingClientRect(); return g.scrollTop > 0 && r('.guide > .h').top >= 0 && r('.guide > .row').bottom <= innerHeight })   // 도감 — 제목 · 「처음으로」 고정, 가운데만 스크롤
+    if (!dock) errors.push('[desktop] 도감 위 · 아래가 고정되지 않음')
     await page.getByRole('button', { name: '← 처음으로' }).click()
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '3-chars.png' })

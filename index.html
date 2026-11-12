@@ -92,8 +92,8 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 
 /* 캐릭터 고르기 */
 .panel.wide { width: min(900px, 100%) }
-.panel.pick { display: flex; flex-direction: column; max-height: 100% }   /* 캐릭터 고르기 — 제목 · 난이도 아래는 고정, 캐릭터만 스크롤 */
-.panel.pick .chars { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 8px; margin: 0 -4px }
+.panel.pick { display: flex; flex-direction: column; max-height: 100% }   /* 캐릭터 고르기 · 도감 — 제목과 아래 단추는 고정, 가운데만 스크롤 */
+.panel.pick > .scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 8px; margin: 0 -4px }
 .chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px }
 .char { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border: 3px solid var(--ink); border-radius: 18px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 4px 0 var(--ink) }
 .char.on { background: #fff0f4; border-color: var(--pink); box-shadow: 0 4px 0 var(--pink) }
@@ -167,13 +167,12 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 @media (max-width: 420px) { .stats { grid-template-columns: repeat(2, 1fr) } }
 .result.win { background: linear-gradient(#fff3c4, var(--card) 50%) }
 
-.guide > .row:last-child { position: sticky; bottom: -20px; z-index: 2; margin: 8px -18px -20px; padding: 18px 18px 16px; background: linear-gradient(rgba(255, 253, 246, 0), var(--card) 40%); border-radius: 0 0 21px 21px }   /* 도감 — 「처음으로」는 늘 아래에 보이게 */
 
 /* 도감 */
 .guide { text-align: left }
 .guide .h { text-align: center }
 .guide h3 { margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px dashed #e5d6c8; font-size: 19px; font-weight: normal }
-.guide p, .guide .rules { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.6; color: var(--soft); margin: 0 }
+.guide .scroll p, .guide .rules { font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.6; color: var(--soft); margin: 0 }
 .guide .rules { padding-left: 20px }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
 .list li { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; background: #fff; border: 2px solid #eadccd; border-radius: 14px; padding: 8px 10px }
