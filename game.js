@@ -2168,7 +2168,7 @@ function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 �
 }
 function chars() {
   mode = 'chars'; G = null
-  show(h('div', { class: 'panel wide' },
+  show(h('div', { class: 'panel wide pick' },
     h('p', { class: 'h' }, '누구랑 토벌할까?'),
     h('div', { class: 'chars' }, CHARS.map((ch, i) => {
       const W = WEAP[ch.w]

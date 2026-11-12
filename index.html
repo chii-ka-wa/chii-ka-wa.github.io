@@ -92,6 +92,8 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 
 /* 캐릭터 고르기 */
 .panel.wide { width: min(900px, 100%) }
+.panel.pick { display: flex; flex-direction: column; max-height: 100% }   /* 캐릭터 고르기 — 제목 · 난이도 아래는 고정, 캐릭터만 스크롤 */
+.panel.pick .chars { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 8px; margin: 0 -4px }
 .chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px }
 .char { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border: 3px solid var(--ink); border-radius: 18px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 4px 0 var(--ink) }
 .char.on { background: #fff0f4; border-color: var(--pink); box-shadow: 0 4px 0 var(--pink) }
