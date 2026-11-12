@@ -28,6 +28,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
 
   await run('desktop', { width: 1280, height: 800 }, async page => {
     await page.screenshot({ path: OUT + '1-title.png' })
+    if (await page.locator('a.kofi[href="https://ko-fi.com/godbono"]').count() !== 1) errors.push('[desktop] 후원 단추(Ko-fi) 없음')
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
     const dock = await page.evaluate(() => { const u = document.getElementById('ui'); u.scrollTop = 900; const r = [...document.querySelectorAll('.guide .btn')].pop().getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
