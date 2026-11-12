@@ -1138,11 +1138,13 @@ function take(o) {
   else if (o.id === 'onigiri') pl.hp = Math.min(S.maxHp, pl.hp + S.maxHp * 0.4)
   else { G.cheer++; stats() }
 }
-/** 새 스킬 카드 아래 — 시너지 이름 · 짝 스킬(가지고 있으면 「보유중」) · 효과 */
+/** 새 스킬 카드 아래 — 내가 가진 스킬의 짝일 때만 시너지 이름 · 효과(짝이 없으면 아무것도 안 붙인다) */
 function synCard(o) {
   if (o.t !== 'w' || G.weapons.some(w => w.id === o.id)) return null
-  const s = synOf(o.id), m = mateOf(o.id), own = G.weapons.some(w => w.id === m)
-  return h('div', { class: `syn${own ? ' own' : ''}` }, `시너지 「${s[0]}」 · 짝: ${WEAP[m].icon} ${WEAP[m].name}`, own && h('mark', {}, '보유중'), h('br'), synText(s))
+  const m = mateOf(o.id)
+  if (!G.weapons.some(w => w.id === m)) return null
+  const s = synOf(o.id)
+  return h('div', { class: 'syn' }, h('mark', {}, '시너지'), ` 「${s[0]}」 · 내 ${WEAP[m].icon} ${WEAP[m].name}의 짝`, h('br'), synText(s))
 }
 let BOX = null
 const ACTS = [['rr', '리롤'], ['skips', '스킵'], ['bans', '제외']]
@@ -1158,7 +1160,7 @@ function openBox() {
   const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}` },
     h('p', { class: 'box-title' }, chest ? '🎁 보물상자!' : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
     jack && h('p', { class: 'jack' }, 'JACKPOT!!'), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
-  const card = (o, i) => { const L = label(o); return h('button', { type: 'button', class: `card ${o.t}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, L.icon), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), synCard(o), h('kbd', {}, i + 1)) }
+  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, L.icon), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
   const sync = () => {
     cards.replaceChildren(...box.opts.map(card)); root.classList.toggle('banning', box.ban)
     hint.textContent = box.ban ? '이번 판에서 뺄 카드를 고르세요 (제외를 다시 누르면 취소)' : jack ? '셋 다 가져요!' : '하나를 고르세요'
