@@ -219,10 +219,13 @@ function fluffOval(g, cx, cy, rx, ry, rot, fill, n = 28) {   // 복슬한 타원
 // 찹쌀떡 몸 — 위는 둥글고 mid(볼 높이)가 가장 넓고 아래로 조금 좁아지며 바닥은 살짝 납작(베지에 다섯)
 function mochiSegs(W, H, mid = 0.42, wide = 0, thin = false, bw = 0.74, neck = 0) {   // 옆선이 곧게 서지 않고 둥글게 — 위는 사분원, 볼 아래로 둥글게 좁아지고 바닥은 살짝 볼록
   const hw = W / 2, b = -1, t = b - H, m = t + H * mid, up = m - (m - t) * 0.56, lo = m + (b - m) * 0.56
-  if (thin && neck) {   // 주인공 — 크고 둥근 머리 + 그보다 좁은 몸. 만나는 곳(neck)은 선 없이 옆선만 살짝 들어가고, 팔이 거기서 나온다
-    const n = t + H * neck, jx = hw * 0.64, bh = hw * 0.69, be = hw * 0.48, d = n - m
-    return [[0, t, hw * 0.52, t, hw, up, hw, m], [hw, m, hw, m + d * 0.62, jx + (hw - jx) * 0.7, n, jx, n], [jx, n, bh, n + (b - n) * 0.12, bh, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b],
-      [-be, b, -bh, b, -bh, n + (b - n) * 0.12, -jx, n], [-jx, n, -(jx + (hw - jx) * 0.7), n, -hw, m + d * 0.62, -hw, m], [-hw, m, -hw, up, -hw * 0.52, t, 0, t]]
+  if (thin && neck) {   // 주인공 — 몸보다 넓은 둥근 타원 머리(높이 neck × H) + 그 아래 짧고 좁은 몸. 만나는 곳은 선 없이 옆선만 들어가고, 팔이 거기서 나온다
+    const { jx, yj } = headJoin(W, H, neck), ry = H * neck / 2, cy = t + ry, bh = jx * 1.04, be = hw * 0.5, aj = Math.acos(jx / hw), arcs = []
+    for (let i = 0; i < 4; i++) {   // 왼쪽 아래 이음매 → 왼쪽 → 꼭대기 → 오른쪽 → 오른쪽 아래 이음매(타원을 베지에 넷으로)
+      const a = Math.PI - aj + (Math.PI + 2 * aj) * i / 4, c = a + (Math.PI + 2 * aj) / 4, k = 4 / 3 * Math.tan((c - a) / 4)
+      arcs.push([hw * Math.cos(a), cy + ry * Math.sin(a), hw * (Math.cos(a) - k * Math.sin(a)), cy + ry * (Math.sin(a) + k * Math.cos(a)), hw * (Math.cos(c) + k * Math.sin(c)), cy + ry * (Math.sin(c) - k * Math.cos(c)), hw * Math.cos(c), cy + ry * Math.sin(c)])
+    }
+    return [...arcs, [jx, yj, bh, yj + (b - yj) * 0.35, bh, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b], [-be, b, -bh, b, -bh, yj + (b - yj) * 0.35, -jx, yj]]
   }
   if (thin) {   // 주인공 — 볼 높이가 가장 넓고, 아래로 끊김 없이 매끄럽게 좁아지는 몸(bw 아래가 좁은 정도). 얼굴과 몸의 경계가 따로 없다
     const d = b - m, bc = hw * (bw + 0.1), be = hw * (bw - 0.32)   // 옆선이 끝까지 볼록 — 달걀처럼 아래로 둥글게 좁아진다
@@ -231,6 +234,8 @@ function mochiSegs(W, H, mid = 0.42, wide = 0, thin = false, bw = 0.74, neck = 0
   const bc = hw * (0.66 + 0.3 * wide), be = hw * (0.2 + 0.4 * wide)   // 아래 모서리 · 바닥 끝 — wide 면 아래가 넓다
   return [[0, t, hw * 0.56, t, hw, up, hw, m], [hw, m, hw, lo, bc, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b], [-be, b, -bc, b, -hw, lo, -hw, m], [-hw, m, -hw, up, -hw * 0.56, t, 0, t]]
 }
+/** 타원 머리와 몸이 만나는 곳 — 머리 너비의 0.72 자리 */
+function headJoin(W, H, neck) { const hw = W / 2, ry = H * neck / 2, jx = hw * 0.72; return { jx, yj: -1 - H + ry + ry * Math.sqrt(1 - 0.72 * 0.72) } }
 function segPath(S) { const P = new Path2D(); P.moveTo(S[0][0], S[0][1]); for (const s of S) P.bezierCurveTo(s[2], s[3], s[4], s[5], s[6], s[7]); P.closePath(); return P }
 function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으로 옅고 짧은 털
   g.strokeStyle = 'rgba(79,65,59,.42)'; g.lineWidth = 0.7; g.beginPath()
@@ -247,16 +252,16 @@ function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으�
  *     back 몸 뒤(꼬리 · 집게), cap 몸 안 무늬, ears 몸 테두리 위에 이어 붙는 것(귀 · 갈기), face, front 몸 앞, hold 보는 쪽 손에 든 것 */
 function mochi(g, o, p = {}) {
   const W = o.W || 25, H = o.H || 24, hw = W / 2, t = -1 - H, mid = o.mid || 0.42, S = mochiSegs(W, H, mid, o.wide, o.thin, o.bw, o.neck), P = segPath(S), foot = p.foot || 0, arm = p.arm || 0, limb = o.limb || o.fur, af = o.armFill || limb
-  const thin = !!o.thin, L = thin ? 2.3 : 0, bob = p.bob || 0   // 주인공 — 가는 팔다리, 몸을 다리 길이만큼 띄운다
-  const ay = thin ? (o.neck ? t + H * o.neck + 0.5 : t + H * (mid + (1 - mid) * 0.42)) : t + H * 0.66
+  const thin = !!o.thin, L = thin ? 1.5 : 0, bob = p.bob || 0, J = o.neck && headJoin(W, H, o.neck)   // 주인공 — 짧고 가는 팔다리, 몸을 다리 길이만큼 띄운다
+  const ay = thin ? (J ? J.yj + 0.5 : t + H * (mid + (1 - mid) * 0.42)) : t + H * 0.66
   const side = yy => { const [x0, y0, x1, y1, x2, y2, x3, y3] = S[1]; let bx = hw, bd = 1e9; for (let i = 0; i <= 24; i++) { const u = i / 24, q = 1 - u, Y = q * q * q * y0 + 3 * q * q * u * y1 + 3 * q * u * u * y2 + u * u * u * y3; if (Math.abs(Y - yy) < bd) { bd = Math.abs(Y - yy); bx = q * q * q * x0 + 3 * q * q * u * x1 + 3 * q * u * u * x2 + u * u * u * x3 } } return bx }   // 그 높이의 몸 옆선
-  const ax = thin ? (o.neck ? hw * 0.66 - 0.3 : side(ay) - 0.6) : hw * (1 - 0.2 * (ay - t - H * mid) / (H * (1 - mid))) - 0.3   // 팔 자리 — 몸 옆 테두리 위
+  const ax = thin ? (J ? J.jx - 0.2 : side(ay) - 0.6) : hw * (1 - 0.2 * (ay - t - H * mid) / (H * (1 - mid))) - 0.3   // 팔 자리 — 몸 옆 테두리 위
   const tube = (q, w, col, edge) => {   // 가는 팔다리 한 가닥 — edge 면 테두리(몸 뒤에), 아니면 몸 색(몸 위에 덮어 이음매를 지운다)
     g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = edge ? OUT : col; g.lineWidth = edge ? w + LW * 2 : w
     g.beginPath(); g.moveTo(q[0], q[1]); g.quadraticCurveTo(q[2], q[3], q[4], q[5]); g.stroke()
   }
   const hold = thin && o.hold, hx = thin ? ax + 2.3 : ax, hy = thin ? ay + 2.4 - arm * 0.8 : ay - arm * 1.1   // 쥔 손 자리
-  const legs = edge => { for (const s of [-1, 1]) { const up = Math.max(0, s * foot) * 1.1; tube([s * 2.9, -3 - bob, s * (2.9 + up * 0.2), L - 1.5 - bob, s * (2.9 + up * 0.4), L - 0.95 - up - bob], 1.75, limb, edge) } }   // 두 다리 — 걸을 때 번갈아 든다
+  const legs = edge => { for (const s of [-1, 1]) { const up = Math.max(0, s * foot) * 0.9; tube([s * 2.5, -3 - bob, s * (2.5 + up * 0.2), L - 1.2 - bob, s * (2.6 + up * 0.3), L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 가운데 모여 있고, 걸을 때 번갈아 든다
   const arms = edge => {
     for (const s of [-1, 1]) {
       if (s > 0 && hold) { tube([ax, ay, ax + 2, ay + 0.6, hx, hy], 1.35, af, edge); continue }   // 든 손 쪽 팔
@@ -328,7 +333,7 @@ function shisa(g, p) {
     g.restore()
   }
   mochi(g, {
-    fur, W: 26, H, mid: 0.4, thin: true, neck: 0.68,
+    fur, W: 25.5, H, mid: 0.4, thin: true, neck: 0.8,
     back: (g, p) => { const w = (p.foot || 0) * 0.12, lag = (p.bob || 0) * 0.07; for (const s of [-1, 1]) [[0.18, -0.8], [0.33, -0.25], [0.48, 0.3]].forEach(([f, a], k) => { const sw = w * (1 + k * 0.4) - s * lag * (k + 1); tuft(s * 10.4, y(f), s > 0 ? a + sw : Math.PI - a + sw) }) },   // 갈기 — 왼쪽 셋 · 오른쪽 셋. 걸을 때 흔들리고, 몸이 오르면 끝이 살짝 처진다
     ears: g => { for (const s of [-1, 1]) { spike(g, [[s * 9.4, y(0.12)], [s * 9.6, y(-0.02)], [s * 8.6, y(-0.12)], [s * 6.6, y(-0.02)], [s * 4.8, y(0.04)]], fur); g.strokeStyle = OUT; g.lineWidth = 0.45; g.beginPath(); g.moveTo(s * 8.4, y(0.0)); g.lineTo(s * 8.6, y(-0.06)); g.stroke() } },   // 뾰족한 고양이 귀
     face: (g, p) => {
@@ -341,7 +346,7 @@ function shisa(g, p) {
 function rakko(g, p) {
   const H = 26, y = f => at(H, f), fur = '#faf0d6', black = '#2f2a2a'
   mochi(g, {
-    fur, W: 26, H, mid: 0.4, thin: true, neck: 0.66, fluffy: true, limb: black, arms: 'none',
+    fur, W: 25.5, H, mid: 0.4, thin: true, neck: 0.78, fluffy: true, limb: black, arms: 'none',
     back: g => { g.beginPath(); g.moveTo(-8.6, y(0.6)); g.quadraticCurveTo(-14.6, y(0.7), -14.4, y(0.9)); g.quadraticCurveTo(-12.2, y(0.84), -10, y(0.92)); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.65; g.strokeStyle = OUT; g.stroke() },   // 망토 자락
     cap: g => { const P = new Path2D(); P.moveTo(-14, y(0.58)); P.quadraticCurveTo(0, y(0.7), 14, y(0.58)); P.lineTo(14, y(0.74)); P.quadraticCurveTo(0, y(0.86), -14, y(0.74)); P.closePath(); g.fillStyle = '#fff'; g.fill(P); g.strokeStyle = OUT; g.lineWidth = 0.6; g.stroke(P) },   // 하얀 목도리
     ears: g => { for (const s of [-1, 1]) topEar(g, s * 8.6, y(0.1), 1.7, black, s * 0.7) },
@@ -366,7 +371,7 @@ function rakko(g, p) {
 function kurimanju(g, p) {
   const H = 25.5, y = f => at(H, f), fur = '#fae3c6', brown = '#90603f'
   mochi(g, {
-    fur, W: 26.5, H, mid: 0.42, thin: true, neck: 0.7,
+    fur, W: 26, H, mid: 0.42, thin: true, neck: 0.82,
     ears: g => {
       for (const s of [-1, 1]) topEar(g, s * 10.2, y(0.22), 1.8, fur, s * 1.1)
       blob(g, 0, y(0.1), 9.6, 3.9, brown, LW); g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(-3, y(0.06), 3.2, 1.1, -0.15, 0, TAU); g.fill()   // 밤색 머리
@@ -383,7 +388,7 @@ function kurimanju(g, p) {
 function kani(g, p) {
   const H = 27, y = f => at(H, f), fur = '#fdeae2', pink = '#f6a9ad'
   mochi(g, {
-    fur, W: 25, H, mid: 0.4, thin: true, neck: 0.68,
+    fur, W: 24.5, H, mid: 0.4, thin: true, neck: 0.8,
     back: (g, p) => {
       for (const s of [-1, 1]) {
         g.save(); g.translate(s * 6.8, y(0.06)); g.rotate(s * 0.35 + (p.foot || 0) * 0.1 - s * (p.bob || 0) * 0.06)   // 집게 머리띠 — 걸을 때 흔들린다
@@ -681,17 +686,16 @@ function leafPair(g, p) {   // 손을 꼭 잡은 둘
   g.save(); g.translate(9.2, 0); leafKid(g, { ...p, foot: -(p.foot || 0) }, 2); g.restore()
   g.lineCap = 'round'; for (const [c, lw] of [[OUT, 2.3], [LF, 1.1]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-3, -9.4); g.quadraticCurveTo(0, -6.6, 3, -9.4); g.stroke() }   // 맞잡은 손
 }
-// 치이카와 — 하얀 찹쌀떡(볼이 넓다) · 따로 떨어진 둥근 귀 · 짧은 눈썹 · 기분 좋게 감은 눈 · 분홍 사스마타
+// 치이카와 — 하얀 찹쌀떡(볼이 넓다) · 따로 떨어진 둥근 귀 · 짧은 눈썹 · 반짝이는 점 눈 · 분홍 사스마타
 function chiikawa(g, p) {
   const H = 26, y = f => at(H, f)
   mochi(g, {
-    fur: '#fff', W: 26, H, mid: 0.4, thin: true, neck: 0.68,
-    ears: g => { for (const s of [-1, 1]) topEar(g, s * 7.2, y(0.05), 2.9, '#fff', s * 0.6) },
+    fur: '#fff', W: 25.5, H, mid: 0.4, thin: true, neck: 0.8,
+    ears: g => { for (const s of [-1, 1]) topEar(g, s * 6.6, y(0.05), 2.9, '#fff', s * 0.6) },
     face: (g, p) => {
       g.strokeStyle = OUT; g.lineCap = 'round'
       if (!p.hurt) { g.lineWidth = 0.6; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 2.5, y(0.21)); g.lineTo(s * 4.7, y(0.225)); g.stroke() } }
-      if (p.hurt) dotEyes(g, y(0.33), 3.7, 1.3, p)
-      else { g.lineWidth = 0.75; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.7 - 1.25, y(0.34)); g.quadraticCurveTo(s * 3.7, y(0.3), s * 3.7 + 1.25, y(0.34)); g.stroke() } }   // 기분 좋게 감은 눈
+      dotEyes(g, y(0.35), 3.8, 1.4, p)   // 반짝이는 점 눈
       hatch(g, y(0.42), 7.1, 0.85); catMouth(g, y(0.42), p.hurt ? 1.1 : 0.6)
     },
     hold: (g, x, y) => { g.save(); g.translate(x, y); g.rotate(-1.2); g.translate(-5, 0); sasuShape(g, 17, '#ff9ab8'); g.restore() },
@@ -701,7 +705,7 @@ function chiikawa(g, p) {
 function hachiware(g, p) {
   const H = 25.5, y = f => at(H, f), blue = '#6f9fc4'
   mochi(g, {
-    fur: '#fff', W: 26, H, mid: 0.4, thin: true, neck: 0.68,
+    fur: '#fff', W: 25.5, H, mid: 0.4, thin: true, neck: 0.8,
     back: g => { g.beginPath(); g.moveTo(5, -2.2); g.quadraticCurveTo(12.6, -2, 12.2, -6.8); g.quadraticCurveTo(10.8, -5.4, 8.2, -5.8); g.closePath(); g.fillStyle = blue; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke() },
     cap: g => {   // 파란 무늬 — 가운데 작은 홈에서 양쪽이 둥근 어깨처럼 내려와, 끝은 머리 옆선을 따라 둥글게 조금 더 내려간다
       const edge = () => { g.moveTo(-14, y(0.27)); g.bezierCurveTo(-12, y(0.235), -10, y(0.215), -7.5, y(0.215)); g.bezierCurveTo(-3.8, y(0.215), -1.4, y(0.2), -0.55, y(0.14)); g.quadraticCurveTo(0, y(0.105), 0.55, y(0.14)); g.bezierCurveTo(1.4, y(0.2), 3.8, y(0.215), 7.5, y(0.215)); g.bezierCurveTo(10, y(0.215), 12, y(0.235), 14, y(0.27)) }
@@ -722,7 +726,7 @@ function hachiware(g, p) {
 function usagi(g, p) {
   const H = 26.5, y = f => at(H, f), fur = '#faefc6'
   mochi(g, {
-    fur, W: 22, H, mid: 0.56, thin: true, bw: 0.8,
+    fur, W: 24, H, mid: 0.56, thin: true, bw: 0.8,
     back: g => fluffOval(g, -8.4, -4.2, 2.2, 2, 0, '#fff', 12),
     ears: g => { for (const s of [-1, 1]) { g.save(); g.translate(s * 2.6 + 0.4, y(0) - 4.6); g.rotate(0.1 + s * 0.04); bump(g, 0, 0, 1.9, 6, 0, fur, Math.PI * 0.66, Math.PI * 2.34); g.fillStyle = '#f8bcc6'; g.beginPath(); g.ellipse(0, 0.5, 0.9, 4.3, 0, 0, TAU); g.fill(); g.restore() } },
     face: (g, p) => {
@@ -742,7 +746,7 @@ function momonga(g, p) {
   const H = 27, y = f => at(H, f), sky = '#bfe2f2'
   const fur = (x0, y0, sx, n) => { g.strokeStyle = OUT; g.lineWidth = 0.55; g.lineCap = 'round'; g.beginPath(); for (let i = 0; i < n; i++) { const yy = y0 + i * 1.5; g.moveTo(x0, yy); g.lineTo(x0 + sx * 2.6, yy - 0.8 + i * 0.4) } g.stroke() }   // 삐죽한 털
   mochi(g, {
-    fur: '#fff', W: 25.5, H, mid: 0.4, thin: true, neck: 0.68,
+    fur: '#fff', W: 25, H, mid: 0.4, thin: true, neck: 0.8,
     back: g => {   // 하늘색 꼬리 — 보는 쪽 반대(왼쪽)에, 테두리 안쪽으로 털결
       g.save(); g.translate(-9.6, y(0.46)); g.rotate(-0.15); blob(g, 0, 0, 7.8, 12.8, sky, LW)
       g.strokeStyle = OUT; g.lineWidth = 0.7; g.lineCap = 'round'; g.beginPath()
