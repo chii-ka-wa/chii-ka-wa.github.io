@@ -131,12 +131,14 @@ const STATUS = {
   charm: { name: '매혹', note: '이동 속도 -40% · 세이렌 쪽으로 끌려간다', col: '#ff6fd0' },
 }
 const ST_T = 8   // 상태이상 지속(초)
-// 난이도 — 어려움이 원래 토벌. 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 일반 몬스터가 멀리서 안 쏜다(보스는 쏜다)
+// 난이도 — 어려움이 원래 토벌(배수 1). 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 멀리서 쏘는 일반 몬스터가 안 나온다(보스는 쏜다)
 const DIFF = {
-  easy: { name: '쉬움', icon: '🌱', note: '적 체력 -40% · 경험치 +50% · 줍는 것 2배 · 멀리서 쏘는 몬스터 없음', hp: 0.6, xp: 1.5, drop: 2, shot: false },
-  normal: { name: '보통', icon: '⭐', note: '적 체력 -20% · 경험치 +25% · 줍는 것 1.5배 · 멀리서 쏘는 몬스터 없음', hp: 0.8, xp: 1.25, drop: 1.5, shot: false },
-  hard: { name: '어려움', icon: '🔥', note: '원래 토벌 그대로 — 멀리서 쏘는 몬스터도 나온다', hp: 1, xp: 1, drop: 1, shot: true },
+  easy: { name: '쉬움', icon: '🌱', hp: 0.6, xp: 1.5, drop: 2, shot: false },
+  normal: { name: '보통', icon: '⭐', hp: 0.8, xp: 1.25, drop: 1.5, shot: false },
+  hard: { name: '어려움', icon: '🔥', hp: 1, xp: 1, drop: 1, shot: true },
 }
+{ const E = DIFF.easy, pc = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`   // 설명은 쉬움 기준 — 배수를 바꾸면 글도 따라 바뀐다
+  for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
 const bestKey = (id, d) => d === 'hard' ? id : `${id}.${d}`   // 어려움 기록은 예전 기록 그대로
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만

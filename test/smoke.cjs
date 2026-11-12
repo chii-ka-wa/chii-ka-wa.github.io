@@ -44,7 +44,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const same = await page.evaluate(async () => { const before = document.querySelector('.panel'); document.querySelectorAll('.char')[3].click(); await new Promise(r => setTimeout(r, 50)); const on = document.querySelectorAll('.char.on').length; document.querySelectorAll('.char')[0].click(); return before === document.querySelector('.panel') && on === 1 })
     if (!same) errors.push('[desktop] 캐릭터를 고를 때 화면을 새로 그린다(깜빡임)')
     const dif = await page.evaluate(async () => { const before = document.querySelector('.panel'), B = k => document.querySelector(`.diff [data-k="${k}"]`); B('easy').click(); const note = document.querySelector('.diff-note').textContent; B('hard').click(); return { same: before === document.querySelector('.panel'), note, on: document.querySelector('.diff .on').dataset.k } })
-    if (!dif.same || !/체력 -40%/.test(dif.note) || dif.on !== 'hard') errors.push('[desktop] 난이도 고르기 ' + JSON.stringify(dif))
+    if (!dif.same || !/기준/.test(dif.note) || dif.on !== 'hard') errors.push('[desktop] 난이도 고르기 ' + JSON.stringify(dif))
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(200)
     if (await page.evaluate(() => window.__mjg.G.diff) !== 'hard') errors.push('[desktop] 어려움으로 시작 안 됨')
     await page.keyboard.down('ArrowRight'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowRight')
