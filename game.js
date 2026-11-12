@@ -203,7 +203,7 @@ function catMouth(g, y, open = 0.7) {
   const P = new Path2D(); P.moveTo(-0.75 * open, y + 0.42); P.quadraticCurveTo(0, y + 0.28, 0.75 * open, y + 0.42); P.quadraticCurveTo(0.45 * open, y + 1.8 * open, 0, y + 1.8 * open); P.quadraticCurveTo(-0.45 * open, y + 1.8 * open, -0.75 * open, y + 0.42)
   g.fillStyle = '#ec7a88'; g.fill(P); g.lineWidth = 0.6; g.stroke(P)
 }
-function heart(g, x, y, r, col) { g.beginPath(); g.moveTo(x, y + r * 1.1); g.bezierCurveTo(x - r * 1.6, y - r * 0.2, x - r * 0.8, y - r * 1.3, x, y - r * 0.5); g.bezierCurveTo(x + r * 0.8, y - r * 1.3, x + r * 1.6, y - r * 0.2, x, y + r * 1.1); g.fillStyle = col; g.fill() }
+function heart(g, x, y, r, col, lw = 0) { g.beginPath(); g.moveTo(x, y + r * 1.1); g.bezierCurveTo(x - r * 1.6, y - r * 0.2, x - r * 0.8, y - r * 1.3, x, y - r * 0.5); g.bezierCurveTo(x + r * 0.8, y - r * 1.3, x + r * 1.6, y - r * 0.2, x, y + r * 1.1); g.fillStyle = col; g.fill(); if (lw) { g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() } }
 function fluffOval(g, cx, cy, rx, ry, rot, fill, n = 28) {   // 복슬한 타원(꼬리)
   g.save(); g.translate(cx, cy); g.rotate(rot); blob(g, 0, 0, rx, ry, fill, LW)
   g.strokeStyle = 'rgba(79,65,59,.5)'; g.lineWidth = 0.7; g.beginPath()
@@ -264,22 +264,23 @@ function guitar(g) {   // (0, 0) 이 몸통, 목은 +x
 }
 const topEar = (g, x, y, r, fill, rot) => bump(g, x, y, r, r * 0.96, rot, fill, Math.PI * 1.02, Math.PI * 1.98)   // 머리 위 둥근 귀
 const at = (H, f) => -1 - H + H * f   // 몸 위에서 f 만큼 내려온 높이
-// 시사 — 크림색 · 둥근 귀 · 귀에서 볼까지 옆에만 난 곱슬 갈기 · 하트 모양 눈썹 · 앞이 열린 빨간 알로하 셔츠 · 아래로 말린 꼬리
+// 시사 — 크림색 · 둥근 귀 · 양옆에 셋씩 뻗은 꽃잎 같은 갈기 · 갈기 색 하트 눈썹(옷은 나중에)
 function shisa(g, p) {
-  const H = 26, y = f => at(H, f), fur = '#fdf3e1', mane = '#da9676', shirt = '#e45a52'
+  const H = 26, y = f => at(H, f), fur = '#fdf2dc', mane = '#ec9a72'
+  const tuft = (x, yy, a) => {   // 갈기 한 가닥 — 바깥으로 뾰족한 꽃잎(뿌리는 몸 뒤에 숨는다)
+    g.save(); g.translate(x, yy); g.rotate(a)
+    g.beginPath(); g.moveTo(-1, -2.8); g.bezierCurveTo(2.2, -4, 5, -2.4, 5, 0); g.bezierCurveTo(5, 2.4, 2.2, 4, -1, 2.8); g.closePath(); g.fillStyle = mane; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()
+    g.strokeStyle = 'rgba(61,48,43,.5)'; g.lineWidth = 0.45; g.beginPath(); g.moveTo(1, 0); g.lineTo(2.8, 0); g.stroke()
+    g.restore()
+  }
   mochi(g, {
-    fur, W: 25, H, armFill: shirt,
-    back: g => { g.strokeStyle = OUT; g.lineWidth = LW; g.beginPath(); g.arc(1.4, 0.4, 1.6, Math.PI, Math.PI * 2.6); g.fillStyle = mane; g.fill(); g.stroke() },
-    cap: g => {
-      g.fillStyle = shirt; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 14, y(0.64)); g.lineTo(s * 4, y(0.64)); g.lineTo(s * 2.2, 0); g.lineTo(s * 14, 0); g.fill() }
-      g.fillStyle = '#fff'; for (const [x, f] of [[-9, 0.72], [-5.4, 0.86], [6.4, 0.74], [9.4, 0.88]]) for (let i = 0; i < 4; i++) { const a = i / 4 * TAU; g.beginPath(); g.arc(x + Math.cos(a) * 0.75, y(f) + Math.sin(a) * 0.75, 0.48, 0, TAU); g.fill() }
-      g.strokeStyle = OUT; g.lineWidth = 0.6; g.beginPath(); for (const s of [-1, 1]) { g.moveTo(s * 14, y(0.64)); g.lineTo(s * 4, y(0.64)); g.lineTo(s * 2.2, 0) } g.stroke()
+    fur, W: 25, H, mid: 0.4,
+    back: g => { for (const s of [-1, 1]) [[0.18, -0.8], [0.33, -0.25], [0.48, 0.3]].forEach(([f, a]) => tuft(s * 11, y(f), s > 0 ? a : Math.PI - a)) },   // 갈기 — 왼쪽 셋 · 오른쪽 셋(짧고 둥근 꽃잎, 몸에 붙여)
+    ears: g => { for (const s of [-1, 1]) { topEar(g, s * 6.8, y(0.05), 2.8, fur, s * 0.55); g.strokeStyle = OUT; g.lineWidth = 0.5; g.beginPath(); g.arc(s * 6.8, y(0.06), 1.2, Math.PI * 1.15, Math.PI * 1.85); g.stroke() } },
+    face: (g, p) => {
+      if (!p.hurt) for (const s of [-1, 1]) heart(g, s * 4.4, y(0.24), 1.6, mane, 0.6)   // 갈기 색 하트 눈썹
+      dotEyes(g, y(0.36), 4.2, 1.3, p); hatch(g, y(0.45), 7.6, 0.9); catMouth(g, y(0.45), p.hurt ? 1.1 : 0.55)
     },
-    ears: g => {
-      for (const s of [-1, 1]) { topEar(g, s * 7, y(0.06), 2.8, fur, s * 0.55); g.strokeStyle = OUT; g.lineWidth = 0.5; g.beginPath(); g.arc(s * 7, y(0.07), 1.2, Math.PI * 1.15, Math.PI * 1.85); g.stroke() }
-      for (const s of [-1, 1]) for (let k = 0; k < 4; k++) { const f = 0.14 + k * 0.15, w = f < 0.42 ? 0.88 + f * 0.28 : 1 - (f - 0.42) * 0.3; bump(g, s * (12.5 * w + 0.6), y(f), 3.1, 2.8, s * (k - 1.5) * 0.25, mane, s > 0 ? -1.85 : Math.PI - 1.85, s > 0 ? 1.85 : Math.PI + 1.85) }   // 크고 성긴 곱슬 갈기
-    },
-    face: (g, p) => { if (!p.hurt) for (const s of [-1, 1]) heart(g, s * 4.3, y(0.25), 1.3, '#b0705a'); dotEyes(g, y(0.37), 4.3, 1.4, p); hatch(g, y(0.45), 7.8, 0.9); catMouth(g, y(0.46), p.hurt ? 1.1 : 0.7) },
   }, p)
 }
 // 랏코 — 크림색 복슬 · 작은 검은 귀 · 검은 발 · 이마의 별 모양 흉터 · 하얀 목도리 망토(앞 검은 매듭) · 반쯤 감은 진지한 눈 · 칼
