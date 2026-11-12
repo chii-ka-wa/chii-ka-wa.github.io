@@ -220,9 +220,9 @@ function fluffOval(g, cx, cy, rx, ry, rot, fill, n = 28) {   // 복슬한 타원
 function mochiSegs(W, H, mid = 0.42, wide = 0, neck = 0, bw = 0.78) {   // 옆선이 곧게 서지 않고 둥글게 — 위는 사분원, 볼 아래로 둥글게 좁아지고 바닥은 살짝 볼록
   const hw = W / 2, b = -1, t = b - H, m = t + H * mid, up = m - (m - t) * 0.56, lo = m + (b - m) * 0.56
   if (neck) {   // 머리와 몸 — 몸보다 큰 둥근 머리, 목에서 살짝 안으로 들어갔다가 좁은 몸(bw 머리 너비 대비)
-    const n = t + H * neck, bh = hw * bw, nx = bh * 0.93, be = bh * 0.5, hb = n - (n - m) * 0.25, bs = n + (b - n) * 0.32
-    return [[0, t, hw * 0.56, t, hw, up, hw, m], [hw, m, hw, hb, nx + (hw - nx) * 0.6, n + 0.15, nx, n], [nx, n, bh, bs, bh, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b],
-      [-be, b, -bh, b, -bh, bs, -nx, n], [-nx, n, -(nx + (hw - nx) * 0.6), n + 0.15, -hw, hb, -hw, m], [-hw, m, -hw, up, -hw * 0.56, t, 0, t]]
+    const n = t + H * neck, bh = hw * bw, nx = bh * 0.93, be = bh * 0.5, hb = m + (n - m) * 0.55, bs = n + (b - n) * 0.32
+    return [[0, t, hw * 0.56, t, hw, up, hw, m], [hw, m, hw, hb, nx + (hw - nx) * 0.55, n + 0.1, nx, n], [nx, n, bh, bs, bh, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b],
+      [-be, b, -bh, b, -bh, bs, -nx, n], [-nx, n, -(nx + (hw - nx) * 0.55), n + 0.1, -hw, hb, -hw, m], [-hw, m, -hw, up, -hw * 0.56, t, 0, t]]
   }
   const bc = hw * (0.66 + 0.3 * wide), be = hw * (0.2 + 0.4 * wide)   // 아래 모서리 · 바닥 끝 — wide 면 아래가 넓다
   return [[0, t, hw * 0.56, t, hw, up, hw, m], [hw, m, hw, lo, bc, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b], [-be, b, -bc, b, -hw, lo, -hw, m], [-hw, m, -hw, up, -hw * 0.56, t, 0, t]]
@@ -243,31 +243,66 @@ function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으�
  *     back 몸 뒤(꼬리 · 집게), cap 몸 안 무늬, ears 몸 테두리 위에 이어 붙는 것(귀 · 갈기), face, front 몸 앞, hold 보는 쪽 손에 든 것 */
 function mochi(g, o, p = {}) {
   const W = o.W || 25, H = o.H || 24, hw = W / 2, t = -1 - H, mid = o.mid || 0.42, S = mochiSegs(W, H, mid, o.wide, o.neck, o.bw), P = segPath(S), foot = p.foot || 0, arm = p.arm || 0, limb = o.limb || o.fur, af = o.armFill || limb
+  const thin = !!o.neck, L = thin ? 2.3 : 0, bob = p.bob || 0   // 주인공 — 가는 팔다리, 몸을 다리 길이만큼 띄운다
+  const n = t + H * (o.neck || 0), bh = hw * (o.bw || 0.78)
+  const ay = thin ? n + (-1 - n) * 0.2 : t + H * 0.66, ax = thin ? bh - 0.6 : hw * (1 - 0.2 * (ay - t - H * mid) / (H * (1 - mid))) - 0.3   // 팔 자리 — 몸 옆 테두리 위
+  const tube = (q, w, col, edge) => {   // 가는 팔다리 한 가닥 — edge 면 테두리(몸 뒤에), 아니면 몸 색(몸 위에 덮어 이음매를 지운다)
+    g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = edge ? OUT : col; g.lineWidth = edge ? w + LW * 2 : w
+    g.beginPath(); g.moveTo(q[0], q[1]); g.quadraticCurveTo(q[2], q[3], q[4], q[5]); g.stroke()
+  }
+  const hold = thin && o.hold, hx = thin ? bh + 1.7 : ax, hy = thin ? ay + 2.4 - arm * 0.8 : ay - arm * 1.1   // 쥔 손 자리
+  const legs = edge => { for (const s of [-1, 1]) { const up = Math.max(0, s * foot) * 1.1; tube([s * 2.9, -3 - bob, s * (2.9 + up * 0.2), L - 1.5 - bob, s * (2.9 + up * 0.4), L - 0.95 - up - bob], 1.75, limb, edge) } }   // 두 다리 — 걸을 때 번갈아 든다
+  const arms = edge => {
+    for (const s of [-1, 1]) {
+      if (s > 0 && hold) { tube([ax, ay, bh + 1.4, ay + 0.6, hx, hy], 1.35, af, edge); continue }   // 든 손 쪽 팔
+      if (o.arms === 'none') continue
+      tube([s * ax, ay, s * (bh + 1.1), ay + 0.9 - s * arm * 0.4, s * (bh + 1.5 + s * arm * 0.3), ay + 3.5 - s * arm * 0.9], 1.35, af, edge)   // 늘어뜨린 팔 — 발과 엇갈려 흔든다
+    }
+  }
+  g.save(); g.translate(0, -L)
   o.back?.(g, p)
-  for (const s of [-1, 1]) { const lift = Math.max(0, s * foot); blob(g, s * (3.3 + lift * 0.5), -0.9 - lift * 1.4, 2.3, 1.35, limb, LW) }   // 작은 발 — 걸을 때 번갈아 든다
-  g.save(); g.translate(0, p.bob || 0)
+  if (!thin) for (const s of [-1, 1]) { const lift = Math.max(0, s * foot); blob(g, s * (3.3 + lift * 0.5), -0.9 - lift * 1.4, 2.3, 1.35, limb, LW) }   // 작은 발 — 걸을 때 번갈아 든다
+  g.save(); g.translate(0, bob)
+  if (thin) { legs(true); arms(true) }
   g.fillStyle = o.fur; g.fill(P)
   if (o.cap) { g.save(); g.clip(P); o.cap(g, p); g.restore() }
   g.lineWidth = LW; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke(P)
   if (o.fluffy) fluff(g, S, t + H / 2)
-  const n = t + H * (o.neck || 0), bh = hw * (o.bw || 0.78)
-  if (o.neck) { g.strokeStyle = OUT; g.lineWidth = 0.55; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * bh * 0.93, n); g.quadraticCurveTo(s * bh * 0.78, n + 0.45, s * bh * 0.6, n + 0.6); g.stroke() } }   // 짧은 턱선 — 머리와 몸이 살짝 갈린다
+  if (thin) { legs(false); g.strokeStyle = OUT; g.lineWidth = 0.55; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * bh * 0.93, n); g.quadraticCurveTo(s * bh * 0.82, n + 0.4, s * bh * 0.7, n + 0.6); g.stroke() } }   // 짧은 턱선 — 머리와 몸이 살짝 갈린다
   o.ears?.(g, p)
-  const ay = o.neck ? n + (-1 - n) * 0.3 : t + H * 0.66, ax = o.neck ? bh - 0.2 : hw * (1 - 0.2 * (ay - t - H * mid) / (H * (1 - mid))) - 0.3   // 팔 자리 — 몸 옆 테두리 위
-  if (o.arms === 'cheek') for (const s of [-1, 1]) blob(g, s * 7.6, t + H * 0.62 - s * arm * 0.5, 1.7, 2.1, af, 0.6)   // 볼 아래에 댄 두 손
+  if (thin) arms(false)
+  else if (o.arms === 'cheek') for (const s of [-1, 1]) blob(g, s * 7.6, t + H * 0.62 - s * arm * 0.5, 1.7, 2.1, af, 0.6)   // 볼 아래에 댄 두 손
   else if (o.arms !== 'none') for (const s of [-1, 1]) bump(g, s * ax, ay - s * arm * 1.1, 1.7, 2.4, s * 0.45, af, s > 0 ? -1.7 : Math.PI - 1.9, s > 0 ? 1.9 : Math.PI + 1.7)   // 팔 — 몸 옆에 붙은 작은 혹, 발과 엇갈려 오르내린다
   g.save(); g.translate(p.look || 0, 0); o.face(g, p); g.restore()
   o.front?.(g, p)
-  if (o.hold) { const hx = ax, hy = ay - arm * 1.1; o.hold(g, hx, hy); blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
-  g.restore()
+  if (o.hold) { o.hold(g, hx, hy); thin ? blob(g, hx + 0.1, hy + 0.1, 1.15, 1.25, af, 0.6) : blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
+  g.restore(); g.restore()
 }
-/** 사스마타 — (0, 0) 에서 +x 로 자루 L, 끝에 안쪽으로 톱니가 난 U 갈래(전체가 한 색) */
+/** 사스마타 — (0, 0) 에서 +x 로 자루 L(뒤쪽은 하얀 손잡이), 끝은 Y 로 갈라져 바깥으로 휘며 가늘어지는 두 갈래 · 갈래 양옆에 하얀 가시 셋씩.
+ *  동그라미를 촘촘히 찍어 굵기가 줄어드는 모양을 만든다(테두리 먼저 → 가시 → 속 색) */
 function sasuShape(g, L, col) {
-  g.lineCap = 'round'; g.lineJoin = 'round'
-  const path = () => { g.beginPath(); g.moveTo(0, 0); g.lineTo(L, 0); g.moveTo(L + 7.5, -3.4); g.lineTo(L + 3.4, -3.4); g.arc(L + 3.4, 0, 3.4, -Math.PI / 2, Math.PI / 2, true); g.lineTo(L + 7.5, 3.4) }
-  for (const [c, lw] of [[OUT, 2.8], [col, 1.4]]) { g.strokeStyle = c; g.lineWidth = lw; path(); g.stroke() }
-  g.fillStyle = col; g.strokeStyle = OUT; g.lineWidth = 0.45
-  for (const s of [-1, 1]) for (const x of [L + 4.6, L + 6.4]) { g.beginPath(); g.moveTo(x - 0.7, s * 2.8); g.lineTo(x, s * 1.8); g.lineTo(x + 0.7, s * 2.8); g.closePath(); g.fill(); g.stroke() }
+  const bz = (c, t) => { const q = 1 - t; return [0, 1].map(i => q * q * q * c[0][i] + 3 * q * q * t * c[1][i] + 3 * q * t * t * c[2][i] + t * t * t * c[3][i]) }
+  const shaft = [], arms = []
+  for (let u = 0; u <= L - 0.3; u += 0.25) shaft.push([u, 0, 0.62 + Math.max(0, (u - L + 3) / 3) ** 2 * 0.5])   // 끝으로 갈수록 부드럽게 넓어져 갈래로 이어진다
+  for (const s of [-1, 1]) {   // 갈래 — 자루 끝에서 매끄럽게 갈라져(Y), 앞으로 뻗다가 끝이 바깥으로 휜다
+    const B = [[L + 4.4, s * 4.4], [L + 7, s * 4.4], [L + 8.8, s * 4.8], [L + 10.2, s * 6.4]], pts = []
+    for (let i = 0; i <= 30; i++) { const a = Math.PI - i / 30 * Math.PI / 2; pts.push([L + 4.4 + Math.cos(a) * 4.4, s * Math.sin(a) * 4.4, 0.95]) }   // 둥근 U 바닥
+    for (let i = 1; i <= 30; i++) { const t = i / 30; pts.push([...bz(B, t), 0.88 * (1 - t * t) + 0.1 * t * t]) }
+    arms.push(pts)
+  }
+  const discs = (D, grow, col) => { g.fillStyle = col; g.beginPath(); for (const [x, y, r] of D) { g.moveTo(x + r + grow, y); g.arc(x, y, r + grow, 0, TAU) } g.fill() }
+  discs([...shaft, ...arms.flat()], 0.5, OUT)   // 테두리
+  g.lineJoin = 'round'
+  for (const pts of arms) for (const [i, side] of [[27, 1], [27, -1], [34, 1], [34, -1], [41, 1], [41, -1]]) {   // 하얀 가시 — 갈래 양옆에 번갈아
+    const [x, y, r] = pts[i], [x1, y1] = pts[i + 1], [x0, y0] = pts[i - 1], tl = Math.hypot(x1 - x0, y1 - y0) || 1, tx = (x1 - x0) / tl, ty = (y1 - y0) / tl, nx = -ty * side, ny = tx * side
+    g.beginPath(); g.moveTo(x + nx * r * 0.5 - tx * 0.75, y + ny * r * 0.5 - ty * 0.75); g.lineTo(x + nx * (r + 1.35), y + ny * (r + 1.35)); g.lineTo(x + nx * r * 0.5 + tx * 0.75, y + ny * r * 0.5 + ty * 0.75); g.closePath()
+    g.fillStyle = '#fff'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.4; g.stroke()
+  }
+  const grip = L * 0.3
+  discs(shaft.filter(d => d[0] >= grip - 0.3).concat(arms.flat()), 0, col)   // 분홍 자루 · 갈래
+  discs(shaft.filter(d => d[0] < grip), 0, '#fbfbf8')   // 하얀 손잡이
+  g.strokeStyle = OUT; g.lineWidth = 0.35; g.beginPath(); g.moveTo(grip, -0.62); g.lineTo(grip, 0.62); g.stroke()   // 손잡이 경계
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 0.32; g.lineCap = 'round'; g.beginPath(); g.moveTo(grip + 0.8, -0.28); g.lineTo(L - 0.5, -0.28); g.stroke()   // 자루 윤기
 }
 function guitar(g) {   // (0, 0) 이 몸통, 목은 +x
   for (const [c, lw] of [[OUT, 2.8], ['#8a5a3c', 1.4]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(2.6, 0); g.lineTo(12, 0); g.stroke() }
@@ -627,18 +662,17 @@ function hachiware(g, p) {
   mochi(g, {
     fur: '#fff', W: 26, H, mid: 0.34, neck: 0.64,
     back: g => { g.beginPath(); g.moveTo(7, -2.2); g.quadraticCurveTo(12.6, -2, 12.2, -6.8); g.quadraticCurveTo(10.8, -5.4, 8.2, -5.8); g.closePath(); g.fillStyle = blue; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke() },
-    cap: g => {   // 파란 무늬 — 가운데 작은 홈에서 양쪽이 둥근 어깨처럼 내려와 옆으로
-      g.fillStyle = blue; g.beginPath(); g.moveTo(-14, y(0.3)); g.lineTo(-9.5, y(0.3)); g.bezierCurveTo(-4.6, y(0.3), -1.5, y(0.275), -0.55, y(0.195)); g.quadraticCurveTo(0, y(0.155), 0.55, y(0.195))
-      g.bezierCurveTo(1.5, y(0.275), 4.6, y(0.3), 9.5, y(0.3)); g.lineTo(14, y(0.3)); g.lineTo(14, y(-0.1)); g.lineTo(-14, y(-0.1)); g.fill()
-      g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); g.moveTo(-14, y(0.3)); g.lineTo(-9.5, y(0.3)); g.bezierCurveTo(-4.6, y(0.3), -1.5, y(0.275), -0.55, y(0.195)); g.quadraticCurveTo(0, y(0.155), 0.55, y(0.195)); g.bezierCurveTo(1.5, y(0.275), 4.6, y(0.3), 9.5, y(0.3)); g.lineTo(14, y(0.3)); g.stroke()   // 무늬 경계선
+    cap: g => {   // 파란 무늬 — 가운데 작은 홈에서 양쪽이 둥근 어깨처럼 내려와, 끝은 머리 옆선을 따라 둥글게 조금 더 내려간다
+      const edge = () => { g.moveTo(-14, y(0.27)); g.bezierCurveTo(-12, y(0.235), -10, y(0.215), -7.5, y(0.215)); g.bezierCurveTo(-3.8, y(0.215), -1.4, y(0.2), -0.55, y(0.14)); g.quadraticCurveTo(0, y(0.105), 0.55, y(0.14)); g.bezierCurveTo(1.4, y(0.2), 3.8, y(0.215), 7.5, y(0.215)); g.bezierCurveTo(10, y(0.215), 12, y(0.235), 14, y(0.27)) }
+      g.fillStyle = blue; g.beginPath(); edge(); g.lineTo(14, y(-0.1)); g.lineTo(-14, y(-0.1)); g.fill()
+      g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); edge(); g.stroke()   // 무늬 경계선
     },
     ears: g => {
       for (const s of [-1, 1]) spike(g, [[s * 10.4, y(0.13)], [s * 10.6, y(0)], [s * 9.4, y(-0.07)], [s * 8, y(-0.06)], [s * 5.8, y(0.04)]], blue)
-      for (const s of [-1, 1]) bump(g, s * 12.6, y(0.27), 1.5, 1.9, s * 0.2, blue, s > 0 ? -1.7 : Math.PI - 1.7, s > 0 ? 1.7 : Math.PI + 1.7)   // 무늬 양 끝 — 머리 옆으로 둥글게 삐져나온다
     },
     face: (g, p) => {
-      if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.5; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.2, y(0.285)); g.lineTo(s * 4.4, y(0.28)); g.stroke() } }
-      dotEyes(g, y(0.35), 3.9, 1.6, p); hatch(g, y(0.43), 7.4, 0.85); catMouth(g, y(0.44), p.hurt ? 1.1 : 0.9)
+      if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.5; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.4, y(0.27)); g.lineTo(s * 4.6, y(0.265)); g.stroke() } }
+      dotEyes(g, y(0.36), 4.1, 1.6, p); hatch(g, y(0.44), 7.6, 0.9); catMouth(g, y(0.45), p.hurt ? 1.1 : 0.9)
     },
     hold: (g, x, y) => { g.save(); g.translate(x - 4, y + 2.4); g.rotate(-0.75); guitar(g); g.restore() },
   }, p)
@@ -829,7 +863,7 @@ function mermaid(g, o, p = {}) {
 }
 // [가로, 세로, 그리기(g, 자세)] — 발밑이 아래에서 3 위. 크게 키운 정예 · 보스는 big(선이 덜 두꺼워지게)
 const ART = {
-  chiikawa: [48, 42, chiikawa], hachiware: [44, 38, hachiware], usagi: [40, 48, usagi], shisa: [36, 34, shisa], momonga: [42, 38, momonga], rakko: [44, 38, rakko], kurimanju: [36, 32, kurimanju], kani: [34, 40, kani],
+  chiikawa: [58, 47, chiikawa], hachiware: [44, 41, hachiware], usagi: [40, 51, usagi], shisa: [38, 37, shisa], momonga: [42, 41, momonga], rakko: [44, 41, rakko], kurimanju: [38, 35, kurimanju], kani: [36, 43, kani],
   goblin: [38, 32, (g, p) => goblin(g, p)],
   rusher: [38, 32, (g, p) => goblin(g, p, { col: '#cbe7a2', band: true })],
   chimera: [30, 26, (g, p) => chimera(g, p)],
@@ -909,7 +943,7 @@ const pickOfR = (r, a) => a[r() * a.length | 0]
 let SPR = null, K = 2   // K = 그려 두는 그림의 단위당 픽셀 — 화면 배율에 맞춘다
 function sprites() {
   const enemy = id => { const R = [artSprite(id, K, { foot: 1 }), artSprite(id, K, { foot: -1 })], L = R.map(flip); return { R, L, WR: R.map(white), WL: L.map(white) } }   // 걷기 두 장 · 왼쪽 · 맞았을 때 하양
-  SPR = { E: {}, ground: groundTile() }
+  SPR = { E: {}, sasu: {}, ground: groundTile() }
   for (const ch of CHARS) SPR[ch.id] = charSprites(ch.id)
   for (const id in FOES) if (id !== 'mermaid') SPR[id] = enemy(id)
   SPR.mermaid = ['mermaid', 'mermaid1', 'mermaid2'].map(enemy); SPR.sirenAngry = enemy('sirenAngry'); SPR.dark = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('darkstar', K, p))
@@ -1783,7 +1817,7 @@ function world(c, ox, oy) {
   // 날아가는 것
   for (const b of G.shots) {
     if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, SPR.E.kanpai, 0, 0, 0.8); c.restore() }
-    else if (b.k === 'ball') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx)); c.translate(-16, 0); c.scale(1.2, 1.2); sasuShape(c, 18, b.col); c.restore() }   // 사스마타 — 캐릭터 색 else if (b.k === 'arc') { const u = b.u, hh = b.H * 4 * u * (1 - u); put(c, SPR.shadow, b.x, b.y, 0.35); tear(c, b.x, b.y - hh - 10, 6) }
+    else if (b.k === 'ball') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx)); put(c, SPR.sasu[b.col] ||= sprite(34, 18, 16, 9, g => { g.translate(-13.4, 0); sasuShape(g, 18, b.col) }), 0, 0, 1.2); c.restore() }   // 사스마타 — 캐릭터 색 else if (b.k === 'arc') { const u = b.u, hh = b.H * 4 * u * (1 - u); put(c, SPR.shadow, b.x, b.y, 0.35); tear(c, b.x, b.y - hh - 10, 6) }
     else if (b.k === 'orb') put(c, SPR.note, b.x, b.y - 14)
     else if (b.k === 'boom') { c.save(); c.translate(b.x, b.y - 14); c.rotate(Math.sin(b.a) * 0.6); put(c, SPR.pochette, 0, 0, b.r / 10); c.restore() }
     else if (b.k === 'ring' && b.t >= 0) { const u = Math.min(1, b.t / b.T); c.globalAlpha = 1 - Math.max(0, b.t - b.T) / 0.18; c.strokeStyle = '#ffd23f'; c.lineWidth = 6; oval(c, b.x, b.y, b.R * u, b.R * u * 0.8); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 1 }
@@ -2068,4 +2102,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { FINAL_T, DARK_T, END_T, DONATE, donate, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { FINAL_T, DARK_T, END_T, DONATE, donate, sasu: sasuShape, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
