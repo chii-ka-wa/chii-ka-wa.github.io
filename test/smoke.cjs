@@ -1,5 +1,5 @@
 // 스모크 테스트 — 실행: python3 -m http.server 8765 를 띄우고 NODE_PATH=<playwright 가 있는 node_modules> node test/smoke.cjs (그림은 test/shots/).
-//   처음 화면 → 캐릭터 → 판 → 상자 → 15분 빨리 돌리기(무적) → 세이렌 → 클리어. 콘솔 에러가 하나라도 있으면 실패
+//   처음 화면 → 캐릭터 → 판 → 상자 → 최종보스까지 빨리 돌리기(무적) → 세이렌 → 클리어. 콘솔 에러가 하나라도 있으면 실패
 const { chromium } = require('playwright')
 const OUT = __dirname + '/shots/'; require('fs').mkdirSync(OUT, { recursive: true })
 const URL = process.env.URL || 'http://127.0.0.1:8765/'
@@ -46,15 +46,16 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/'
     await page.evaluate(() => { const M = window.__mjg; M.step(1 / 30) }); await page.waitForTimeout(100)
     await page.evaluate(() => window.__mjg.step(0.001))
     await page.screenshot({ path: OUT + '6-boss5.png' })
-    r = await sim(page, 905, { god: true, walk: true }); console.log('15:05', r)
+    const F = await page.evaluate(() => window.__mjg.FINAL_T)
+    r = await sim(page, F + 5, { god: true, walk: true }); console.log('final+5s', r)
     await page.screenshot({ path: OUT + '7-siren.png' })
-    r = await sim(page, 960, { god: true, walk: true }); console.log('16:00', r)
+    r = await sim(page, F + 60, { god: true, walk: true }); console.log('final+60s', r)
     const fin = await page.evaluate(() => { const F = window.__mjg.G.final; return F && { siren: Math.round(F.siren.hp), max: Math.round(F.siren.max), dead: F.siren.dead, mer: F.mermaids.map(m => m.dead ? 'x' : Math.round(m.hp)) } })
     console.log('final', fin)
     await page.screenshot({ path: OUT + '8-siren2.png' })
     // 남은 피를 줄여 클리어까지
     await page.evaluate(() => { const F = window.__mjg.G.final; for (const m of F.mermaids) m.hp = Math.min(m.hp, 1); F.siren.hp = Math.min(F.siren.hp, 50) })
-    r = await sim(page, 1100, { god: true }); console.log('clear', r)
+    r = await sim(page, F + 200, { god: true }); console.log('clear', r)
     await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '9-result.png' })
     console.log('saved', await page.evaluate(() => localStorage.getItem('mjg.v1')))
