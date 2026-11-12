@@ -22,6 +22,7 @@ const CHARS = [
   { id: 'momonga', name: '모몽가', w: 'momo', hp: 90, trait: '내 거야!', note: '보스 · 정예에게 주는 피해 +30% · 이동 속도 +15%', mod: { bossX: 0.3, move: 0.15 } },
   { id: 'kurimanju', name: '쿠리만쥬', w: 'kanpai', hp: 130, trait: '캬아~', note: '받는 피해 -2 · 초당 체력 0.5 회복 · 경험치 줍는 거리 +30%', mod: { armor: 2, regen: 0.5, magnet: 0.3 } },
   { id: 'rakko', name: '랏코', w: 'sword', hp: 120, trait: '토벌 랭킹 1위', note: '치명타 확률 +15% · 치명타 피해 2.5배', mod: { crit: 0.15, critX: 0.5 } },
+  { id: 'kani', name: '카니', w: 'sasu', hp: 110, trait: '헌책방 주인', note: '범위 +20% · 투사체 속도 +20%', mod: { area: 0.2, speed: 0.2 } },
   { id: 'shisa', name: '시사', w: 'ramen', hp: 110, trait: '라멘집 수행 중', note: '경험치 +25% · 쿨타임 -5% · 지속 시간 +15%', mod: { growth: 0.25, cdr: 0.05, dur: 0.15 } },
 ]
 
@@ -97,6 +98,7 @@ const FOES = {
   goblinKing: { r: 30, hp: 1100, spd: 60, dmg: 18, xp: 120, col: '#86b85f' },
   bigChimera: { r: 36, hp: 1400, spd: 50, dmg: 24, xp: 120, col: '#c9b8e0' },
   mermaid: { r: 14, hp: 500, spd: 70, dmg: 14, xp: 60, col: '#ff9fb5' },
+  anoko: { r: 34, hp: 1500, spd: 62, dmg: 22, xp: 150, col: '#f3ece4' },
   siren: { r: 40, hp: 2800, spd: 55, dmg: 26, xp: 400, col: '#ee4a3c' },
 }
 // line = 나올 때 외치는 말, st = 거는 상태이상(stCd 초마다, 중간보스는 안 건다)
@@ -104,11 +106,12 @@ const BOSS = {
   dekatsuyo: { name: '데카츠요', line: '쿵… 쿵…!', note: '「뭔가 크고 강한 녀석」 — 멈칫(갈 길이 붉게)한 뒤 그 방향으로 돌진. 옆으로 피하기' },
   goblinKing: { name: '고블린 대장', line: '쳐라, 쳐!', note: '돌을 부채꼴로 던지고 부하를 불러 에워싼다 · 약화를 건다', st: 'weak', stCd: 30 },
   bigChimera: { name: '거대 키메라', line: '헤헤… 흑…', note: '웃으면서 우는 거대한 키메라 — 뛰어올라 내 자리에 내려찍는다. 붉은 원에서 벗어나기' },
+  anoko: { name: '아노코', line: '…!!', note: '「커다란 토벌」의 대상 — 돌진하고 · 용 같은 꼬리로 둘레를 휩쓸고(청록 원) · 꼬깔콘 같은 발톱을 던진다' },
   mermaid: { name: '인어', line: '라~♪', note: '세이렌의 코러스 — 곁을 돌다가 날카로운 이빨로 달려들어 문다. 살아 있는 동안 세이렌은 받는 피해 -50%' },
   siren: { name: '세이렌', line: '내 노래를 들어 봐…', note: '노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다', st: 'charm', stCd: 14 },
 }
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
-const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [750, 'bigChimera', 1], [900, 'bigChimera'], [1020, 'dekatsuyo', 1], [1140, 'goblinKing', 1], [1200, 'dekatsuyo'],
+const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [750, 'bigChimera', 1], [900, 'bigChimera'], [1020, 'dekatsuyo', 1], [1140, 'goblinKing', 1], [1200, 'anoko'],
   [1320, 'bigChimera', 1], [1380, 'goblinKing'], [1440, 'bigChimera']]
 const STATUS = {
   weak: { name: '약화', note: '주는 피해 -40%', col: '#ff9f43' },
@@ -327,6 +330,27 @@ function kurimanju(g, p) {
     },
   }, p)
 }
+// 카니 — 헌책방. 복숭앗빛 동그란 몸 · 분홍 머리 · 게 집게 머리띠 · 짧은 눈썹 · 초록 헌책
+function kani(g, p) {
+  const fur = '#fde8de', pink = '#f5a3a6'
+  mochi(g, {
+    fur, H: 25,
+    back: g => {
+      for (const s of [-1, 1]) {
+        g.save(); g.translate(s * 8.4, -27.6); g.rotate(s * 0.35)
+        for (const [col, lw] of [[OUT, 3.2], [pink, 1.6]]) { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.moveTo(0, 3); g.lineTo(0, -1); g.stroke() }
+        g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(-4.5, -2, -4.5, -8.5, -0.6, -9); g.lineTo(-0.2, -5.6); g.lineTo(0.8, -8.8); g.bezierCurveTo(4.5, -8, 4.2, -2, 0, -1); g.closePath(); g.fillStyle = pink; g.fill(); g.lineWidth = 1.2; g.strokeStyle = OUT; g.stroke()
+        g.restore()
+      }
+    },
+    cap: g => { g.fillStyle = pink; g.beginPath(); g.moveTo(-15, -22.2); g.quadraticCurveTo(0, -19.4, 15, -22.2); g.lineTo(15, -30); g.lineTo(-15, -30); g.fill() },
+    face: (g, p) => {
+      if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.8; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.8, -19.6); g.lineTo(s * 6.2, -20.4); g.stroke() } }
+      dotEyes(g, -16, 5.2, 1.6, p); hatch(g, -12.6, 8.6); catMouth(g, -13.4, p.hurt ? 1.4 : 0.8)
+    },
+    front: g => { g.save(); g.translate(-12.6, -6.4); g.rotate(-0.15); g.fillStyle = '#8fd14f'; g.fillRect(-2.6, -3.6, 5.2, 7); g.fillStyle = '#fff'; g.fillRect(1.4, -3, 0.9, 5.8); g.strokeStyle = OUT; g.lineWidth = 1; g.strokeRect(-2.6, -3.6, 5.2, 7); g.restore() },   // 초록 헌책
+  }, p)
+}
 // 고블린 — 연두색 · 머리 꼭지 · 뾰족 귀 · 아래 단이 들쭉날쭉한 가죽옷 · 몽둥이
 function goblin(g, p = {}, o = {}) {
   const col = o.col || '#a9d083'
@@ -389,6 +413,24 @@ function dekatsuyo(g, p = {}) {
   g.fillStyle = '#3a1f2a'; g.beginPath(); g.ellipse(0, -5.4, 6, 2.6, 0, 0, Math.PI); g.closePath(); g.fill()
   g.fillStyle = '#fff'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 4.4, -5.4); g.lineTo(s * 3, -5.4); g.lineTo(s * 3.7, -2.8); g.fill() }
 }
+// 아노코 — 「커다란 토벌」의 대상. 이마의 작은 뿔 · 하얀 복슬 윗몸 · 짧은 크림색 아랫몸 · 청록 용 꼬리 · 꼬깔콘 같은 발톱 · 소용돌이 눈(오른쪽을 본다)
+function anoko(g, p = {}) {
+  const f = p.foot || 0, cream = '#f2dccb', teal = '#4f9a8c', claw = '#b7793f'
+  g.beginPath(); g.moveTo(-10, -11); g.bezierCurveTo(-18, -12.5, -21.5, -4, -16, -1); g.bezierCurveTo(-13, 0.8, -10, -1, -9, -4.5); g.closePath(); g.fillStyle = teal; g.fill(); g.lineWidth = 1.3; g.strokeStyle = OUT; g.stroke()   // 용 꼬리
+  g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 0.7; for (const [x, y] of [[-15, -8], [-17.5, -4.5], [-14, -3]]) { g.beginPath(); g.arc(x, y, 1.2, 0.3, Math.PI - 0.3); g.stroke() }
+  ;[-9, -3.4].forEach((x, i) => blob(g, x, -1.6 - Math.max(0, (i ? 1 : -1) * f) * 1.6, 2.6, 2.2, cream, 1.1))   // 뒷발
+  blob(g, -4.5, -8, 9, 6.8, cream)   // 짧은 털 아랫몸
+  ;[4.6, 10].forEach((x, i) => {   // 앞발 · 꼬깔콘 발톱
+    const y = -1.6 - Math.max(0, (i ? -1 : 1) * f) * 1.6
+    for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(x + 1.4 + k * 0.4, y + 0.2 + k * 0.9); g.lineTo(x + 4.2, y + k * 1.1); g.lineTo(x + 1.4 + k * 0.4, y - 0.8 + k * 0.9); g.closePath(); g.fillStyle = claw; g.fill() }
+    blob(g, x, y, 2.6, 2.2, '#fdfbf7', 1.1)
+  })
+  for (const s of [-1, 1]) blob(g, 6.6 + s * 5.4, -22.2, 2.4, 2.2, '#fdfbf7', 1.1)   // 귀
+  fluffOval(g, 6.6, -13.6, 9.6, 10, 0, '#fdfbf7', 34)   // 복슬 윗몸 · 머리
+  g.beginPath(); g.moveTo(5.4, -22.4); g.lineTo(6.6, -26.2); g.lineTo(7.8, -22.4); g.closePath(); g.fillStyle = '#f2e6c9'; g.fill(); g.lineWidth = 1; g.strokeStyle = OUT; g.stroke()   // 작은 뿔
+  g.strokeStyle = '#6b6f8a'; g.lineWidth = 0.8; for (const x of [3.6, 9.6]) { g.beginPath(); for (let t = 0; t < TAU * 1.6; t += 0.3) { const r = 0.25 + t * 0.2; g.lineTo(x + Math.cos(t) * r, -15.6 + Math.sin(t) * r) } g.stroke() }   // 소용돌이 눈
+  g.strokeStyle = OUT; g.lineWidth = 0.8; g.beginPath(); g.moveTo(5.4, -11.8); g.quadraticCurveTo(6, -11.1, 6.6, -11.8); g.quadraticCurveTo(7.2, -11.1, 7.8, -11.8); g.stroke()
+}
 // 세이렌 — 이누하리코(종이 개 인형) 머리 · 포유류 같은 복슬한 윗몸 · 붉은 금붕어 아랫몸과 큰 꼬리지느러미. 화나면 얼굴에 그늘이 지고 눈이 붉어진다
 function siren(g, angry = false, p = {}) {
   const white = '#fffaf2', red = '#e8453a', f = p.foot || 0
@@ -422,6 +464,7 @@ function mermaid(g, o, p = {}) {
 }
 // [가로, 세로, 그리기(g, 자세)] — 발밑이 아래에서 3 위
 const ART = {
+  kani: [34, 42, kani], anoko: [96, 70, (g, p) => { g.scale(2.4, 2.4); anoko(g, p) }],
   chiikawa: [34, 35, chiikawa], hachiware: [34, 37, hachiware], usagi: [32, 50, usagi], shisa: [36, 35, shisa], momonga: [42, 38, momonga], rakko: [36, 38, rakko], kurimanju: [38, 32, kurimanju],
   goblin: [36, 33, (g, p) => goblin(g, p)],
   rusher: [36, 33, (g, p) => goblin(g, p, { col: '#c7df9a', band: true })],
@@ -638,7 +681,7 @@ const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
 function splash(x, y, R, dmg, col, sea = 1) { near(x, y, R, e => { hurt(e, dmg, x, y, 60, sea) }); fx({ k: 'boom', x, y, R, col, T: 0.35 }) }
 
 // ---- 스킬 — 한 발씩(여러 개면 0.12초 간격으로)
-const SASU = { chiikawa: '#ff9ab8', hachiware: '#7fa6dc' }   // 사스마타 색
+const SASU = { chiikawa: '#ff9ab8', hachiware: '#7fa6dc', kani: '#a9b1bc' }   // 사스마타 색 — 치이카와 분홍 · 하치와레 파랑 · 카니 회색
 const SHOT = {
   sasu(w, st, i, A, D) {
     const e = alive(w.list[i % (w.list.length || 1)]) || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, v = 520 * st.spd * S.speed
@@ -877,6 +920,7 @@ function bossAI(e, dt, dx, dy, d) {
       break
     case 'bigChimera': e.patT = e.mid ? 5.5 : 4; leap(e); break
     case 'mermaid': e.patT = 3 + rnd() * 1.5; Object.assign(e, { st: 'wind', stT: 0.55, dx, dy }); break   // 날카로운 이빨로 달려들어 문다(charge)
+    case 'anoko': e.patT = 2.4; [() => Object.assign(e, { st: 'wind', stT: 0.7, dx, dy }), () => { e.act = { k: 'sweep', t: 0.5 }; bubble(e, '꼬리!', '#4f9a8c') }, () => { e.act = { k: 'volley', n: 5, t: 0.45, shot: 'claw' } }][e.pat++ % 3](); break
     case 'siren': e.patT = e.angry ? 2 : 2.6; [() => { e.act = { k: 'notes', t: 0.5 } }, () => { e.act = { k: 'vines', t: 0.3 }; bubble(e, '덩굴아!', '#58b947') }, () => { e.act = { k: 'slam', t: 0.35 }; bubble(e, '꼬리치기!', '#ff8a8a') }][e.pat++ % 3](); break
   }
 }
@@ -890,6 +934,7 @@ const ACT = {
     for (let i = 0; i < n; i++) { const q = o + i / n * TAU; G.eshots.push({ k: 'note', x: e.x, y: e.y, vx: Math.cos(q) * 170, vy: Math.sin(q) * 170, t: 0, life: 3.4, dmg: pct(0.06), r: 7 }) }
   },
   squad() { for (let i = 0; i < 8; i++) { const q = i / 8 * TAU; spawn('goblin', pl.x + Math.cos(q) * 230, pl.y + Math.sin(q) * 230) } },   // 부하를 불러 나를 에워싼다
+  sweep(e) { G.haz.push({ k: 'bomb', x: e.x, y: e.y, R: 150, t: 0, T: 1, dmg: pct(0.18), col: '#4f9a8c' }) },   // 용 꼬리로 둘레를 휩쓴다 — 멀리 벗어나기
   vines() { for (let i = 0; i < 7; i++) { const a = rnd() * TAU, d = i ? 50 + rnd() * 180 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 55, t: -i * 0.12, T: 1.15, dmg: pct(0.12), col: '#58b947' }) } },   // 노래로 땅에서 덩굴을 솟게 한다
   slam() { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 100, t: 0, T: 1, dmg: pct(0.2), col: '#ff4d4d' }) },   // 큰 꼬리로 내려친다
   wave(e, a) { fx({ k: 'wave', x: e.x, y: e.y, R: 360, T: 0.8, st: a.id, col: STATUS[a.id].col }) },
@@ -1281,7 +1326,7 @@ function world(c, ox, oy) {
   }
   for (const b of G.eshots) {
     const y = b.y - 14
-    if (b.k === 'spike') { c.save(); c.translate(b.x, y); c.rotate(Math.atan2(b.vy, b.vx)); c.beginPath(); c.moveTo(8, 0); c.lineTo(-6, -4); c.lineTo(-6, 4); c.closePath(); c.fillStyle = '#3f7f74'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.5; c.stroke(); c.restore() }
+    if (b.k === 'spike' || b.k === 'claw') { c.save(); c.translate(b.x, y); c.rotate(Math.atan2(b.vy, b.vx)); c.beginPath(); c.moveTo(8, 0); c.lineTo(-6, -4); c.lineTo(-6, 4); c.closePath(); c.fillStyle = b.k === 'claw' ? '#b7793f' : '#3f7f74'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.5; c.stroke(); c.restore() }
     else if (b.k === 'note') put(c, SPR.pinkNote, b.x, y)
     else { oval(c, b.x, y, b.r, b.r); c.fillStyle = b.k === 'rock' ? '#9a8f86' : '#6fc3ff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke(); c.fillStyle = 'rgba(255,255,255,.7)'; oval(c, b.x - b.r * 0.3, y - b.r * 0.35, b.r * 0.3, b.r * 0.25); c.fill() }
   }
