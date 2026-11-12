@@ -40,6 +40,11 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(200)
     await page.keyboard.down('ArrowRight'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowRight')
     await page.screenshot({ path: OUT + '4-play.png' })
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200)   // 일시정지 — 스킬을 누르면 자세히
+    await page.locator('.build .chip').first().click(); await page.waitForTimeout(100)
+    const det = await page.locator('.skill-detail').innerText(); if (!/피해/.test(det) || !/시너지/.test(det)) errors.push('[desktop] 일시정지 스킬 자세히: ' + det.slice(0, 60))
+    await page.screenshot({ path: OUT + '4-pause.png' })
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100)
     // 첫 상자가 열릴 때까지
     await page.evaluate(() => { const M = window.__mjg; while (M.mode === 'play' && M.G.t < 120) { M.pl.inv = 1e9; M.step(1 / 30) } })
     await page.waitForTimeout(700)

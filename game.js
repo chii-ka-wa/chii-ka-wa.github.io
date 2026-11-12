@@ -2102,11 +2102,37 @@ function guide() {
     h('ul', { class: 'list' }, Object.entries(BOSS).map(([id, b]) => li(portrait(id), b.name, b.note, `나오는 때: ${when(id)}${b.st ? ` · 상태이상: ${STATUS[b.st].name}(${STATUS[b.st].note})` : ''}`)), li(portrait('darkstar'), '검은 별똥별', '쓰러뜨릴 수 없다 — 끝까지 쫓아오며(점점 빨라진다) 3초마다 별 조각을 사방으로 뿌린다. 30:00까지 도망치기', `나오는 때: ${fmt(DARK_T)}(세이렌을 못 쓰러뜨렸을 때)`)),
     h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }
-const chips = () => h('div', { class: 'build' }, G.weapons.map(w => h('span', { class: 'chip w' }, `${WEAP[w.id].icon} ${WEAP[w.id].name} Lv${w.lv}`)), Object.entries(G.passives).map(([id, lv]) => h('span', { class: 'chip' }, `${PASS[id].icon} ${PASS[id].name} Lv${lv}`)))
+/** 지금 가진 스킬 · 아이템 — pick 을 주면 눌러서 자세히 볼 수 있는 단추로 */
+const chips = pick => {
+  const chip = (kind, id, txt) => pick ? h('button', { type: 'button', class: `chip${kind === 'w' ? ' w' : ''}`, onclick: e => pick(kind, id, e.currentTarget) }, txt) : h('span', { class: `chip${kind === 'w' ? ' w' : ''}` }, txt)
+  return h('div', { class: 'build' }, G.weapons.map(w => chip('w', w.id, `${WEAP[w.id].icon} ${WEAP[w.id].name} Lv${w.lv}`)), Object.entries(G.passives).map(([id, lv]) => chip('p', id, `${PASS[id].icon} ${PASS[id].name} Lv${lv}`)))
+}
+/** 스킬 · 아이템 자세히 — 지금 수치(아이템 · 캐릭터 보정까지), 다음 레벨, 시너지 */
+function skillInfo(kind, id) {
+  const r1 = v => +(+v).toFixed(1), kv = (rows, wide) => h('div', { class: `kv${wide ? ' wide' : ''}` }, rows.map(([k, v]) => h('div', {}, h('small', {}, k), h('b', {}, v))))
+  if (kind === 'p') {
+    const d = PASS[id], lv = G.passives[id]
+    return [h('p', { class: 't' }, `${d.icon} ${d.name}`, h('small', {}, ` Lv${lv}/${d.max}`)), h('p', {}, `레벨마다 ${d.note}`), kv([['지금', d.note.replace(/[\d.]+/, x => r1(x * lv))]], true), h('p', { class: 'next' }, lv < d.max ? `다음 Lv${lv + 1} — ${d.note.replace(/[\d.]+/, x => r1(x * (lv + 1)))}` : '최대 레벨이에요')]
+  }
+  const w = G.weapons.find(x => x.id === id), d = WEAP[id], st = w.st, max = d.ups.length + 1
+  const rows = [['피해', r1(st.dmg * S.might)], ['쿨타임', `${r1(st.cd * S.cdr)}초`], ['개수', st.n + S.amount], ['범위', `${Math.round(st.area * S.area * 100)}%`]]
+  if (st.dur) rows.push(['지속', `${r1(st.dur * S.dur)}초`])
+  if (st.pierce) rows.push(['관통', st.pierce])
+  if (st.bounce) rows.push(['튕김', st.bounce])
+  if (st.spd !== 1) rows.push(['속도', `${Math.round(st.spd * S.speed * 100)}%`])
+  const sy = synOf(id), mate = mateOf(id), on = G.weapons.some(x => x.id === mate)
+  return [
+    h('p', { class: 't' }, `${d.icon} ${d.name}`, h('small', {}, ` Lv${w.lv}/${max}`)), h('p', {}, d.note), kv(rows),
+    h('p', { class: 'next' }, w.lv < max ? `다음 Lv${w.lv + 1} — ${Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ')}` : '최대 레벨이에요'),
+    h('p', { class: `syn${on ? ' on' : ''}` }, on ? `✨ 시너지 「${sy[0]}」 켜짐 — ${synText(sy)}` : `시너지 「${sy[0]}」 — ${WEAP[mate].icon} ${WEAP[mate].name}을(를) 얻으면 ${synText(sy)}`),
+  ]
+}
 function pause() {
   if (mode !== 'play') return
   mode = 'pause'; calm(); pauseBtn.hidden = true
-  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지'), chips(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main'))))
+  const det = h('div', { class: 'skill-detail' }, h('p', { class: 'hint' }, '스킬 · 아이템을 누르면 자세히 볼 수 있어요'))
+  const pick = (kind, id, el) => { for (const c of ui.querySelectorAll('.build .chip')) c.classList.toggle('on', c === el); det.replaceChildren(...skillInfo(kind, id)) }
+  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지'), chips(pick), det, h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main'))))
 }
 function resume() { if (mode !== 'pause') return; mode = 'play'; ui.hidden = true; pauseBtn.hidden = false }
 function finish(win, quit = false) {
