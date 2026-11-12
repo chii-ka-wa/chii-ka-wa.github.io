@@ -217,9 +217,10 @@ function fluffOval(g, cx, cy, rx, ry, rot, fill, n = 28) {   // 복슬한 타원
   g.stroke(); g.restore()
 }
 // 찹쌀떡 몸 — 위는 둥글고 mid(볼 높이)가 가장 넓고 아래로 조금 좁아지며 바닥은 살짝 납작(베지에 다섯)
-function mochiSegs(W, H, mid = 0.42) {   // 옆선이 곧게 서지 않고 둥글게 — 위는 사분원, 볼 아래로 둥글게 좁아지고 바닥은 살짝 볼록
+function mochiSegs(W, H, mid = 0.42, wide = 0) {   // 옆선이 곧게 서지 않고 둥글게 — 위는 사분원, 볼 아래로 둥글게 좁아지고 바닥은 살짝 볼록
   const hw = W / 2, b = -1, t = b - H, m = t + H * mid, up = m - (m - t) * 0.56, lo = m + (b - m) * 0.56
-  return [[0, t, hw * 0.56, t, hw, up, hw, m], [hw, m, hw, lo, hw * 0.66, b, hw * 0.2, b], [hw * 0.2, b, hw * 0.07, b + 0.3, -hw * 0.07, b + 0.3, -hw * 0.2, b], [-hw * 0.2, b, -hw * 0.66, b, -hw, lo, -hw, m], [-hw, m, -hw, up, -hw * 0.56, t, 0, t]]
+  const bc = hw * (0.66 + 0.3 * wide), be = hw * (0.2 + 0.4 * wide)   // 아래 모서리 · 바닥 끝 — wide 면 아래가 넓다
+  return [[0, t, hw * 0.56, t, hw, up, hw, m], [hw, m, hw, lo, bc, b, be, b], [be, b, be * 0.35, b + 0.3, -be * 0.35, b + 0.3, -be, b], [-be, b, -bc, b, -hw, lo, -hw, m], [-hw, m, -hw, up, -hw * 0.56, t, 0, t]]
 }
 function segPath(S) { const P = new Path2D(); P.moveTo(S[0][0], S[0][1]); for (const s of S) P.bezierCurveTo(s[2], s[3], s[4], s[5], s[6], s[7]); P.closePath(); return P }
 function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으로 옅고 짧은 털
@@ -236,7 +237,7 @@ function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으�
 /** o: W · H 몸, fur 털, limb 발 색, armFill 팔 색, arms 'cheek'(볼에 손) | 'none', fluffy 복슬 테두리,
  *     back 몸 뒤(꼬리 · 집게), cap 몸 안 무늬, ears 몸 테두리 위에 이어 붙는 것(귀 · 갈기), face, front 몸 앞, hold 보는 쪽 손에 든 것 */
 function mochi(g, o, p = {}) {
-  const W = o.W || 25, H = o.H || 24, hw = W / 2, t = -1 - H, mid = o.mid || 0.42, S = mochiSegs(W, H, mid), P = segPath(S), foot = p.foot || 0, arm = p.arm || 0, limb = o.limb || o.fur, af = o.armFill || limb
+  const W = o.W || 25, H = o.H || 24, hw = W / 2, t = -1 - H, mid = o.mid || 0.42, S = mochiSegs(W, H, mid, o.wide), P = segPath(S), foot = p.foot || 0, arm = p.arm || 0, limb = o.limb || o.fur, af = o.armFill || limb
   o.back?.(g, p)
   for (const s of [-1, 1]) { const lift = Math.max(0, s * foot); blob(g, s * (3.3 + lift * 0.5), -0.9 - lift * 1.4, 2.3, 1.35, limb, LW) }   // 작은 발 — 걸을 때 번갈아 든다
   g.save(); g.translate(0, p.bob || 0)
@@ -621,36 +622,41 @@ function usagi(g, p) {
     },
   }, p)
 }
-// 모몽가 — 하얀 복슬 · 키 큰 둥근 귀(안쪽 하늘색 · 결) · 이마의 하늘색 점 · 눈꺼풀이 무거운 큰 눈 · 몸만 한 하늘색 꼬리(털결) · 볼털
+// 모몽가 — 하얀 몸 · 키 큰 귀(안쪽 하늘색 · 결) · 진한 테 안에 흰 반원과 초승달이 있는 눈 · 콧등의 하늘색 점 · ω 입 · 볼털 · 보는 쪽 반대에 하늘색 꼬리
 function momonga(g, p) {
-  const H = 26, y = f => at(H, f), sky = '#bfe2f2'
+  const H = 27, y = f => at(H, f), sky = '#bfe2f2'
+  const fur = (x0, y0, sx, n) => { g.strokeStyle = OUT; g.lineWidth = 0.55; g.lineCap = 'round'; g.beginPath(); for (let i = 0; i < n; i++) { const yy = y0 + i * 1.5; g.moveTo(x0, yy); g.lineTo(x0 + sx * 2.6, yy - 0.8 + i * 0.4) } g.stroke() }   // 삐죽한 털
   mochi(g, {
-    fur: '#fff', W: 24, H, mid: 0.44, fluffy: true,
-    back: g => {
-      g.save(); g.translate(9.4, y(0.42)); g.rotate(0.15); blob(g, 0, 0, 7.6, 12.6, sky, LW)   // 하늘색 꼬리 — 바깥 털결
-      g.strokeStyle = OUT; g.lineWidth = 0.6; g.lineCap = 'round'; g.beginPath()
-      for (let i = 0; i < 16; i++) { const a = -1.5 + i / 15 * 3, x = Math.cos(a) * 7.6, yy = Math.sin(a) * 12.6; g.moveTo(x * 0.8, yy * 0.8); g.lineTo(x * 1.08, yy * 1.08) }
+    fur: '#fff', W: 24, H, mid: 0.4, wide: 0.75,
+    back: g => {   // 하늘색 꼬리 — 보는 쪽 반대(왼쪽)에, 테두리 안쪽으로 털결
+      g.save(); g.translate(-9.6, y(0.46)); g.rotate(-0.15); blob(g, 0, 0, 7.8, 12.8, sky, LW)
+      g.strokeStyle = OUT; g.lineWidth = 0.7; g.lineCap = 'round'; g.beginPath()
+      for (let i = 0; i < 14; i++) { const a = Math.PI - 1.45 + i / 13 * 2.9, x = Math.cos(a) * 7.8, yy = Math.sin(a) * 12.8; g.moveTo(x * 0.98, yy * 0.98); g.lineTo(x * 0.74, yy * 0.74) }
       g.stroke(); g.restore()
-      g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); for (const s of [-1, 1]) for (let i = 0; i < 4; i++) { const yy = y(0.38 + i * 0.05); g.moveTo(s * 11.4, yy); g.lineTo(s * 14, yy - 0.6 + i * 0.35) } g.stroke()   // 양 볼의 삐죽한 볼털
     },
     ears: g => {
       for (const s of [-1, 1]) {
         bump(g, s * 6.8, y(0.02), 3.4, 4.8, s * 0.2, '#fff', Math.PI * 1.0, Math.PI * 2.0)
         g.fillStyle = sky; g.beginPath(); g.ellipse(s * 6.9, y(-0.02), 1.7, 2.9, s * 0.2, 0, TAU); g.fill()
-        g.strokeStyle = OUT; g.lineWidth = 0.45; g.beginPath(); g.moveTo(s * 6.3, y(-0.08)); g.lineTo(s * 6.6, y(0.04)); g.moveTo(s * 7.6, y(-0.06)); g.lineTo(s * 7.5, y(0.03)); g.stroke()
+        g.strokeStyle = OUT; g.lineWidth = 0.45; g.beginPath(); g.moveTo(s * 6.3, y(0.02)); g.lineTo(s * 6.7, y(0.06)); g.moveTo(s * 7.6, y(0.01)); g.lineTo(s * 7.4, y(0.05)); g.stroke()
       }
+      fur(11.8, y(0.32), 1, 5); fur(-11.8, y(0.58), -1, 4)   // 꼬리 반대쪽 볼털 · 꼬리 쪽 옆털
     },
     face: (g, p) => {
-      g.fillStyle = sky; g.beginPath(); g.ellipse(0, y(0.32), 1.7, 1.5, 0, 0, TAU); g.fill()   // 눈 사이 콧등의 하늘색 점
-      if (p.hurt) dotEyes(g, y(0.34), 4.5, 1.6, p)
-      else for (const s of [-1, 1]) {   // 얄밉게 내리깐 눈 — 가로로 긴 흰 눈의 위를 두꺼운 눈꺼풀이 덮는다(깜빡이면 더 내려온다)
-        const ex = s * 4.5, ey = y(0.34), lid = p.blink ? 1.1 : -0.35, E = new Path2D(); E.ellipse(ex, ey, 2.6, 1.75, s * -0.08, 0, TAU)
-        g.fillStyle = '#fff'; g.fill(E); g.save(); g.clip(E)
-        g.fillStyle = '#3b2a26'; g.beginPath(); g.moveTo(ex - 3, ey - 2); g.lineTo(ex + 3, ey - 2); g.lineTo(ex + 3, ey - 0.2 + lid); g.quadraticCurveTo(ex, ey + 0.6 + lid, ex - 3, ey - 0.2 + lid); g.closePath(); g.fill()
-        g.restore(); g.lineWidth = 0.8; g.strokeStyle = OUT; g.stroke(E)
+      g.fillStyle = sky; g.beginPath(); g.ellipse(0, y(0.35), 1.8, 1.9, 0, 0, TAU); g.fill()   // 눈 사이 콧등의 하늘색 점
+      if (p.hurt) dotEyes(g, y(0.36), 4.5, 1.6, p)
+      else for (const s of [-1, 1]) {
+        const ex = s * 4.6, ey = y(0.36)
+        g.strokeStyle = OUT; g.lineWidth = 0.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(s * 2.3, ey - 3.3); g.lineTo(s * 3.1, ey - 3.5); g.stroke()   // 작은 눈썹 점
+        if (p.blink) { g.lineWidth = 0.9; g.beginPath(); g.moveTo(ex - 2.2, ey); g.quadraticCurveTo(ex, ey + 1.5, ex + 2.2, ey); g.stroke(); continue }
+        g.fillStyle = '#3b2a26'; g.beginPath(); g.ellipse(ex, ey, 2.7, 2.6, 0, 0, TAU); g.fill()   // 둥근 진한 테
+        g.save(); g.beginPath(); g.ellipse(ex, ey, 2.05, 1.95, 0, 0, TAU); g.clip(); g.fillStyle = '#fff'
+        g.beginPath(); g.moveTo(ex - 3, ey - 0.05); g.quadraticCurveTo(ex, ey + 0.35, ex + 3, ey - 0.05); g.lineTo(ex + 3, ey - 3); g.lineTo(ex - 3, ey - 3); g.fill()   // 위의 흰 반원
+        g.beginPath(); g.moveTo(ex - 3, ey + 0.55); g.quadraticCurveTo(ex, ey + 1.1, ex + 3, ey + 0.55); g.lineTo(ex + 3, ey + 3); g.lineTo(ex - 3, ey + 3); g.fill()   // 아래 흰 초승달(가운데 얇게 휜 띠만 남는다)
+        g.restore()
       }
-      hatch(g, y(0.45), 7.6, 0.9)
-      catMouth(g, y(0.42), 0); g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); g.moveTo(-0.7, y(0.455)); g.quadraticCurveTo(0, y(0.47), 0.7, y(0.455)); g.stroke()   // 비열한 웃음 — ω 아래 입술 한 줄
+      hatch(g, y(0.47), 7.6, 0.95)
+      catMouth(g, y(0.46), 0); g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); g.moveTo(-0.8, y(0.5)); g.quadraticCurveTo(0, y(0.515), 0.8, y(0.5)); g.stroke()   // ω 아래 입술 한 줄
     },
   }, p)
 }
@@ -825,8 +831,12 @@ function trimRect(cs) {
 const crop = (c, r) => { const o = mk(r.w, r.h); o.getContext('2d').drawImage(c, -r.x, -r.y); return o }
 const PORT = {}   // 메뉴 · 도감 그림 — 크게 그려 빈 둘레를 자른 것(캐릭터는 같은 틀의 걷는 그림 _walk 도)
 function portrait(id) {
-  const P = PORT[id] ||= (() => { const idle = artSprite(id, 3).c, walk = CHARS.some(c => c.id === id) ? WALK.map(p => artSprite(id, 3, p).c) : [], r = trimRect([idle, ...walk]); return { idle: crop(idle, r), walk: walk.map(w => crop(w, r)) } })()
-  const c = mk(P.idle.width, P.idle.height); c.getContext('2d').drawImage(P.idle, 0, 0); c.className = 'pt'; c._walk = P.walk; return c
+  const P = PORT[id] ||= (() => {
+    const m = id === 'momonga' ? x => { const o = mk(x.width, x.height), g = o.getContext('2d'); g.scale(-1, 1); g.drawImage(x, -x.width, 0); return o } : x => x   // 모몽가는 꼬리가 오른쪽에 보이게(게임에선 보는 쪽 반대)
+    const idle = artSprite(id, 3).c, walk = CHARS.some(c => c.id === id) ? WALK.map(p => artSprite(id, 3, p).c) : [], r = trimRect([idle, ...walk])
+    return { idle: m(crop(idle, r)), walk: walk.map(w => m(crop(w, r))) }
+  })()
+  const c = mk(P.idle.width, P.idle.height); c.getContext('2d').drawImage(P.idle, 0, 0); c.className = 'pt'; c._idle = P.idle; c._walk = P.walk; return c
 }
 
 const TILE = 256
@@ -897,8 +907,8 @@ addEventListener('keydown', e => {
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
   if (mode === 'box') boxKey(e)
   if (mode === 'chars' && !e.repeat) {
-    if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') { pickCi = (pickCi + CHARS.length - 1) % CHARS.length; chars() }
-    if (e.code === 'ArrowRight' || e.code === 'ArrowDown') { pickCi = (pickCi + 1) % CHARS.length; chars() }
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') pickChar((pickCi + CHARS.length - 1) % CHARS.length)
+    if (e.code === 'ArrowRight' || e.code === 'ArrowDown') pickChar((pickCi + 1) % CHARS.length)
     if (e.code === 'Enter' && !e.target.closest?.('button')) startGame(pickCi)
   }
 })
@@ -1888,7 +1898,15 @@ function title() {
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
     h('div', { class: 'row' }, btn('도감', guide), btn('☕ 후원', donate), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
-    h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ')))
+    h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
+    h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
+}
+/** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
+function pickChar(i) {
+  const cards = ui.querySelectorAll('.char'), old = cards[pickCi], c = old?.querySelector('canvas')
+  if (old) old.classList.remove('on')
+  if (c?._idle) { const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(c._idle, 0, 0) }
+  pickCi = i; cards[i]?.classList.add('on')
 }
 function chars() {
   mode = 'chars'; G = null
@@ -1896,7 +1914,7 @@ function chars() {
     h('p', { class: 'h' }, '누구랑 토벌할까?'),
     h('div', { class: 'chars' }, CHARS.map((ch, i) => {
       const b = save.best[ch.id], W = WEAP[ch.w]
-      return h('button', { type: 'button', class: `char${i === pickCi ? ' on' : ''}`, onclick: () => { if (pickCi === i) return startGame(i); pickCi = i; chars() } },
+      return h('button', { type: 'button', class: `char${i === pickCi ? ' on' : ''}`, onclick: () => pickCi === i ? startGame(i) : pickChar(i) },
         portrait(ch.id), h('b', {}, ch.name), h('small', {}, `${W.icon} ${W.name}`), h('span', { class: 'trait' }, ch.trait), h('span', { class: 'note' }, ch.note),
         h('span', { class: 'best' }, b ? `최고 ${fmt(b.t)} · 레벨 ${b.lvl}${b.clears ? ` · 클리어 ${b.clears}번` : ''}` : '아직 기록 없음'))
     })),

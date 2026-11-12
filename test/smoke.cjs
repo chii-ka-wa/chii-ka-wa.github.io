@@ -37,6 +37,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.getByRole('button', { name: '← 처음으로' }).click()
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '3-chars.png' })
+    const same = await page.evaluate(async () => { const before = document.querySelector('.panel'); document.querySelectorAll('.char')[3].click(); await new Promise(r => setTimeout(r, 50)); const on = document.querySelectorAll('.char.on').length; document.querySelectorAll('.char')[0].click(); return before === document.querySelector('.panel') && on === 1 })
+    if (!same) errors.push('[desktop] 캐릭터를 고를 때 화면을 새로 그린다(깜빡임)')
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(200)
     await page.keyboard.down('ArrowRight'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowRight')
     await page.screenshot({ path: OUT + '4-play.png' })
