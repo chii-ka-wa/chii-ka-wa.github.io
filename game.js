@@ -138,6 +138,75 @@ const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = {
 try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 
+// ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
+const SND = (() => {
+  let ac = null, out = null, mus = null, sfx = null, noise = null, theme = '', step = 0, at = 0, timer = 0, duck = 1
+  const last = {}, mtof = n => 440 * 2 ** ((n - 69) / 12)
+  const THEMES = {   // 직접 지은 곡 — 8분음표 한 칸(0 은 쉼), 베이스는 4분음표
+    field: { bpm: 112, lead: [76, 79, 81, 79, 76, 0, 74, 72, 74, 76, 79, 76, 74, 0, 72, 0, 72, 76, 79, 81, 84, 81, 79, 76, 79, 76, 74, 76, 72, 0, 0, 0], bass: [48, 48, 43, 43, 41, 41, 48, 43], vol: 0.16 },
+    siren: { bpm: 136, lead: [69, 72, 76, 72, 74, 76, 77, 76, 76, 74, 72, 71, 69, 0, 64, 0, 69, 72, 76, 81, 79, 77, 76, 74, 72, 74, 71, 68, 69, 0, 0, 0], bass: [45, 45, 41, 41, 43, 43, 40, 40], vol: 0.17 },
+  }
+  function boot() {
+    if (ac) return ac.state === 'suspended' && ac.resume()
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return
+    ac = new C(); out = ac.createGain(); out.connect(ac.destination); mus = ac.createGain(); mus.connect(out); sfx = ac.createGain(); sfx.gain.value = 0.55; sfx.connect(out)
+    const b = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; noise = b
+    mute(!!save.mute); if (theme) play(theme, true)
+  }
+  /** 음 하나 — 파형 · 길이 · 크기 · (끝 음으로 미끄러지기) · (떨림) */
+  function tone(f, t, len, type = 'square', vol = 0.2, bus = sfx, f2 = 0, vib = 0) {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + len)
+    if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 9; lg.gain.value = vib; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + len) }
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + len)
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + len + 0.02)
+  }
+  function hiss(t, len, vol, hz = 7000, bus = sfx) { const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = noise; f.type = 'bandpass'; f.frequency.value = hz; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len); n.connect(f); f.connect(g); g.connect(bus); n.start(t); n.stop(t + len) }
+  function tick() {   // 조금 앞서 음을 예약한다
+    const T = THEMES[theme]; if (!T || !ac) return
+    const dt = 60 / T.bpm / 2
+    while (at < ac.currentTime + 0.15) {
+      const i = step % 32, n = T.lead[i]
+      if (n) tone(mtof(n), at, dt * 1.6, 'square', T.vol * 0.55, mus)
+      if (i % 2 === 0) { tone(mtof(T.bass[(i / 2 | 0) % 8 * 1]), at, dt * 1.8, 'triangle', T.vol * 1.1, mus); if (i % 4 === 0) tone(150, at, 0.12, 'sine', T.vol * 0.9, mus, 50) }
+      hiss(at, 0.04, T.vol * (i % 2 ? 0.18 : 0.3), 8000, mus)
+      at += dt; step++
+    }
+  }
+  function play(name, force) {   // 곡 바꾸기(같은 곡이면 그대로)
+    if (name === theme && !force && timer) return
+    theme = name; if (!ac) return
+    clearInterval(timer); timer = 0; step = 0; at = ac.currentTime + 0.05
+    if (name) timer = setInterval(tick, 30)
+  }
+  function mute(m) { save.mute = m; persist(); if (out) out.gain.setTargetAtTime(m ? 0 : 0.9, ac.currentTime, 0.03); btn && (btn.textContent = m ? '🔇' : '🔊') }
+  const ok = (k, gap) => { if (!ac || save.mute) return false; const t = ac.currentTime; if (last[k] && t - last[k] < gap) return false; last[k] = t; return true }
+  // 캐릭터 목소리 — 높이 · 파형 · 떨림이 다른 짧은 삐약 소리(기쁠 때는 올라가고, 아플 때는 내려간다)
+  const VOICE = { chiikawa: [880, 'triangle', 30], hachiware: [700, 'sine', 14], usagi: [1050, 'square', 8], momonga: [820, 'sawtooth', 20], kurimanju: [430, 'triangle', 16], rakko: [360, 'square', 4], shisa: [640, 'triangle', 18], kani: [560, 'sine', 12] }
+  const api = {
+    boot, play, mute, toggle: () => mute(!save.mute),
+    duck(on) { duck = on ? 0.35 : 1; if (mus) mus.gain.setTargetAtTime(duck, ac.currentTime, 0.1) },
+    voice(id, mood = 'happy') {
+      if (!ok('voice', 0.35)) return; const [f, type, vib] = VOICE[id] || VOICE.chiikawa, t = ac.currentTime
+      if (mood === 'happy') { tone(f, t, 0.12, type, 0.16, sfx, f * 1.35, vib); tone(f * 1.2, t + 0.13, 0.16, type, 0.15, sfx, f * 1.6, vib) }
+      else if (mood === 'cry') { tone(f * 1.1, t, 0.5, type, 0.15, sfx, f * 0.6, vib * 1.6) }
+      else tone(f * 1.15, t, 0.16, type, 0.15, sfx, f * 0.7, vib)
+    },
+    hit() { if (ok('hit', 0.07)) hiss(ac.currentTime, 0.035, 0.12, 2500) },
+    kill() { if (ok('kill', 0.06)) tone(520 + Math.random() * 120, ac.currentTime, 0.08, 'sine', 0.16, sfx, 1100) },
+    gem() { if (ok('gem', 0.05)) tone(1500 + Math.random() * 300, ac.currentTime, 0.06, 'sine', 0.08, sfx, 2100) },
+    level() { if (!ok('level', 0.3)) return; const t = ac.currentTime; [72, 76, 79, 84].forEach((n, i) => tone(mtof(n), t + i * 0.07, 0.2, 'triangle', 0.18)) },
+    chest() { if (!ok('chest', 0.3)) return; const t = ac.currentTime; [79, 84, 88, 91, 96].forEach((n, i) => tone(mtof(n), t + i * 0.05, 0.25, 'sine', 0.14)) },
+    hurt(id) { if (!ok('hurt', 0.25)) return; tone(160, ac.currentTime, 0.14, 'square', 0.14, sfx, 70); api.voice(id, 'ouch') },
+    boss() { if (!ok('boss', 1)) return; const t = ac.currentTime; tone(110, t, 0.45, 'sawtooth', 0.14, sfx, 82, 6); tone(98, t + 0.4, 0.6, 'sawtooth', 0.14, sfx, 70, 8); tone(55, t, 1, 'sine', 0.2, sfx) },   // 보스 — 낮은 으르렁 소리
+    dark() { if (!ok('dark', 1)) return; const t = ac.currentTime; tone(70, t, 1.6, 'sawtooth', 0.16, sfx, 40, 3); hiss(t, 1.2, 0.18, 400) },
+    end(win) { play(''); if (!ac || save.mute) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
+  }
+  let btn = null
+  api.button = b => { btn = b; b.textContent = save.mute ? '🔇' : '🔊'; b.onclick = e => { e.stopPropagation(); boot(); api.toggle() } }
+  for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, boot, { passive: true })
+  return api
+})()
+
 function h(tag, props, ...kids) {
   const e = document.createElement(tag)
   for (const k in props || {}) { const v = props[k]; if (v == null || v === false) continue; if (k.startsWith('on')) e[k] = v; else if (k === 'class') e.className = v; else e.setAttribute(k, v) }
@@ -1028,6 +1097,7 @@ function sprites() {
 
 // ---------------------------------------------------------------- 화면 · 입력
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ui = document.getElementById('ui'), pauseBtn = document.getElementById('pause')
+SND.button(document.getElementById('snd'))
 let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2
 function size() {
   const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height)))
@@ -1094,7 +1164,7 @@ function newGame(ch) {
   cam.x = cam.y = 0; shake = 0; calm()
   say(`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
-function startGame(i) { pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2 }
+function startGame(i) { pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field'); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -1272,7 +1342,7 @@ function summon(kind, mid = false) {
   const e = spawn(kind), B = BOSS[kind]
   if (mid) { e.mid = true; e.max *= 0.4; e.hp = e.max; e.r *= 0.8; e.sc = 0.8; e.xp = Math.round(e.xp * 0.3) }
   Object.assign(e, { castT: G.t + 6 + rnd() * 4, patT: 2.5 + rnd(), pat: 0 })
-  bubble(e, B.line, '#fff')
+  bubble(e, B.line, '#fff'); SND.boss()
   say(mid ? `중간보스 — ${B.name}` : `${B.name} 등장!`, 2.2, mid ? '#ffb35e' : '#ff6b6b'); shake = Math.max(shake, mid ? 4 : 8)
   return e
 }
@@ -1280,7 +1350,7 @@ const bubble = (e, s, col) => fx({ k: 'shout', e, s, col, T: 1.8 })
 /** 최종보스 — 세이렌 + 둘레를 도는 인어 셋. 인어가 살아 있는 동안 세이렌은 받는 피해 -50% */
 function finale() {
   const s = summon('siren'); s.sea = true
-  G.final = { siren: s, mermaids: [] }
+  G.final = { siren: s, mermaids: [] }; SND.play('siren')
   for (let i = 0; i < 3; i++) {
     const a = i / 3 * TAU, m = spawn('mermaid', s.x + Math.cos(a) * 130, s.y + Math.sin(a) * 100)
     Object.assign(m, { v: i, sea: true, orb: a, patT: 2 + i, pat: 0, castT: Infinity })
@@ -1453,6 +1523,7 @@ function afflict(id) {
 }
 /** sea — 인어 · 세이렌에게 곱하는 배수(극매운 카레) */
 function hurt(e, dmg, ox, oy, kb = 0, sea = 1) {
+  SND.hit()
   if (e.dead || e.rush) return   // 돌격대는 스킬에 안 맞는다 — 피하는 수밖에
   if (e.type === 'star' && rnd() < 0.05 && G.fx.length < 150) fx({ k: 'text', x: e.x, y: e.y - 26, s: '흐아아악!', col: '#ffe066', T: 0.6 })
   const crit = rnd() < S.crit
@@ -1465,7 +1536,7 @@ function hurt(e, dmg, ox, oy, kb = 0, sea = 1) {
 }
 function kill(e, quiet = false) {
   e.dead = true
-  if (!quiet) { G.kills++; gem(e.x, e.y, e.xp) }
+  if (!quiet) { G.kills++; gem(e.x, e.y, e.xp); SND.kill() }
   const col = FOES[e.type].col
   if (G.fx.length < 180) fx({ k: 'puff', x: e.x, y: e.y - e.r, R: e.r * 1.4, T: 0.4 })
   for (let i = 0; i < (e.boss ? 36 : e.elite ? 14 : 3); i++) { const a = rnd() * TAU, s = 40 + rnd() * (e.boss ? 240 : 110); part(e.x, e.y - e.r, Math.cos(a) * s, Math.sin(a) * s - 60, i % 3 ? col : '#fff', 0.35 + rnd() * 0.35, 2 + rnd() * (e.boss ? 4 : 2.5)) }
@@ -1486,9 +1557,9 @@ function kill(e, quiet = false) {
 }
 function ouch(d) {
   if (pl.inv > 0 || G.dying || G.won) return
-  d = Math.max(1, Math.round(d - S.armor)); pl.hp -= d; pl.inv = 0.4; pl.hurtT = 0.35; shake = Math.max(shake, 4)
+  d = Math.max(1, Math.round(d - S.armor)); pl.hp -= d; pl.inv = 0.4; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
   num(pl.x, pl.y - 48, d, 'hurt')
-  if (pl.hp <= 0) { pl.hp = 0; G.dying = 1.2; say('와아…', 1.5, '#ff6b6b') }
+  if (pl.hp <= 0) { pl.hp = 0; G.dying = 1.2; say('와아…', 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }
 }
 
 // ---- 경험치 · 줍는 것
@@ -1555,7 +1626,7 @@ function darkStep(dt) {
     if (G.t < DARK_T) return
     const a = rnd() * TAU, R = Math.max(VW, VH) * 0.6
     G.dark = { x: pl.x + Math.cos(a) * R, y: pl.y + Math.sin(a) * R, t: 0, cd: 3 }
-    say('검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 도망쳐!', 3.2, '#c9b3ff'); shake = 10
+    say('검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 도망쳐!', 3.2, '#c9b3ff'); shake = 10; SND.dark()
     return
   }
   const D = G.dark, [dx, dy] = toward(pl, D.x, D.y), sp = 118 + D.t * 0.6   // 점점 빨라진다(30분엔 거의 내 속도)
@@ -1569,7 +1640,7 @@ function darkStep(dt) {
   }
 }
 function gainXp(v) {
-  G.xp += v * S.growth
+  SND.gem(); G.xp += v * S.growth
   while (G.xp >= G.next) { G.xp -= G.next; G.lvl++; G.next = need(G.lvl); G.queue.push('level') }
 }
 
@@ -1744,6 +1815,7 @@ let BOX = null
 const ACTS = [['rr', '리롤'], ['skips', '스킵'], ['bans', '제외']]
 function openBox() {
   const chest = G.queue.shift() === 'chest'
+  chest ? SND.chest() : SND.level(); SND.voice(G.ch.id, 'happy')
   const jack = rnd() < (chest ? 0.5 : 0.01 * S.luck * (G.ch.mod.jackpot ? 2 : 1))   // 잭팟 — 셋 다 받는다. 레벨 업 1%(행운 배수 · 하치와레 2배), 보물상자 50%
   const box = BOX = { opts: offers(), jack, ready: false, ban: false }
   if (jack) G.jackpots++
@@ -2032,6 +2104,7 @@ function hud(c) {
 const btn = (s, fn, cls = '') => h('button', { type: 'button', class: `btn ${cls}`, onclick: fn }, s)
 function show(...kids) { ui.replaceChildren(...kids); ui.hidden = false; ui.scrollTop = 0; still = 2 }
 function title() {
+  SND.play('field')
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
   show(h('div', { class: 'panel' },
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
@@ -2129,14 +2202,14 @@ function skillInfo(kind, id) {
 }
 function pause() {
   if (mode !== 'play') return
-  mode = 'pause'; calm(); pauseBtn.hidden = true
+  mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
   const det = h('div', { class: 'skill-detail' }, h('p', { class: 'hint' }, '스킬 · 아이템을 누르면 자세히 볼 수 있어요'))
   const pick = (kind, id, el) => { for (const c of ui.querySelectorAll('.build .chip')) c.classList.toggle('on', c === el); det.replaceChildren(...skillInfo(kind, id)) }
   show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지'), chips(pick), det, h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main'))))
 }
-function resume() { if (mode !== 'pause') return; mode = 'play'; ui.hidden = true; pauseBtn.hidden = false }
+function resume() { if (mode !== 'pause') return; mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; SND.duck(false) }
 function finish(win, quit = false) {
-  mode = 'over'; BOX = null; calm(); pauseBtn.hidden = true
+  mode = 'over'; BOX = null; calm(); pauseBtn.hidden = true; SND.duck(false); SND.end(win)
   const b = save.best[G.ch.id] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
   save.runs++; save.kills += G.kills
   if (win) { save.clears++; b.clears++ }
