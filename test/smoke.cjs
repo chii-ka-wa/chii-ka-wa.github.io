@@ -30,10 +30,10 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.screenshot({ path: OUT + '1-title.png' })
     if (await page.locator('a.kofi[href="https://ko-fi.com/godbono"]').count() !== 1) errors.push('[desktop] 후원 단추(Ko-fi) 없음')
     await page.click('#snd'); await page.waitForTimeout(100)   // 소리 크기 — 배경음 · 효과음 따로
-    const vol = await page.evaluate(() => { const r = document.querySelector('#sndp input[name=bgm]'), f = document.querySelector('#sndp input[name=sfx]'); r.value = 30; r.dispatchEvent(new Event('input')); f.value = 0; f.dispatchEvent(new Event('input')); const s = JSON.parse(localStorage.getItem('mjg.v1')); return { open: !document.getElementById('sndp').hidden, bgm: s.bgm, sfx: s.sfx, icon: document.getElementById('snd').textContent } })
+    const vol = await page.evaluate(() => { const r = document.querySelector('#sndm input[name=bgm]'), f = document.querySelector('#sndm input[name=sfx]'); r.value = 30; r.dispatchEvent(new Event('input')); f.value = 0; f.dispatchEvent(new Event('input')); const s = JSON.parse(localStorage.getItem('mjg.v1')); return { open: !document.getElementById('sndm').hidden, bgm: s.bgm, sfx: s.sfx, icon: document.getElementById('snd').textContent } })
     if (!vol.open || vol.bgm !== 0.3 || vol.sfx !== 0) errors.push('[desktop] 소리 크기 ' + JSON.stringify(vol))
     await page.mouse.click(40, 40); await page.waitForTimeout(100)
-    if (!(await page.evaluate(() => document.getElementById('sndp').hidden))) errors.push('[desktop] 소리 창이 바깥을 눌러도 안 닫힘')
+    if (!(await page.evaluate(() => document.getElementById('sndm').hidden))) errors.push('[desktop] 소리 창이 바깥을 눌러도 안 닫힘')
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
     const dock = await page.evaluate(() => { const u = document.getElementById('ui'); u.scrollTop = 900; const r = [...document.querySelectorAll('.guide .btn')].pop().getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
@@ -46,6 +46,11 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(200)
     await page.keyboard.down('ArrowRight'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowRight')
     await page.screenshot({ path: OUT + '4-play.png' })
+    await page.click('#snd'); const t0 = await page.evaluate(() => window.__mjg.G.t); await page.waitForTimeout(400)   // 게임 중 소리 창 — 멈췄다가 닫으면 이어서
+    const sm = await page.evaluate(() => ({ mode: window.__mjg.mode, t: window.__mjg.G.t }))
+    if (sm.mode !== 'sound' || sm.t !== t0) errors.push('[desktop] 소리 창에서 게임이 안 멈춤 ' + JSON.stringify(sm))
+    await page.getByRole('button', { name: '닫기' }).click(); await page.waitForTimeout(100)
+    if (await page.evaluate(() => window.__mjg.mode) !== 'play') errors.push('[desktop] 소리 창을 닫아도 이어지지 않음')
     await page.keyboard.press('Escape'); await page.waitForTimeout(200)   // 일시정지 — 스킬을 누르면 자세히
     await page.locator('.build .chip').first().click(); await page.waitForTimeout(100)
     const det = await page.locator('.skill-detail').innerText(); if (!/피해/.test(det) || !/시너지/.test(det)) errors.push('[desktop] 일시정지 스킬 자세히: ' + det.slice(0, 60))

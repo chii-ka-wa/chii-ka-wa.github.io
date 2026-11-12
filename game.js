@@ -208,14 +208,16 @@ const SND = (() => {
     end(win) { play(''); if (!ac || !save.sfx) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
   }
   let btn = null
-  api.button = b => {   // 🔊 단추 — 누르면 배경음 · 효과음 크기를 조절하는 작은 창
+  api.button = b => {   // 🔊 단추 — 가운데 창에서 배경음 · 효과음 크기를 따로. 게임 중에 열면 멈추고, 닫으면 이어서
     btn = b; vol()
     const row = (k, name) => { const v = h('b', {}, Math.round(save[k] * 100)), r = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(save[k] * 100), name: k, 'aria-label': `${name} 크기` })
-      r.oninput = () => { api.set(k, r.value / 100); v.textContent = r.value; if (k === 'sfx') api.kill() }; r.onchange = () => r.blur(); return h('label', {}, h('span', {}, name), r, v) }
-    const pop = h('div', { id: 'sndp', hidden: true }, h('p', {}, '소리 크기'), row('bgm', '🎵 배경음'), row('sfx', '🔔 효과음'))
-    document.body.append(pop)
-    b.onclick = e => { e.stopPropagation(); boot(); pop.hidden = !pop.hidden }
-    addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && e.target !== b) pop.hidden = true })
+      r.oninput = () => { api.set(k, r.value / 100); v.textContent = r.value; if (k === 'sfx') api.kill() }; return h('label', {}, h('span', {}, name), r, v) }
+    const close = () => { if (box.hidden) return; box.hidden = true; if (mode === 'sound') { mode = 'play'; pauseBtn.hidden = false } }
+    const box = h('div', { id: 'sndm', hidden: true, role: 'dialog', 'aria-label': '소리 크기' }, h('div', { class: 'panel snd' }, h('p', { class: 'h' }, '🔊 소리 크기'), row('bgm', '🎵 배경음'), row('sfx', '🔔 효과음'), h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn main', onclick: close }, '닫기'))))
+    box.onpointerdown = e => { if (e.target === box) close() }   // 바깥(어두운 곳)을 눌러도 닫힌다
+    document.body.append(box)
+    b.onclick = e => { e.stopPropagation(); boot(); if (!box.hidden) return close(); box.hidden = false; if (mode === 'play') { mode = 'sound'; calm(); pauseBtn.hidden = true } }
+    api.open = () => !box.hidden; api.close = close
   }
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, boot, { passive: true })
   return api
@@ -260,7 +262,7 @@ function dotEyes(g, y, gap, r, p, shine = true) {
   for (const s of [-1, 1]) {
     const x = s * gap
     if (p.hurt) {
-      g.lineWidth = 0.85; g.beginPath(); g.moveTo(x - s * 1.2, y - 1.1); g.lineTo(x + s * 0.9, y); g.lineTo(x - s * 1.2, y + 1.1); g.stroke()
+      g.lineWidth = 0.85; g.beginPath(); g.moveTo(x + s * 1.2, y - 1.1); g.lineTo(x - s * 0.9, y); g.lineTo(x + s * 1.2, y + 1.1); g.stroke()   // > < — 꼭짓점이 코 쪽
       g.fillStyle = '#9fd6ff'; g.beginPath(); g.ellipse(x + s * 1.7, y + 1.7, 0.65, 1.05, 0, 0, TAU); g.fill()
     } else if (p.blink) { g.lineWidth = 0.8; g.beginPath(); g.moveTo(x - r * 0.9, y); g.quadraticCurveTo(x, y + r * 0.9, x + r * 0.9, y); g.stroke() }
     else {
@@ -1129,6 +1131,7 @@ addEventListener('keydown', e => {
   const k = KEYS[e.code]
   if (k) key[k] = 1
   if ((k || e.code === 'Space') && mode === 'play') e.preventDefault()
+  if (SND.open?.()) { if (e.code === 'Escape') SND.close(); return }   // 소리 창이 떠 있으면 Esc 로 닫기만
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
   if (mode === 'box') boxKey(e)
   if (mode === 'chars' && !e.repeat) {
