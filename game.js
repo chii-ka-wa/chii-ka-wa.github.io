@@ -93,13 +93,13 @@ const FOES = {
   goblin: { name: '고블린', note: '가장 흔한 토벌 대상 — 줄지어 다가온다', r: 12, hp: 9, spd: 62, dmg: 7, xp: 1, col: '#8fc46e' },
   chimera: { name: '꼬마 키메라', note: '1분부터 — 하얀 날개 · 보랏빛 꼬리의 분홍 키메라. 울면서 다가온다 · 빠르고, 가끔 떼로 둘러싼다', r: 10, hp: 5, spd: 95, dmg: 5, xp: 1, col: '#f9cdd6' },
   dekatsu: { name: '분홍 키메라', note: '4분부터 — 네 발로 걷는 어른 키메라. 느리지만 단단하고 아프다 · 밀리지 않는다', r: 18, hp: 52, spd: 47, dmg: 10, xp: 3, col: '#efb3c8' },
-  spiker: { name: '가면 키메라', note: '6분부터 — 곤충 날개 · 기괴한 가면. 멀리서 독침을 쏜다', r: 12, hp: 18, spd: 57, dmg: 7, xp: 2, col: '#8d9a77', shot: { k: 'spike', spd: 210, cd: 2.6, range: 330, r: 5 } },
+  spiker: { name: '가면 키메라', note: '6분부터(어려움만) — 곤충 날개 · 기괴한 가면. 멀리서 독침을 쏜다', r: 12, hp: 18, spd: 57, dmg: 7, xp: 2, col: '#8d9a77', shot: { k: 'spike', spd: 210, cd: 2.6, range: 330, r: 5 } },
   golden: { name: '황금 고블린', note: '가끔 나오는 정예 — 쓰러뜨리면 가끔 아이템', r: 22, hp: 420, spd: 55, dmg: 16, xp: 25, col: '#ffd34d' },
   bug: { name: '초록 벌레', note: '처음부터 — 초록 털모자를 쓴 벌레. 입을 동그랗게 벌리고 걸어온다 · 약하고 느리다', r: 10, hp: 7, spd: 55, dmg: 6, xp: 1, col: '#c3e6a4' },
   beetle: { name: '꼬마 풍뎅이', note: '3분부터 — 밤색 탈을 쓴 것 같은 풍뎅이(머리 위 뿔). 단단해서 밀리지 않는다', r: 13, hp: 30, spd: 58, dmg: 9, xp: 2, col: '#a47b63' },
   star: { name: '별똥별', note: '5분부터 — 셋이 같이 다닌다. 맞으면 「흐아아악!」', r: 10, hp: 12, spd: 90, dmg: 7, xp: 1, col: '#ffe066' },
-  fugu: { name: '복어', note: '8분부터 — 기름 그물을 뿌린다(맞으면 잠깐 느려진다) · 「블링블링 마블링」', r: 14, hp: 30, spd: 45, dmg: 8, xp: 2, col: '#f6dc98', shot: { k: 'net', spd: 170, cd: 3.2, range: 300, r: 9, slow: 1.6 } },
-  octo: { name: '문어 괴물', note: '12분부터 — 간장을 뱉는다', r: 15, hp: 45, spd: 50, dmg: 10, xp: 3, col: '#f29a9a', shot: { k: 'soy', spd: 220, cd: 2.6, range: 320, r: 6 } },
+  fugu: { name: '복어', note: '8분부터(어려움만) — 기름 그물을 뿌린다(맞으면 잠깐 느려진다) · 「블링블링 마블링」', r: 14, hp: 30, spd: 45, dmg: 8, xp: 2, col: '#f6dc98', shot: { k: 'net', spd: 170, cd: 3.2, range: 300, r: 9, slow: 1.6 } },
+  octo: { name: '문어 괴물', note: '12분부터(어려움만) — 간장을 뱉는다', r: 15, hp: 45, spd: 50, dmg: 10, xp: 3, col: '#f29a9a', shot: { k: 'soy', spd: 220, cd: 2.6, range: 320, r: 6 } },
   parttimer: { name: '아르바이트생 괴물', note: '14분부터 — 카페 앞치마를 두른 분홍 코끼리 같은 괴물(뿔 여럿 · 점 눈 다섯). 아주 단단하다', r: 20, hp: 160, spd: 42, dmg: 14, xp: 6, col: '#e9bcc8' },
   rusher: { name: '고블린 돌격대', note: '10분부터 — 줄지어 화면을 가로지른다. 스킬에 안 맞으니 빈 줄로 피하기', r: 11, hp: 14, spd: 0, dmg: 14, xp: 1, col: '#c9e29a' },
   // 보스(BOSS) — 피는 시간에 따라 완만하게, 대신 서 있으면 맞는 기술을 쓴다
@@ -131,11 +131,19 @@ const STATUS = {
   charm: { name: '매혹', note: '이동 속도 -40% · 세이렌 쪽으로 끌려간다', col: '#ff6fd0' },
 }
 const ST_T = 8   // 상태이상 지속(초)
+// 난이도 — 어려움이 원래 토벌. 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 일반 몬스터가 멀리서 안 쏜다(보스는 쏜다)
+const DIFF = {
+  easy: { name: '쉬움', icon: '🌱', note: '적 체력 -40% · 경험치 +50% · 줍는 것 2배 · 멀리서 쏘는 몬스터 없음', hp: 0.6, xp: 1.5, drop: 2, shot: false },
+  normal: { name: '보통', icon: '⭐', note: '적 체력 -20% · 경험치 +25% · 줍는 것 1.5배 · 멀리서 쏘는 몬스터 없음', hp: 0.8, xp: 1.25, drop: 1.5, shot: false },
+  hard: { name: '어려움', icon: '🔥', note: '원래 토벌 그대로 — 멀리서 쏘는 몬스터도 나온다', hp: 1, xp: 1, drop: 1, shot: true },
+}
+const bestKey = (id, d) => d === 'hard' ? id : `${id}.${d}`   // 어려움 기록은 예전 기록 그대로
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
 const LS = 'mjg.v1'
 const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = { t 가장 오래 버틴 초, kills, lvl, clears }
 try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
+if (!DIFF[save.diff]) save.diff = 'normal'
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
@@ -1172,7 +1180,7 @@ function newGame(ch) {
   pl = { x: 0, y: 0, r: 12, hp: 1, inv: 0, hurtT: 0, slowT: 0, face: [1, 0], fx: 1, jump: 0, moving: false }
   const b = 2 + (ch.mod.boxes || 0)
   G = {
-    ch, t: 0, foes: [], shots: [], eshots: [], gems: [], items: [], fx: [], parts: [], nums: [], haz: [], help: [], weapons: [], passives: {},
+    ch, diff: save.diff, D: DIFF[save.diff], t: 0, foes: [], shots: [], eshots: [], gems: [], items: [], fx: [], parts: [], nums: [], haz: [], help: [], weapons: [], passives: {},
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
@@ -1344,7 +1352,7 @@ const HPK = [1, 1.4, 1.8, 2.3, 4.3, 13, 26]   // 보통 적 피 배수 — 0 · 
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
-  const hp = F.hp * (big ? 1 + mm * 0.25 : hpK(mm))
+  const hp = F.hp * (big ? 1 + mm * 0.25 : hpK(mm)) * G.D.hp
   const e = {
     type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * (1 + m * 0.055), xp: F.xp,
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
@@ -1389,8 +1397,9 @@ function spawner(dt) {
     G.spawnT = Math.max(0.09, 0.55 - m * 0.02)
     const n = Math.min(want - G.foes.length, 1 + (m / 1.8 | 0))
     for (let i = 0; i < n; i++) {
+      const far = G.D.shot ? 1 : 0   // 원거리 일반 몬스터(가면 키메라 · 복어 · 문어)는 어려움에서만
       const w = [['goblin', 1], ['bug', m < 6 ? 0.7 : 0.3], ['chimera', m >= 1 ? 0.5 + m * 0.03 : 0], ['beetle', m >= 3 ? 0.15 + m * 0.02 : 0], ['star', m >= 5 ? 0.12 + (m - 5) * 0.01 : 0], ['dekatsu', m >= 4 ? 0.1 + m * 0.03 : 0],
-        ['spiker', m >= 6 ? 0.1 + (m - 6) * 0.035 : 0], ['fugu', m >= 8 ? 0.08 + (m - 8) * 0.03 : 0], ['octo', m >= 12 ? 0.08 + (m - 12) * 0.03 : 0], ['parttimer', m >= 14 ? 0.05 + (m - 14) * 0.02 : 0]]
+        ['spiker', far * (m >= 6 ? 0.1 + (m - 6) * 0.035 : 0)], ['fugu', far * (m >= 8 ? 0.08 + (m - 8) * 0.03 : 0)], ['octo', far * (m >= 12 ? 0.08 + (m - 12) * 0.03 : 0)], ['parttimer', m >= 14 ? 0.05 + (m - 14) * 0.02 : 0]]
       let q = rnd() * w.reduce((s, x) => s + x[1], 0), type = 'goblin'
       for (const [k, v] of w) if ((q -= v) < 0) { type = k; break }
       if (type === 'star') { const e = spawn('star'); for (let k = 0; k < 2; k++) spawn('star', e.x + (rnd() - 0.5) * 34, e.y + (rnd() - 0.5) * 34) }   // 별똥별은 셋이 같이
@@ -1558,10 +1567,10 @@ function kill(e, quiet = false) {
   if (G.fx.length < 180) fx({ k: 'puff', x: e.x, y: e.y - e.r, R: e.r * 1.4, T: 0.4 })
   for (let i = 0; i < (e.boss ? 36 : e.elite ? 14 : 3); i++) { const a = rnd() * TAU, s = 40 + rnd() * (e.boss ? 240 : 110); part(e.x, e.y - e.r, Math.cos(a) * s, Math.sin(a) * s - 60, i % 3 ? col : '#fff', 0.35 + rnd() * 0.35, 2 + rnd() * (e.boss ? 4 : 2.5)) }
   if (quiet) return
-  if (e.elite || e.mid) { if (rnd() < 0.33 * S.luck) item(e.x, e.y); for (let i = 0; i < 3; i++) gem(e.x + (rnd() - 0.5) * 40, e.y + (rnd() - 0.5) * 40, e.mid ? 10 : 5) }
-  else if (!e.boss && rnd() < 0.0013 * S.luck) item(e.x, e.y, rnd() < 0.6 ? 'onigiri' : 'magnet')
-  else if (!e.boss && G.t >= 600 && rnd() < 0.0005 * S.luck) item(e.x, e.y, 'earplug')
-  else if (!e.boss && G.t >= 180 && rnd() < 0.0004 * S.luck) item(e.x, e.y, rnd() < 0.5 ? 'pajama' : 'battery')
+  if (e.elite || e.mid) { if (rnd() < 0.33 * S.luck * G.D.drop) item(e.x, e.y); for (let i = 0; i < 3; i++) gem(e.x + (rnd() - 0.5) * 40, e.y + (rnd() - 0.5) * 40, e.mid ? 10 : 5) }
+  else if (!e.boss && rnd() < 0.0013 * S.luck * G.D.drop) item(e.x, e.y, rnd() < 0.6 ? 'onigiri' : 'magnet')
+  else if (!e.boss && G.t >= 600 && rnd() < 0.0005 * S.luck * G.D.drop) item(e.x, e.y, 'earplug')
+  else if (!e.boss && G.t >= 180 && rnd() < 0.0004 * S.luck * G.D.drop) item(e.x, e.y, rnd() < 0.5 ? 'pajama' : 'battery')
   if (!e.boss) return
   const B = BOSS[e.kind]
   if (e.kind === 'mermaid') say(guarded() ? '인어 격파!' : '세이렌의 보호막이 사라졌다!', 2, '#7fd8ff')
@@ -1657,7 +1666,7 @@ function darkStep(dt) {
   }
 }
 function gainXp(v) {
-  SND.gem(); G.xp += v * S.growth
+  SND.gem(); G.xp += v * S.growth * G.D.xp
   while (G.xp >= G.next) { G.xp -= G.next; G.lvl++; G.next = need(G.lvl); G.queue.push('level') }
 }
 
@@ -1972,13 +1981,17 @@ function world(c, ox, oy) {
     else if (b.k === 'ring' && b.t >= 0) { const u = Math.min(1, b.t / b.T); c.globalAlpha = 1 - Math.max(0, b.t - b.T) / 0.18; c.strokeStyle = '#ffd23f'; c.lineWidth = 6; oval(c, b.x, b.y, b.R * u, b.R * u * 0.8); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 1 }
   }
   for (const b of G.eshots) {
-    const y = b.y - 14
+    const y = b.y - 14, R = b.r * 2.2 + 8, pu = 0.5 + 0.5 * Math.sin(b.t * 16), v = Math.hypot(b.vx, b.vy) || 1   // 잘 보이게 — 꼬리 · 깜빡이는 빨간 테
+    c.lineCap = 'round'; c.strokeStyle = 'rgba(255,70,90,.35)'; c.lineWidth = R * 1.2; c.beginPath(); c.moveTo(b.x - b.vx / v * R * 2.2, y - b.vy / v * R * 2.2); c.lineTo(b.x, y); c.stroke()
+    oval(c, b.x, y, R, R); c.fillStyle = `rgba(255,60,90,${0.3 + 0.2 * pu})`; c.fill(); c.lineWidth = 2.2; c.strokeStyle = pu > 0.5 ? '#fff' : '#ff3355'; c.stroke()
+    c.save(); c.translate(b.x, y); c.scale(1.7, 1.7); c.translate(-b.x, -y)
     if (b.k === 'spike' || b.k === 'claw') { c.save(); c.translate(b.x, y); c.rotate(Math.atan2(b.vy, b.vx)); c.beginPath(); c.moveTo(8, 0); c.lineTo(-6, -4); c.lineTo(-6, 4); c.closePath(); c.fillStyle = b.k === 'claw' ? '#b7793f' : '#3f7f74'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.5; c.stroke(); c.restore() }
     else if (b.k === 'note') put(c, SPR.pinkNote, b.x, y)
     else if (b.k === 'shard') { c.save(); c.translate(b.x, y); c.rotate(b.t * 8); c.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = i % 2 ? 2.2 : 6; c.lineTo(Math.cos(a) * r, Math.sin(a) * r) } c.closePath(); c.fillStyle = '#2a2038'; c.fill(); c.strokeStyle = '#a78bfa'; c.lineWidth = 1.2; c.stroke(); c.restore() }
     else if (b.k === 'paper') { c.save(); c.translate(b.x, y); c.rotate(b.t * 6); c.fillStyle = '#fff'; c.fillRect(-4.5, -5.5, 9, 11); c.strokeStyle = OUT; c.lineWidth = 1; c.strokeRect(-4.5, -5.5, 9, 11); c.restore() }
     else if (b.k === 'net') { oval(c, b.x, y, b.r, b.r); c.fillStyle = 'rgba(255,236,160,.6)'; c.fill(); c.strokeStyle = '#d9a93a'; c.lineWidth = 1; c.stroke(); c.beginPath(); for (let k = -1; k <= 1; k++) { c.moveTo(b.x + k * b.r * 0.5, y - b.r * 0.85); c.lineTo(b.x + k * b.r * 0.5, y + b.r * 0.85); c.moveTo(b.x - b.r * 0.85, y + k * b.r * 0.5); c.lineTo(b.x + b.r * 0.85, y + k * b.r * 0.5) } c.stroke() }
     else { oval(c, b.x, y, b.r, b.r); c.fillStyle = b.k === 'rock' ? '#9a8f86' : b.k === 'soy' ? '#5a3a26' : '#6fc3ff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke(); c.fillStyle = 'rgba(255,255,255,.7)'; oval(c, b.x - b.r * 0.3, y - b.r * 0.35, b.r * 0.3, b.r * 0.25); c.fill() }
+    c.restore()
   }
   for (const p of G.parts) { c.globalAlpha = 1 - p.t / p.T; c.fillStyle = p.col; c.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r) }
   c.globalAlpha = 1
@@ -2008,7 +2021,14 @@ function drawFoe(c, e) {
   if (e.flash > 0) { c.globalAlpha = e.boss ? 0.45 : 0.8; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 }   // 맞으면 하얗게(보스는 모양이 보이게 옅게)
   if (e.boss && e.kind === 'siren' && guarded()) { c.globalAlpha = 0.35 + 0.15 * Math.sin(G.t * 4); c.strokeStyle = '#7fd8ff'; c.lineWidth = 3; oval(c, e.x, e.y - e.r * 1.1, e.r * 1.5, e.r * 1.6); c.stroke(); c.globalAlpha = 1 }
   if (e.slow > 0 && !e.boss) { c.globalAlpha = 0.5; c.fillStyle = '#e8a04f'; oval(c, e.x, e.y, e.r, e.r * 0.4); c.fill(); c.globalAlpha = 1 }
+  const SH = FOES[e.type].shot, d = Math.hypot(pl.x - e.x, pl.y - e.y)   // 쏘기 직전 경고 — 머리 위 빨간 ! (겨누는 것은 조준선도)
+  if (SH ? d < SH.range && e.cd < 0.7 : e.act && FIRE.has(e.act.k)) {
+    const hy = y - e.r * 2.3 * k - 10, aim = SH || e.act.k === 'volley', on = (G.t * 10 | 0) % 2
+    if (aim) { c.save(); c.setLineDash([7, 6]); c.lineDashOffset = -G.t * 40; c.strokeStyle = 'rgba(255,40,70,.75)'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(e.x, e.y - 14); c.lineTo(e.x + (pl.x - e.x) / (d || 1) * Math.min(d, 260), e.y - 14 + (pl.y - e.y) / (d || 1) * Math.min(d, 260)); c.stroke(); c.restore() }
+    oval(c, e.x, hy, 9, 9); c.fillStyle = on ? '#ff3355' : '#ffd23f'; c.fill(); c.lineWidth = 2; c.strokeStyle = OUT; c.stroke(); txt(c, '!', e.x, hy + 5.5, 15)
+  }
 }
+const FIRE = new Set(['volley', 'notes', 'papers'])   // 날아오는 것을 쏘는 보스 기술
 function drawMe(c) {
   const C = SPR[G.ch.id], j = pl.jump > 0 ? Math.sin(pl.jump / 0.3 * Math.PI) * 26 : 0, walking = pl.moving && !G.dying
   const s = G.dying || pl.hurtT > 0 ? C.hurt : walking ? C.walk[(G.t * 9 * Math.sqrt(S.move) | 0) % 4] : C.idle[G.t % 3.4 < 0.14 ? 1 : 0]   // 아프면 > < · 걸으면 네 장 · 서 있으면 가끔 깜빡
@@ -2139,16 +2159,25 @@ function pickChar(i) {
   if (c?._idle) { const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(c._idle, 0, 0) }
   pickCi = i; cards[i]?.classList.add('on')
 }
+const bestText = id => { const b = save.best[bestKey(id, save.diff)]; return b ? `최고 ${fmt(b.t)} · 레벨 ${b.lvl}${b.clears ? ` · 클리어 ${b.clears}번` : ''}` : '아직 기록 없음' }
+function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 글자만 바꾼다(깜빡임 없이)
+  save.diff = k; persist()
+  for (const b of ui.querySelectorAll('.diff button')) { const on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)) }
+  ui.querySelector('.diff-note').textContent = DIFF[k].note
+  ui.querySelectorAll('.char .best').forEach((el, i) => { el.textContent = bestText(CHARS[i].id) })
+}
 function chars() {
   mode = 'chars'; G = null
   show(h('div', { class: 'panel wide' },
     h('p', { class: 'h' }, '누구랑 토벌할까?'),
     h('div', { class: 'chars' }, CHARS.map((ch, i) => {
-      const b = save.best[ch.id], W = WEAP[ch.w]
+      const W = WEAP[ch.w]
       return h('button', { type: 'button', class: `char${i === pickCi ? ' on' : ''}`, onclick: () => pickCi === i ? startGame(i) : pickChar(i) },
         portrait(ch.id), h('b', {}, ch.name), h('small', {}, `${W.icon} ${W.name}`), h('span', { class: 'trait' }, ch.trait), h('span', { class: 'note' }, ch.note),
-        h('span', { class: 'best' }, b ? `최고 ${fmt(b.t)} · 레벨 ${b.lvl}${b.clears ? ` · 클리어 ${b.clears}번` : ''}` : '아직 기록 없음'))
+        h('span', { class: 'best' }, bestText(ch.id)))
     })),
+    h('div', { class: 'diff', role: 'radiogroup', 'aria-label': '난이도' }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, `${d.icon} ${d.name}`))),
+    h('p', { class: 'diff-note' }, DIFF[save.diff].note),
     h('div', { class: 'row' }, btn('← 처음으로', title), btn('토벌 시작!', () => startGame(pickCi), 'main'))))
 }
 setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리걸음
@@ -2171,6 +2200,7 @@ function guide() {
       h('li', {}, '스킬 · 아이템은 6칸씩, 스킬은 Lv 8 · 아이템은 Lv 5 까지. 아주 가끔(1%) 잭팟이 터지면 셋 다 가져요.'),
       h('li', {}, '한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기).'),
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
+      h('li', {}, `난이도 — ${Object.values(DIFF).map(d => `${d.icon} ${d.name}: ${d.note}`).join(' / ')}. 기록은 난이도마다 따로.`),
       h('li', {}, '10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.'),
       h('li', {}, `${FINAL_T / 60}분에 세이렌과 인어 셋이 나와요. 세이렌을 쓰러뜨리면 토벌 성공!`),
       h('li', {}, `${DARK_T / 60}분까지 세이렌을 못 쓰러뜨리면 검은 별똥별이 나타나요 — 쓰러뜨릴 수 없으니 ${END_T / 60}:00까지 도망치면 생존 클리어. 기록은 이 브라우저에만 저장돼요.`)),
@@ -2227,7 +2257,7 @@ function pause() {
 function resume() { if (mode !== 'pause') return; mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; SND.duck(false) }
 function finish(win, quit = false) {
   mode = 'over'; BOX = null; calm(); pauseBtn.hidden = true; SND.duck(false); SND.end(win)
-  const b = save.best[G.ch.id] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
+  const b = save.best[bestKey(G.ch.id, G.diff)] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
   save.runs++; save.kills += G.kills
   if (win) { save.clears++; b.clears++ }
   b.t = Math.max(b.t, G.t); b.kills = Math.max(b.kills, G.kills); b.lvl = Math.max(b.lvl, G.lvl)
@@ -2237,6 +2267,7 @@ function finish(win, quit = false) {
     portrait(G.ch.id),
     h('p', { class: 'h' }, win ? (G.endKind === 'time' ? '30분 생존! 🎉' : '토벌 성공! 🎉') : quit ? '토벌 중단' : '쓰러졌다… 와아…'),
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? '검은 별똥별에게서 끝까지 도망쳤어요!' : '세이렌을 쫓아냈어요!') : G.final ? '세이렌까지 왔어요! 조금만 더' : `세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
+    h('p', { class: 'sub' }, `${G.D.icon} ${G.D.name}`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
     chips(),
     h('div', { class: 'row' }, btn('처음으로', title), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
