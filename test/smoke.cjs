@@ -28,10 +28,6 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
 
   await run('desktop', { width: 1280, height: 800 }, async page => {
     await page.screenshot({ path: OUT + '1-title.png' })
-    await page.getByRole('button', { name: '☕ 후원' }).click(); await page.waitForTimeout(200)   // 후원 창 — 세 칸
-    await page.screenshot({ path: OUT + '1-donate.png' })
-    const dons = await page.locator('.don').count(); if (dons !== 3) errors.push(`[desktop] 후원 칸 ${dons}`)
-    await page.getByRole('button', { name: '← 처음으로' }).click()
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
     const dock = await page.evaluate(() => { const u = document.getElementById('ui'); u.scrollTop = 900; const r = [...document.querySelectorAll('.guide .btn')].pop().getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })

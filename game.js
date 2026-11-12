@@ -131,12 +131,6 @@ const STATUS = {
   charm: { name: '매혹', note: '이동 속도 -40% · 세이렌 쪽으로 끌려간다', col: '#ff6fd0' },
 }
 const ST_T = 8   // 상태이상 지속(초)
-// 후원 — 값을 넣은 칸만 켜진다(비어 있으면 「준비 중이에요」)
-const DONATE = {
-  toss: { bank: '토스뱅크', account: '', holder: '', link: '' },   // account 계좌번호 · holder 예금주 · link 토스 아이디 송금 링크(https://toss.me/…)
-  naver: { link: '', qr: '' },   // link 네이버페이 송금 링크 · qr 송금 QR 그림(저장소에 올린 그림 경로, 예: assets/naverpay-qr.png)
-  coffee: { link: '' },   // Buy Me a Coffee · Ko-fi 페이지 주소
-}
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
 const LS = 'mjg.v1'
@@ -259,12 +253,12 @@ function mochi(g, o, p = {}) {
     g.beginPath(); g.moveTo(q[0], q[1]); g.quadraticCurveTo(q[2], q[3], q[4], q[5]); g.stroke()
   }
   const hold = thin && o.hold, hx = thin ? ax + 2.3 : ax, hy = thin ? ay + 2.4 - arm * 0.8 : ay - arm * 1.1   // 쥔 손 자리
-  const legs = edge => { for (const s of [-1, 1]) { const up = Math.max(0, s * foot) * 0.9; tube([s * 3.1, -3 - bob, s * (3.1 + up * 0.2), L - 1.2 - bob, s * (3.2 + up * 0.3), L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 가운데 모여 있고, 걸을 때 번갈아 든다
+  const legs = edge => { for (const s of [-1, 1]) { const ph = s * foot, up = Math.max(0, ph) * 1.2, dx = ph * 1.1; tube([s * 3.1, -3 - bob, s * 3.1 + dx * 0.5, L - 1.3 - bob - up * 0.5, s * 3.1 + dx, L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 걸을 때 번갈아 들어 가는 쪽으로 내딛는다
   const arms = edge => {
     for (const s of [-1, 1]) {
       if (s > 0 && hold) { tube([ax, ay, ax + 2, ay + 0.6, hx, hy], 1.35, af, edge); continue }   // 든 손 쪽 팔
       if (o.arms === 'none') continue
-      tube([s * ax, ay, s * (ax + 1.8), ay + 0.7 - s * arm * 0.4, s * (ax + 2.5 + s * arm * 0.3), ay + 2.6 - s * arm * 0.8], 1.35, af, edge)   // 늘어뜨린 팔 — 발과 엇갈려 흔든다
+      const sw = -s * arm; tube([s * ax, ay, s * (ax + 1.6) + sw * 0.7, ay + 0.9, s * (ax + 2.2) + sw * 1.5, ay + 2.6 - Math.abs(sw) * 0.4], 1.35, af, edge)   // 늘어뜨린 팔 — 발과 엇갈려 흔든다
     }
   }
   g.save(); g.translate(0, -L)
@@ -955,28 +949,6 @@ function mk(w, h) { const c = document.createElement('canvas'); c.width = Math.m
 function sprite(w, h, ox, oy, paint, k = K) {
   const c = mk(w * k, h * k), g = c.getContext('2d'); g.scale(k, k); g.translate(ox, oy); g.lineJoin = g.lineCap = 'round'; paint(g)
   return { c, w, h, ox, oy }
-}
-// 주인공 그림 — assets/chars/<id>.png 가 있으면 코드 그림 대신 쓴다(7장이 같은 320px 틀 · 같은 배율 · 발끝 줄이 같다).
-//   움직임은 그림 한 장으로 — 걸을 때 몸을 뒤뚱 기울이고 늘였다 줄이며, 발 줄(맨 아래)을 가운데에서 둘로 나눠 번갈아 든다. 서 있으면 숨쉬듯, 맞으면 납작하게
-const IMG_CHARS = ['chiikawa', 'hachiware', 'usagi', 'momonga', 'kurimanju', 'rakko', 'shisa']
-const IMG_U = 0.14, IMG_BASE = 318, IMG_CX = 160, IMG_FOOT = 13   // 그림 1px = 0.14 단위 · 발끝 줄(px) · 가운데 · 발 줄 높이(px)
-const IMG_FLIP = { momonga: true }   // 꼬리가 보는 쪽 반대에 오게 뒤집어 쓴다(그림은 꼬리가 오른쪽)
-function imgPose(g, id, im, p) {
-  const U = IMG_U, f = p.foot || 0, bob = p.bob || 0, hurt = !!p.hurt
-  const sx = hurt ? 1.07 : bob ? 0.975 : p.blink ? 1.012 : 1, sy = hurt ? 0.92 : bob ? 1.035 : p.blink ? 0.985 : 1, rot = hurt ? -0.07 : f * 0.06, rise = bob ? -bob * 0.55 : 0
-  const ft = -IMG_FOOT * U, X = -IMG_CX * U, Y = -IMG_BASE * U, W = im.width * U, Hh = im.height * U
-  if (IMG_FLIP[id]) g.scale(-1, 1)
-  for (const s of [-1, 1]) {   // 두 발 — 내딛는 쪽을 든다
-    const lift = Math.max(0, s * f) * 1.15
-    g.save(); g.beginPath(); g.rect(s < 0 ? -40 : 0, ft, 40, -ft + 3); g.clip(); g.translate(0, -lift - rise * 0.3); g.drawImage(im, X, Y, W, Hh); g.restore()
-  }
-  g.save(); g.beginPath(); g.rect(-40, -60, 80, 60 + ft + 0.7); g.clip()   // 몸 — 발 줄 위
-  g.translate(0, ft - rise); g.rotate(rot); g.scale(sx, sy); g.translate(0, -ft); g.drawImage(im, X, Y, W, Hh); g.restore()
-}
-async function loadCharArt() {   // 그림이 없거나 못 읽으면 코드 그림 그대로
-  await Promise.all(IMG_CHARS.map(id => new Promise(ok => {
-    const im = new Image(); im.onload = () => { ART[id] = [Math.ceil(im.width * IMG_U) + 8, Math.ceil(IMG_BASE * IMG_U) + 7, (g, p) => imgPose(g, id, im, p)]; ok() }; im.onerror = () => ok(); im.src = `assets/chars/${id}.png`
-  })))
 }
 const artSprite = (id, k = K, p = {}) => { const [w, h, paint] = ART[id]; return sprite(w, h, w / 2, h - 3, g => paint(g, p), k) }
 const charSprites = id => ({ walk: WALK.map(p => artSprite(id, K, { ...p, look: LOOK })), idle: [artSprite(id, K, { look: LOOK }), artSprite(id, K, { look: LOOK, blink: true })], hurt: artSprite(id, K, { look: LOOK, hurt: true }) })
@@ -2062,7 +2034,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn('☕ 후원', donate), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
@@ -2092,27 +2064,6 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   if (!cv?._walk?.length) return
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
-/** 후원 — 토스뱅크(계좌 복사 · 토스로 보내기) · 네이버페이(링크 · QR) · 커피(Buy Me a Coffee · Ko-fi) */
-function donate() {
-  mode = 'donate'
-  const D = DONATE, on = { toss: !!(D.toss.account || D.toss.link), naver: !!(D.naver.link || D.naver.qr), coffee: !!D.coffee.link }
-  const go = (href, s) => h('a', { class: 'btn main', href, target: '_blank', rel: 'noopener' }, s)
-  const copy = e => {   // 계좌번호 복사 — 클립보드가 막혀 있으면 직접 복사하게 띄운다
-    const b = e.currentTarget, done = () => { b.textContent = '복사됐어요!'; setTimeout(() => { b.textContent = '계좌번호 복사' }, 1500) }
-    navigator.clipboard ? navigator.clipboard.writeText(D.toss.account).then(done, () => prompt('복사해 주세요', D.toss.account)) : prompt('복사해 주세요', D.toss.account)
-  }
-  const card = (k, icon, name, ...body) => h('div', { class: `don ${k}${on[k] ? '' : ' off'}` }, h('div', { class: 'don-h' }, h('i', {}, icon), h('b', {}, name)), on[k] ? body : h('p', { class: 'don-wait' }, '준비 중이에요'))
-  show(h('div', { class: 'panel donate' },
-    h('p', { class: 'h' }, '☕ 개발자 응원하기'),
-    h('p', { class: 'sub' }, '먼작귀 서바이버즈는 광고 없는 비영리 팬게임이에요. 재미있게 즐기셨다면 커피 한 잔으로 응원해 주세요!'),
-    card('toss', '💙', '토스뱅크',
-      D.toss.account && h('p', { class: 'acct' }, `${D.toss.bank} ${D.toss.account}`, D.toss.holder && h('small', {}, ` · 예금주 ${D.toss.holder}`)),
-      h('div', { class: 'row' }, D.toss.account && h('button', { type: 'button', class: 'btn', onclick: copy }, '계좌번호 복사'), D.toss.link && go(D.toss.link, '토스로 보내기'))),
-    card('naver', '💚', '네이버페이', D.naver.qr && h('img', { class: 'qr', src: D.naver.qr, alt: '네이버페이 송금 QR' }), D.naver.link && h('div', { class: 'row' }, go(D.naver.link, '네이버페이로 보내기'))),
-    card('coffee', '☕', '커피 한 잔 사 주기', h('div', { class: 'row' }, go(D.coffee.link, '커피 사 주기'))),
-    h('p', { class: 'fine' }, '후원은 전적으로 자유예요. 후원해도 게임 안에서 달라지는 건 없어요.'),
-    h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
-}
 function guide() {
   mode = 'guide'
   const li = (pic, name, note, extra) => h('li', {}, typeof pic === 'string' ? h('i', {}, pic) : pic, h('div', {}, h('b', {}, name), h('span', {}, note), extra && h('em', {}, extra)))
@@ -2169,7 +2120,7 @@ function finish(win, quit = false) {
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? '검은 별똥별에게서 끝까지 도망쳤어요!' : '세이렌을 쫓아냈어요!') : G.final ? '세이렌까지 왔어요! 조금만 더' : `세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
     chips(),
-    h('div', { class: 'row' }, btn('처음으로', title), btn('☕ 후원', donate), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
+    h('div', { class: 'row' }, btn('처음으로', title), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
 }
 
 // ---------------------------------------------------------------- 돌리기
@@ -2183,10 +2134,8 @@ function frame(ts) {
   if (mode === 'play' || !G || still-- > 0) render()   // 상자 · 일시정지 · 결과 동안은 다시 그리지 않는다 — 메뉴 연출이 부드럽게
   requestAnimationFrame(frame)
 }
-await loadCharArt()
-SPR = null; for (const k in PORT) delete PORT[k]   // 그림을 기다리는 사이 창 크기 이벤트로 먼저 만든 그림이 있으면 버리고 새로
 size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { FINAL_T, DARK_T, END_T, DONATE, donate, sasu: sasuShape, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { FINAL_T, DARK_T, END_T, sasu: sasuShape, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
