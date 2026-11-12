@@ -1,0 +1,15 @@
+{
+  "name": "먼작귀 서바이버즈",
+  "short_name": "먼작귀",
+  "description": "치이카와 비공식 팬게임 — 무료 브라우저 생존 게임",
+  "lang": "ko",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#cdeaa8",
+  "theme_color": "#cdeaa8",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

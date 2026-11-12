@@ -24,6 +24,18 @@
 
 빌드는 없습니다. 기록은 브라우저 localStorage(`mjg.v1`)에만 저장되고 서버 · DB는 없습니다.
 
+## 검색 · 공유
+
+- `index.html` 머리말: 제목 · 설명 · 키워드 · canonical · robots, 공유 미리보기(Open Graph · X 카드), 아이콘, 검색 엔진용 구조화 데이터(JSON-LD `VideoGame`), 자바스크립트가 꺼진 곳을 위한 `<noscript>` 소개
+- `og.png`(1200×630 공유 썸네일) · `icon-512.png` · `apple-touch-icon.png`(180) · `favicon.png`(64) — 게임 속 직접 그린 캐릭터로 `test/og.cjs` 가 만든다(그림을 고치면 다시 실행)
+- `robots.txt`(사이트맵 위치) · `sitemap.xml`(내용을 바꾸면 `lastmod` 날짜를 고친다) · `site.webmanifest`(홈 화면에 추가할 때 이름 · 아이콘)
+
+검색 등록(소유 확인 코드는 각 사이트에서 받아 `index.html` 머리말에 한 줄 넣는다)
+
+1. 구글 서치 콘솔 — 속성 추가 → URL 접두어 `https://chii-ka-wa.github.io/` → 「HTML 태그」 → `<meta name="google-site-verification" content="…">` 를 넣고 푸시 → 확인 → 「Sitemaps」에 `sitemap.xml` 제출
+2. 네이버 서치어드바이저 — 웹마스터 도구 → 사이트 등록 `https://chii-ka-wa.github.io` → 「HTML 태그」 → `<meta name="naver-site-verification" content="…">` 를 넣고 푸시 → 소유 확인 → 요청 › 사이트맵 제출(`https://chii-ka-wa.github.io/sitemap.xml`) · robots.txt 확인 · 웹 페이지 수집 요청
+3. 카카오톡 미리보기가 예전 것으로 보이면 — 카카오 개발자 「공유 디버거」에서 주소를 넣고 캐시 초기화
+
 ## 로컬 실행 · 점검
 
 ```sh

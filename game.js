@@ -252,7 +252,7 @@ function mochi(g, o, p = {}) {
     g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = edge ? OUT : col; g.lineWidth = edge ? w + LW * 2 : w
     g.beginPath(); g.moveTo(q[0], q[1]); g.quadraticCurveTo(q[2], q[3], q[4], q[5]); g.stroke()
   }
-  const hold = thin && o.hold, hx = thin ? ax + 1.7 : ax, hy = thin ? ay + 1.8 - arm * 0.6 : ay - arm * 1.1   // 쥔 손 자리
+  const hold = thin && o.hold && !p.bare, hx = thin ? ax + 1.7 : ax, hy = thin ? ay + 1.8 - arm * 0.6 : ay - arm * 1.1   // 쥔 손 자리
   const legs = edge => { for (const s of [-1, 1]) { const ph = s * foot, up = Math.max(0, ph) * 0.9, dx = ph * 0.8; tube([s * 3.1, -2.6 - bob, s * 3.1 + dx * 0.5, L - 1.2 - bob - up * 0.5, s * 3.1 + dx, L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 걸을 때 번갈아 들어 가는 쪽으로 내딛는다
   const arms = edge => {
     for (const s of [-1, 1]) {
@@ -277,7 +277,7 @@ function mochi(g, o, p = {}) {
   else if (o.arms !== 'none') for (const s of [-1, 1]) bump(g, s * ax, ay - s * arm * 1.1, 1.7, 2.4, s * 0.45, af, s > 0 ? -1.7 : Math.PI - 1.9, s > 0 ? 1.9 : Math.PI + 1.7)   // 팔 — 몸 옆에 붙은 작은 혹, 발과 엇갈려 오르내린다
   g.save(); g.translate(p.look || 0, 0); o.face(g, p); g.restore()
   o.front?.(g, p)
-  if (o.hold) { o.hold(g, hx, hy); thin ? blob(g, hx + 0.1, hy + 0.1, 1.15, 1.25, af, 0.6) : blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
+  if (o.hold && !p.bare) { o.hold(g, hx, hy); thin ? blob(g, hx + 0.1, hy + 0.1, 1.15, 1.25, af, 0.6) : blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
   g.restore(); g.restore()
 }
 /** 사스마타 — (0, 0) 에서 +x 로 자루 L(뒤쪽은 하얀 손잡이), 끝은 Y 로 갈라져 바깥으로 휘며 가늘어지는 두 갈래 · 갈래 양옆에 하얀 가시 셋씩.
