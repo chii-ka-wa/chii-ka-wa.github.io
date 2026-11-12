@@ -131,6 +131,12 @@ const STATUS = {
   charm: { name: '매혹', note: '이동 속도 -40% · 세이렌 쪽으로 끌려간다', col: '#ff6fd0' },
 }
 const ST_T = 8   // 상태이상 지속(초)
+// 후원 — 값을 넣은 칸만 켜진다(비어 있으면 「준비 중이에요」)
+const DONATE = {
+  toss: { bank: '토스뱅크', account: '', holder: '', link: '' },   // account 계좌번호 · holder 예금주 · link 토스 아이디 송금 링크(https://toss.me/…)
+  naver: { link: '', qr: '' },   // link 네이버페이 송금 링크 · qr 송금 QR 그림(저장소에 올린 그림 경로, 예: assets/naverpay-qr.png)
+  coffee: { link: '' },   // Buy Me a Coffee · Ko-fi 페이지 주소
+}
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
 const LS = 'mjg.v1'
@@ -1880,7 +1886,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn('☕ 후원', donate), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ')))
 }
@@ -1902,6 +1908,27 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   if (!cv?._walk?.length) return
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
+/** 후원 — 토스뱅크(계좌 복사 · 토스로 보내기) · 네이버페이(링크 · QR) · 커피(Buy Me a Coffee · Ko-fi) */
+function donate() {
+  mode = 'donate'
+  const D = DONATE, on = { toss: !!(D.toss.account || D.toss.link), naver: !!(D.naver.link || D.naver.qr), coffee: !!D.coffee.link }
+  const go = (href, s) => h('a', { class: 'btn main', href, target: '_blank', rel: 'noopener' }, s)
+  const copy = e => {   // 계좌번호 복사 — 클립보드가 막혀 있으면 직접 복사하게 띄운다
+    const b = e.currentTarget, done = () => { b.textContent = '복사됐어요!'; setTimeout(() => { b.textContent = '계좌번호 복사' }, 1500) }
+    navigator.clipboard ? navigator.clipboard.writeText(D.toss.account).then(done, () => prompt('복사해 주세요', D.toss.account)) : prompt('복사해 주세요', D.toss.account)
+  }
+  const card = (k, icon, name, ...body) => h('div', { class: `don ${k}${on[k] ? '' : ' off'}` }, h('div', { class: 'don-h' }, h('i', {}, icon), h('b', {}, name)), on[k] ? body : h('p', { class: 'don-wait' }, '준비 중이에요'))
+  show(h('div', { class: 'panel donate' },
+    h('p', { class: 'h' }, '☕ 개발자 응원하기'),
+    h('p', { class: 'sub' }, '먼작귀 서바이버즈는 광고 없는 비영리 팬게임이에요. 재미있게 즐기셨다면 커피 한 잔으로 응원해 주세요!'),
+    card('toss', '💙', '토스뱅크',
+      D.toss.account && h('p', { class: 'acct' }, `${D.toss.bank} ${D.toss.account}`, D.toss.holder && h('small', {}, ` · 예금주 ${D.toss.holder}`)),
+      h('div', { class: 'row' }, D.toss.account && h('button', { type: 'button', class: 'btn', onclick: copy }, '계좌번호 복사'), D.toss.link && go(D.toss.link, '토스로 보내기'))),
+    card('naver', '💚', '네이버페이', D.naver.qr && h('img', { class: 'qr', src: D.naver.qr, alt: '네이버페이 송금 QR' }), D.naver.link && h('div', { class: 'row' }, go(D.naver.link, '네이버페이로 보내기'))),
+    card('coffee', '☕', '커피 한 잔 사 주기', h('div', { class: 'row' }, go(D.coffee.link, '커피 사 주기'))),
+    h('p', { class: 'fine' }, '후원은 전적으로 자유예요. 후원해도 게임 안에서 달라지는 건 없어요.'),
+    h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
+}
 function guide() {
   mode = 'guide'
   const li = (pic, name, note, extra) => h('li', {}, typeof pic === 'string' ? h('i', {}, pic) : pic, h('div', {}, h('b', {}, name), h('span', {}, note), extra && h('em', {}, extra)))
@@ -1958,7 +1985,7 @@ function finish(win, quit = false) {
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? '검은 별똥별에게서 끝까지 도망쳤어요!' : '세이렌을 쫓아냈어요!') : G.final ? '세이렌까지 왔어요! 조금만 더' : `세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
     chips(),
-    h('div', { class: 'row' }, btn('처음으로', title), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
+    h('div', { class: 'row' }, btn('처음으로', title), btn('☕ 후원', donate), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
 }
 
 // ---------------------------------------------------------------- 돌리기
@@ -1976,4 +2003,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { FINAL_T, DARK_T, END_T, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { FINAL_T, DARK_T, END_T, DONATE, donate, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

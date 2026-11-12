@@ -24,6 +24,14 @@
 
 빌드는 없습니다. 기록은 브라우저 localStorage(`mjg.v1`)에만 저장되고 서버 · DB는 없습니다.
 
+## 후원
+
+처음 화면 · 결과 화면의 「☕ 후원」. 정보는 `game.js` 맨 위 `DONATE` 에 넣으면 그 칸이 켜집니다(비어 있으면 「준비 중이에요」).
+
+- `toss` — `account` 계좌번호 · `holder` 예금주 · `link` 토스 아이디 송금 링크(`https://toss.me/…`)
+- `naver` — `link` 네이버페이 송금 링크 · `qr` 송금 QR 그림 경로(저장소에 올린 그림)
+- `coffee` — Buy Me a Coffee · Ko-fi 페이지 주소
+
 ## 로컬 실행 · 점검
 
 ```sh
