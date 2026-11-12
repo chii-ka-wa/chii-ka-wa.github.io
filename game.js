@@ -624,7 +624,7 @@ function momonga(g, p) {
       g.strokeStyle = OUT; g.lineWidth = 0.6; g.lineCap = 'round'; g.beginPath()
       for (let i = 0; i < 16; i++) { const a = -1.5 + i / 15 * 3, x = Math.cos(a) * 7.6, yy = Math.sin(a) * 12.6; g.moveTo(x * 0.8, yy * 0.8); g.lineTo(x * 1.08, yy * 1.08) }
       g.stroke(); g.restore()
-      g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); for (let i = 0; i < 5; i++) { const yy = y(0.36 + i * 0.05); g.moveTo(-11.6, yy); g.lineTo(-14.2, yy - 0.6 + i * 0.3) } g.stroke()   // 볼털
+      g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); for (const s of [-1, 1]) for (let i = 0; i < 4; i++) { const yy = y(0.38 + i * 0.05); g.moveTo(s * 11.4, yy); g.lineTo(s * 14, yy - 0.6 + i * 0.35) } g.stroke()   // 양 볼의 삐죽한 볼털
     },
     ears: g => {
       for (const s of [-1, 1]) {
@@ -634,16 +634,16 @@ function momonga(g, p) {
       }
     },
     face: (g, p) => {
-      g.fillStyle = sky; g.beginPath(); g.ellipse(0, y(0.24), 1.5, 1.3, 0, 0, TAU); g.fill()   // 이마의 하늘색 점
-      if (p.hurt || p.blink) dotEyes(g, y(0.33), 4.3, 1.8, p)
-      else for (const s of [-1, 1]) {   // 눈꺼풀이 무거운 큰 눈
-        const ex = s * 4.3, ey = y(0.33), E = new Path2D(); E.ellipse(ex, ey, 2.3, 2.2, 0, 0, TAU)
+      g.fillStyle = sky; g.beginPath(); g.ellipse(0, y(0.32), 1.7, 1.5, 0, 0, TAU); g.fill()   // 눈 사이 콧등의 하늘색 점
+      if (p.hurt) dotEyes(g, y(0.34), 4.5, 1.6, p)
+      else for (const s of [-1, 1]) {   // 얄밉게 내리깐 눈 — 가로로 긴 흰 눈의 위를 두꺼운 눈꺼풀이 덮는다(깜빡이면 더 내려온다)
+        const ex = s * 4.5, ey = y(0.34), lid = p.blink ? 1.1 : -0.35, E = new Path2D(); E.ellipse(ex, ey, 2.6, 1.75, s * -0.08, 0, TAU)
         g.fillStyle = '#fff'; g.fill(E); g.save(); g.clip(E)
-        g.fillStyle = '#3b2a26'; g.beginPath(); g.moveTo(ex - 2.4, ey - 2.4); g.lineTo(ex + 2.4, ey - 2.4); g.lineTo(ex + 2.4, ey - 0.1); g.quadraticCurveTo(ex, ey + 0.7, ex - 2.4, ey - 0.1); g.closePath(); g.fill()   // 반쯤 내려온 눈꺼풀(아래로 둥근 끝)
-        g.beginPath(); g.arc(ex, ey + 1, 1.05, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - 0.4, ey + 0.85, 0.32, 0, TAU); g.fill()
-        g.restore(); g.strokeStyle = OUT; g.lineWidth = 0.65; g.stroke(E)
+        g.fillStyle = '#3b2a26'; g.beginPath(); g.moveTo(ex - 3, ey - 2); g.lineTo(ex + 3, ey - 2); g.lineTo(ex + 3, ey - 0.2 + lid); g.quadraticCurveTo(ex, ey + 0.6 + lid, ex - 3, ey - 0.2 + lid); g.closePath(); g.fill()
+        g.restore(); g.lineWidth = 0.8; g.strokeStyle = OUT; g.stroke(E)
       }
-      hatch(g, y(0.42), 7.2, 0.85); catMouth(g, y(0.41), p.hurt ? 1.1 : 0)
+      hatch(g, y(0.45), 7.6, 0.9)
+      catMouth(g, y(0.42), 0); g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); g.moveTo(-0.7, y(0.455)); g.quadraticCurveTo(0, y(0.47), 0.7, y(0.455)); g.stroke()   // 비열한 웃음 — ω 아래 입술 한 줄
     },
   }, p)
 }
