@@ -40,7 +40,7 @@
 - 끄기: 처음 화면 아래 「보내지 않기」(이 브라우저에 기억). 브라우저의 추적 거부(GPC · Do Not Track)도 따릅니다
 - `chii-ka-wa.github.io` 에서만 보냅니다 — 로컬 실행 · 점검(test) · 복사본에서는 안 보냄
 - 처음 한 번: Supabase 새 프로젝트 → SQL Editor 에 `supabase/schema.sql` 붙여 넣고 Run → Project Settings › API Keys 의 Project URL 과 공개 키(publishable 또는 anon — **secret · service_role 키는 절대 넣지 말 것**)를 `game.js` 의 `STATS` 에 넣고 푸시
-- 게임(공개 키)은 넣기만 할 수 있고 읽기 · 고치기 · 지우기는 못 합니다(RLS). 보기는 대시보드 Table Editor 나 SQL Editor 에서 `supabase/stats.sql` — 캐릭터 · 난이도별 판 수 · 클리어율, 몇 분에 · 무엇에 많이 쓰러지나, 많이 쓴 스킬, 날마다 판 수, 강화한 판 · 안 한 판(클리어율 · 버틴 시간). `up` 열은 예전 표라면 `schema.sql` 의 `alter table … add column if not exists up …` 한 줄을 SQL Editor 에서 Run(그 전까지 게임은 `up` 을 빼고 보낸다)
+- 게임(공개 키)은 넣기만 할 수 있고 읽기 · 고치기 · 지우기는 못 합니다(RLS). 보기는 대시보드 Table Editor 나 SQL Editor 에서 `supabase/stats.sql` — 캐릭터 · 난이도별 판 수 · 클리어율, 몇 분에 · 무엇에 많이 쓰러지나, 많이 쓴 스킬, 날마다 판 수, 강화한 판 · 안 한 판(클리어율 · 버틴 시간). `up` 열은 예전 표라면 `schema.sql` 의 `alter table … add column if not exists up …` 한 줄을 SQL Editor 에서 Run(안 하면 판이 저장되지 않는다)
 
 ## 소리
 

@@ -229,9 +229,8 @@ function statRow(result) {
 }
 function report(result) {
   if (!statsOn()) return
-  const row = statRow(result), send = () => fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(row),
-    headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } })
-  send().then(r => { if (r.status === 400 && 'up' in row) { delete row.up; return send() } }).catch(() => {})   // ponytail: 표에 up 열이 아직 없으면(schema.sql 의 alter 전) up 을 빼고 한 번 더 — 열을 더한 뒤엔 지워도 된다
+  fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
+    headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } }).catch(() => {})
 }
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다

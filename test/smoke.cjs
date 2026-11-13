@@ -11,7 +11,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
     page.on('request', q => { if (q.url().includes('.supabase.co')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다
-    page.on('console', m => { if (m.type() === 'error' && !m.location()?.url?.includes('stats.invalid')) errors.push(`[${name}] console: ${m.text()}`) })   // 가짜 통계 주소의 400(일부러)은 빼고
+    page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
     await fn(page)
     await page.close()
@@ -111,14 +111,16 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     console.log('final', fin)
     await page.screenshot({ path: OUT + '8-siren2.png' })
     // 남은 피를 줄여 클리어까지
-    await page.evaluate(() => { const F = window.__mjg.G.final; for (const m of F.mermaids) m.hp = Math.min(m.hp, 1); F.siren.hp = Math.min(F.siren.hp, 50) })
+    await page.evaluate(() => { const M = window.__mjg, F = M.G.final; for (const m of F.mermaids) m.hp = Math.min(m.hp, 1); F.siren.hp = Math.min(F.siren.hp, 50); F.siren.x = M.pl.x + 70; F.siren.y = M.pl.y })   // 세이렌을 옆으로 — 멀리 가 있어 클리어가 늦는 일이 없게
     const sent = []   // 익명 통계 — 가짜 주소로 돌려 실제로 보내는 줄 · 머리말을 확인(진짜 Supabase 에는 안 간다)
-    await page.route('https://stats.invalid/**', rt => { sent.push({ url: rt.request().url(), h: rt.request().headers(), body: rt.request().postDataJSON() }); rt.fulfill(sent.length === 1 ? { status: 400, body: '{"code":"PGRST204"}' } : { status: 201, body: '' }) })   // 처음엔 up 열이 없는 표처럼 400 → up 빼고 다시
+    page.on('request', q => { if (q.url().startsWith('https://stats.invalid/')) sent.push({ url: q.url(), h: q.headers(), body: q.postDataJSON() }) })   // 받는 건 request 이벤트로 — keepalive 요청은 route 에 가끔 안 잡힌다
+    await page.route('https://stats.invalid/**', rt => rt.fulfill({ status: 201, body: '' }))
     await page.evaluate(() => Object.assign(window.__mjg.STATS, { url: 'https://stats.invalid', key: 'sb_publishable_test', host: location.hostname }))
     r = await sim(page, F + 200, { god: true }); console.log('clear', r)
-    for (let i = 0; i < 30 && sent.length < 2; i++) await page.waitForTimeout(100)   // 400 → 다시 보내기까지 기다린다
+    if (r.mode !== 'over') errors.push('[desktop] 세이렌을 쓰러뜨리지 못함 ' + JSON.stringify(r))
+    for (let i = 0; i < 30 && !sent.length; i++) await page.waitForTimeout(100)   // 보낼 때까지 기다린다
     const st = sent[0]; console.log('stat sent', sent.length, JSON.stringify(st?.body))
-    if (sent.length !== 2 || typeof st.body.up !== 'number' || 'up' in sent[1].body || sent[1].body.result !== 'clear' || !st.url.endsWith('/rest/v1/runs') || st.h.apikey !== 'sb_publishable_test' || st.body.result !== 'clear' || st.body.killer !== null || st.body.diff !== 'hard') errors.push('[desktop] 통계 보내기 ' + JSON.stringify(st))
+    if (sent.length !== 1 || typeof st.body.up !== 'number' || !st.url.endsWith('/rest/v1/runs') || st.h.apikey !== 'sb_publishable_test' || st.body.result !== 'clear' || st.body.killer !== null || st.body.diff !== 'hard') errors.push('[desktop] 통계 보내기 ' + JSON.stringify(st))
     await page.evaluate(() => { window.__mjg.STATS.url = '' })
     await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '9-result.png' })
@@ -152,7 +154,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (ns.diff !== 'normal' || ns.shots || ns.far) errors.push('[phone] 보통인데 멀리서 쏘는 몬스터가 있다 ' + JSON.stringify(ns))
     await page.screenshot({ path: OUT + 'm5-late.png' })
     // 맞으면 죽는지 — 무적을 풀고 체력을 1로
-    await page.evaluate(() => { const M = window.__mjg; M.pl.inv = 0; M.pl.hp = 1; let n = 0; while (M.mode !== 'over' && n++ < 3000) { if (M.mode === 'box') M.pick0(); M.step(1 / 30) } })
+    await page.evaluate(() => { const M = window.__mjg; let n = 0; while (M.mode !== 'over' && n++ < 6000) { if (M.mode === 'box') M.pick0(); if (M.mode === 'pause') M.resume(); M.pl.inv = 0; M.pl.hp = Math.min(M.pl.hp, 1); M.step(1 / 30) } })   // 레벨 업 회복이 있어 체력을 계속 1로
     await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + 'm6-dead.png' }); await clearSnd(page, 'phone m6-dead')
     const row = await page.evaluate(() => window.__mjg.statRow('dead'))   // 익명 통계 한 줄 — 쓰러뜨린 것까지(로컬이라 실제로는 안 보낸다)
@@ -173,7 +175,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   })
 
   await run('shop', { width: 390, height: 844 }, async page => {   // 토벌 보상금 · 영구 강화 상점 — 판이 끝나면 돈이 쌓이고, 사면 다음 판 능력치에 더해진다
-    await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = 300; M.G.kills = 1000; M.pl.inv = 0; M.pl.hp = 1; let n = 0; while (M.mode !== 'over' && n++ < 3000) { if (M.mode === 'box') M.pick0(); M.step(1 / 30) } })
+    await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = 300; M.G.kills = 1000; let n = 0; while (M.mode !== 'over' && n++ < 6000) { if (M.mode === 'box') M.pick0(); if (M.mode === 'pause') M.resume(); M.pl.inv = 0; M.pl.hp = Math.min(M.pl.hp, 1); M.step(1 / 30) } })
     const res = await page.evaluate(() => ({ txt: document.querySelector('#ui .coin')?.textContent, coin: JSON.parse(localStorage.getItem('mjg.v1')).coin }))
     if (!/토벌 보상금 \+\d+/.test(res.txt) || !(res.coin >= 40)) errors.push('[shop] 보상금 ' + JSON.stringify(res))
     await page.locator('#ui .row button', { hasText: '상점' }).click(); await page.waitForTimeout(400)
