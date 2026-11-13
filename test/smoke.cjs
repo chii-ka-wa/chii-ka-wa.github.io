@@ -81,7 +81,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const det = await page.locator('.skill-detail').innerText(); if (!/피해/.test(det) || !/시너지/.test(det)) errors.push('[desktop] 일시정지 스킬 자세히: ' + det.slice(0, 60))
     const pill = await page.locator('.h .pill').innerText(); if (!/쉬움|보통|어려움/.test(pill)) errors.push('[desktop] 일시정지 옆 난이도: ' + pill)
     await page.screenshot({ path: OUT + '4-pause.png' }); await noEmoji(page, 'pause')
-    await page.keyboard.press('Escape'); await page.waitForTimeout(100)
+    await page.keyboard.press('Enter'); await page.waitForTimeout(100)   // 칩에 초점이 있어도 Enter = 계속하기
+    if (await page.evaluate(() => window.__mjg.mode) !== 'play') errors.push('[desktop] 일시정지에서 Enter 로 계속하기 안 됨')
     // 첫 상자가 열릴 때까지
     await page.evaluate(() => { const M = window.__mjg; while (M.mode === 'play' && M.G.t < 120) { M.pl.inv = 1e9; M.step(1 / 30) } })
     await page.waitForTimeout(700)
@@ -96,7 +97,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const rs = await page.evaluate(() => ({ mode: window.__mjg.mode, h: document.querySelector('#ui .panel .h')?.textContent, rows: document.querySelectorAll('#ui .dmg li').length }))
     if (rs.mode !== 'pause' || !/토벌!/.test(rs.h) || !rs.rows) errors.push('[desktop] 보스 격파 쉬는 창 ' + JSON.stringify(rs))
     await page.waitForTimeout(500); await page.screenshot({ path: OUT + '6-rest.png' }); await noEmoji(page, 'rest')
-    await page.keyboard.press('Escape'); await page.waitForTimeout(100)
+    await page.keyboard.press('Space'); await page.waitForTimeout(100)
+    if (await page.evaluate(() => window.__mjg.mode) !== 'play') errors.push('[desktop] 쉬는 창에서 Space 로 계속하기 안 됨')
     const rage = await page.evaluate(() => { const M = window.__mjg, b = M.summon('dekatsuyo', true), s0 = b.spd; b.age = 61; M.step(1 / 30); const o = { rage: b.rage, spd: b.spd / s0 }; b.dead = true; return o })   // 보스를 오래 두면 화낸다
     if (!rage.rage || rage.spd < 1.4) errors.push('[desktop] 보스 화내기 ' + JSON.stringify(rage))
     const F = await page.evaluate(() => window.__mjg.FINAL_T)
@@ -172,6 +174,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.evaluate(() => window.__mjg.startGame(0))
     await sim(page, 120, { god: true, walk: true })
     const n = await page.evaluate(() => { const M = window.__mjg; for (const k of ['pajama', 'battery']) M.G.items.push({ x: M.pl.x, y: M.pl.y, k, t: 0 }); M.step(1 / 60); return M.G.help.length })
+    const guard = await page.evaluate(() => { const M = window.__mjg, p = M.pl; M.G.eshots.push({ k: 'rock', x: p.x, y: p.y - 300, vx: 0, vy: 150, t: 0, life: 5, dmg: 1, r: 8 }); for (let i = 0; i < 24; i++) M.step(1 / 60); return Math.sin(M.G.help.find(h => h.k === 'leaf').a) })
+    if (!(guard < -0.9)) errors.push('[help] 한잎이 · 두잎이가 위에서 오는 것 쪽으로 안 섬 ' + guard)   // 위 = -90°
     await sim(page, 124, { god: true })
     const notes = await page.evaluate(() => window.__mjg.G.shots.filter(b => b.look === 'note').length)   // 파자마 파티즈는 돌면서 음표를 쏜다
     if (!notes) errors.push('[help] 파자마 파티즈 음표가 안 나옴')

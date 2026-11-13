@@ -59,6 +59,8 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
+    '쉬어 가는 창 · 일시정지에서 Enter · Space 를 누르면 계속하기, 잭팟에서는 셋 다 받기',
+    '한잎이 · 두잎이 — 그냥 빙빙 돌지 않고 가장 가까운 날아오는 것 쪽으로 돌아 서서 막아요(없으면 가까운 적 쪽)',
     '맞으면 0.8초 동안 무적(전엔 0.4초) — 둘레의 적도 살짝 밀려나 빠져나갈 틈이 생겨요. 몰려 있을 때 두두두 연달아 맞지 않게',
     '레벨 업 — 체력 10% 회복, 고르고 나면 둘레의 적을 밀쳐 내고 1.2초 무적(고르자마자 몰려 맞지 않게)',
     '보스 · 중간보스를 1분 넘게 두면 화내요 — 빨라지고(1.5배) 기술을 더 자주 · 몸통이 더 아프게. 15초 전부터 보스 체력 줄에 알려 줘요',
@@ -129,7 +131,7 @@ const ITEMS = {
   firework: { name: '폭죽', note: '화면 안의 적을 모두 쓰러뜨린다(보스는 큰 피해)' },
   earplug: { name: '귀마개', note: '상태이상을 모두 푼다(걸린 게 없으면 체력 15%) — 10분부터' },
   pajama: { name: '꿀맛 페스티벌 티켓', note: '파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%' },
-  battery: { name: '건전지', note: '한잎이 · 두잎이가 12초 동안 손을 잡고 빠르게 돈다(멀어졌다 가까워졌다) — 날아오는 것을 막고 닿은 적을 세게 밀쳐 낸다' },
+  battery: { name: '건전지', note: '한잎이 · 두잎이가 12초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다' },
   chest: { name: '보물상자', note: '보스가 떨어뜨린다 — 잭팟 확률 50%' },
 }
 
@@ -1460,12 +1462,18 @@ new ResizeObserver(size).observe(cv)
 
 const key = { u: 0, d: 0, l: 0, r: 0 }, joy = { on: false, id: null, x: 0, y: 0, ox: 0, oy: 0, px: 0, py: 0 }
 const KEYS = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' }
+let tabbed = false   // Tab 으로 단추를 골랐으면 Enter · Space 는 그 단추(마우스 · 터치하면 풀린다)
+addEventListener('pointerdown', () => { tabbed = false }, true)
 addEventListener('keydown', e => {
   const k = KEYS[e.code]
+  if (e.code === 'Tab') tabbed = true
   if (k) key[k] = 1
   if ((k || e.code === 'Space') && mode === 'play') e.preventDefault()
   if (SND.open?.()) { if (e.code === 'Escape') SND.close(); return }   // 소리 창이 떠 있으면 Esc 로 닫기만
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
+  if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat && (mode === 'pause' || (mode === 'box' && BOX?.jack)) && !(tabbed && e.target.closest?.('#ui button'))) {   // 쉬는 창 · 일시정지 → 계속하기, 잭팟 → 셋 다 받기(Tab 으로 고른 단추는 그 단추)
+    e.preventDefault(); return mode === 'pause' ? resume() : BOX.act('take')
+  }
   if (mode === 'box') boxKey(e)
   if (mode === 'chars' && !e.repeat) {
     if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') pickChar((pickCi + CHARS.length - 1) % CHARS.length)
@@ -1959,7 +1967,7 @@ function summonHelp(k) {
   G.help.push(k === 'pajama' ? { k, t: 0, T: 10, a: 0, tick: 0.3, shot: 0, n: 0 } : { k, t: 0, T: 12, a: 0, hit: new Map() })
   say(k === 'pajama' ? '파자마 파티즈의 응원 공연! ♪' : '한잎이 · 두잎이가 지켜 줄게요!', 2.2, k === 'pajama' ? '#ff9be0' : '#a6e07a')
 }
-const helpPos = (h, i) => { const a = h.k === 'pajama' ? h.a + i / 4 * TAU : h.a, r = h.k === 'pajama' ? 92 : 72 + 22 * Math.sin(h.t * 2.2); return [pl.x + Math.cos(a) * r, pl.y + Math.sin(a) * r * 0.8] }   // 한잎이 · 두잎이는 멀어졌다 가까워졌다
+const helpPos = (h, i) => { const a = h.k === 'pajama' ? h.a + i / 4 * TAU : h.a, r = h.k === 'pajama' ? 92 : 64; return [pl.x + Math.cos(a) * r, pl.y + Math.sin(a) * r * 0.8] }
 function helpers(dt) {
   for (const h of G.help) {
     if ((h.t += dt) > h.T) { h.dead = true; continue }
@@ -1975,8 +1983,12 @@ function helpers(dt) {
         h.shot = 0.25; const i = h.n = (h.n + 1) % 4, [x, y] = helpPos(h, i), e = closest(1, x, y, null, 380)[0], [dx, dy] = e ? toward(e, x, y) : [Math.cos(h.a + i / 4 * TAU), Math.sin(h.a + i / 4 * TAU)]
         G.shots.push({ src: SRC, k: 'ball', look: 'note', x, y, vx: dx * 430, vy: dy * 430, r: 11, dmg: D * 0.6, pierce: 2, kb: 90, life: 0.9, t: 0, hit: new Set() })
       }
-    } else {   // 빠르게 돌며 닿은 적을 세게 밀쳐 내고 날아오는 것을 막는다
-      h.a += dt * 4.2
+    } else {   // 가장 가까운 다가오는 것(없으면 가까운 적) 쪽으로 빠르게 돌아 서서 막고, 닿은 적은 세게 밀쳐 낸다
+      let T = null, bd = 450 ** 2
+      for (const b of G.eshots) { const d = (b.x - pl.x) ** 2 + (b.y - pl.y) ** 2; if (!b.dead && d < bd && (pl.x - b.x) * b.vx + (pl.y - b.y) * b.vy > 0) { bd = d; T = b } }
+      T ||= closest(1, pl.x, pl.y, null, 450)[0]
+      if (T) { const da = ((Math.atan2((T.y - pl.y) / 0.8, T.x - pl.x) - h.a) % TAU + TAU * 1.5) % TAU - Math.PI; h.a += Math.sign(da) * Math.min(Math.abs(da), dt * 12) }
+      else h.a += dt * 2
       const [x, y] = helpPos(h, 0), D = (18 + G.t / 6) * S.might
       near(x, y, 36, e => { const t = h.hit.get(e); if (t === undefined || G.t - t > 0.25) { h.hit.set(e, G.t); hurt(e, D, x, y, 320) } })
       for (const b of G.eshots) if (!b.dead && (b.x - x) ** 2 + (b.y - y) ** 2 < 40 * 40) { b.dead = true; fx({ k: 'flash', x: b.x, y: b.y - 14, R: 18, col: '#c8f0a8', T: 0.25 }) }
@@ -2188,7 +2200,7 @@ function openBox() {
   mode = 'box'; calm(); pauseBtn.hidden = true; still = 2
   const cards = h('div', { class: 'cards' }), hint = h('p', { class: 'hint' })
   const btns = ACTS.map(([k, s], j) => h('button', { type: 'button', class: 'btn act', onclick: () => act(k) }, s, h('em'), h('kbd', {}, j + 4)))
-  const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, '셋 다 받기')
+  const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, '셋 다 받기', h('kbd', {}, 'Enter'))
   const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}` },
     h('p', { class: 'box-title' }, chest ? [ic('chest'), ' 보물상자!'] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
     jack && h('p', { class: 'jack' }, 'JACKPOT!!'), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
@@ -2232,8 +2244,7 @@ function next() {
 }
 function boxKey(e) {
   if (!BOX || e.repeat) return
-  if (BOX.jack && ['Enter', 'Space'].includes(e.code) && !e.target.closest?.('button')) { BOX.act('take'); e.preventDefault() }
-  else if (/^Digit[1-6]$/.test(e.code)) { const i = +e.code.slice(5) - 1; i < 3 ? BOX.pick(i) : BOX.act(ACTS[i - 3][0]); e.preventDefault() }
+  if (/^Digit[1-6]$/.test(e.code)) { const i = +e.code.slice(5) - 1; i < 3 ? BOX.pick(i) : BOX.act(ACTS[i - 3][0]); e.preventDefault() }
 }
 
 // ---------------------------------------------------------------- 그리기
@@ -2486,7 +2497,7 @@ function hud(c) {
 }
 
 // ---------------------------------------------------------------- 메뉴(HTML)
-const btn = (s, fn, cls = '') => h('button', { type: 'button', class: `btn ${cls}`, onclick: fn }, s)
+const btn = (s, fn, cls = '', key) => h('button', { type: 'button', class: `btn ${cls}`, onclick: fn }, s, key && h('kbd', {}, key))
 function show(...kids) { ui.replaceChildren(...kids); ui.hidden = false; ui.scrollTop = 0; still = 2 }
 function title() {
   SND.play('field')
@@ -2583,7 +2594,7 @@ function guide() {
     h('h3', {}, '줍는 것'),
     h('ul', { class: 'list' }, Object.entries(ITEMS).map(([id, p]) => li(ic(id), p.name, p.note))),
     h('h3', {}, '도와주는 친구들 (선택은 못 해요 — 아이템을 먹으면 잠깐 나타나요)'),
-    h('ul', { class: 'list' }, li(portrait('pj1'), '파자마 파티즈', '잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%', [ic('pajama'), ' 꿀맛 페스티벌 티켓']), li(portrait('leafpair'), '한잎이 · 두잎이', '늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 12초 동안 손을 잡고 빠르게 돌며(멀어졌다 가까워졌다) 날아오는 것을 막고 닿은 적을 세게 밀쳐 낸다', [ic('battery'), ' 건전지'])),
+    h('ul', { class: 'list' }, li(portrait('pj1'), '파자마 파티즈', '잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%', [ic('pajama'), ' 꿀맛 페스티벌 티켓']), li(portrait('leafpair'), '한잎이 · 두잎이', '늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 12초 동안 손을 잡고 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다', [ic('battery'), ' 건전지'])),
     h('h3', {}, '토벌 대상'),
     h('ul', { class: 'list' }, Object.entries(FOES).filter(([id]) => !(id in BOSS)).map(([id, f]) => li(portrait(id), f.name, f.note))),
     h('h3', {}, '보스'),
@@ -2621,7 +2632,7 @@ function pause() {
   mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
   const det = h('div', { class: 'skill-detail' }, h('p', { class: 'hint' }, '스킬 · 아이템을 누르면 자세히 볼 수 있어요'))
   const pick = (kind, id, el) => { for (const c of ui.querySelectorAll('.build .chip')) c.classList.toggle('on', c === el); det.replaceChildren(...skillInfo(kind, id)) }
-  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지', h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main'))))
+  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지', h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main', 'Enter'))))
 }
 const DMG_NAME = { pajama: '파자마 파티즈', battery: '한잎이 · 두잎이', firework: '폭죽' }
 /** 이번 판 스킬(· 친구 · 폭죽)별 준 피해 — 많은 순, 막대 · 몫 */
@@ -2634,7 +2645,7 @@ function rest() {
   const r = G.rest; G.rest = null
   mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
   show(h('div', { class: 'panel' }, h('p', { class: 'h' }, `${r.name} 토벌!`), h('p', { class: 'sub' }, `${fmt(G.t)} · Lv ${G.lvl} · 처치 ${G.kills.toLocaleString()} — ${nextLine()[0]}`),
-    dmgTable(), h('p', { class: 'hint' }, '잠깐 쉬어 가요. 준비되면 계속!'), h('div', { class: 'row' }, btn('계속하기', resume, 'main'))))
+    dmgTable(), h('p', { class: 'hint' }, '잠깐 쉬어 가요. 준비되면 계속!'), h('div', { class: 'row' }, btn('계속하기', resume, 'main', 'Enter'))))
 }
 function resume() { if (mode !== 'pause') return; mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; SND.duck(false) }
 function finish(win, quit = false) {
