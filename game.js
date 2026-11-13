@@ -56,14 +56,14 @@ const SYN = [
   ['안주 내놔!', { momo: { n: 1 }, kanpai: { bounce: 2, dmg: 3 } }],
 ]
 const synOf = id => SYN.find(s => id in s[1])
-// 패치노트 — 새 항목을 맨 위에 넣는다. 처음 화면 「패치노트」에 NEW 가 뜬다(본 날짜는 save.seen)
+// 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 날짜는 save.seen)
 const PATCH = [
   ['2026-11-13', [
     '난이도 🌱 쉬움 · ⭐ 보통 · 🔥 어려움 추가 — 지금까지의 토벌이 어려움. 쉬움 · 보통은 적 체력이 낮고 경험치 · 줍는 것이 많아요. 기록은 난이도마다 따로(예전 기록은 어려움)',
     '멀리서 쏘는 일반 몬스터(가면 키메라 · 복어 · 문어 괴물)는 어려움에서만 나와요',
     '날아오는 공격을 크게, 빨간 테와 꼬리를 달아 경험치 보석과 구별되게. 쏘기 직전에는 머리 위에 빨간 ! 와 조준선',
-    '시너지 버프 「랏코 선생의 수련」 — 사스마타 관통 +1 · 피해 +5 → 관통 +2 · 피해 +8 · 쿨타임 -0.15초 / 일섬 개수 +1 → 개수 +1 · 피해 +8 · 범위 +20%',
-    '시너지 버프 「하치와레의 꿈」 — 기타 개수 +1 → 개수 +1 · 피해 +4 · 지속 +1초 / 포셰트 개수 +1 → 개수 +1 · 피해 +5 · 범위 +20%',
+    { syn: '랏코 선생의 수련', from: { sasu: { pierce: 1, dmg: 5 }, sword: { n: 1 } }, to: { sasu: { pierce: 2, dmg: 8, cd: -0.15 }, sword: { n: 1, dmg: 8, area: 0.2 } } },
+    { syn: '하치와레의 꿈', from: { guitar: { n: 1 }, pochette: { n: 1 } }, to: { guitar: { n: 1, dmg: 4, dur: 1 }, pochette: { n: 1, dmg: 5, area: 0.2 } } },
     '캐릭터 고르기 · 도감 — 제목과 아래 단추는 고정, 가운데만 스크롤',
     '휴대폰 — 스킬 줄이 다음 보스 글자와 겹치지 않게',
     '결과 화면에 난이도를 크게',
@@ -2217,8 +2217,19 @@ function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스�
   mode = 'notes'; save.seen = PATCH[0][0]; persist()
   show(h('div', { class: 'panel guide pick' },
     h('p', { class: 'h' }, '패치노트'),
-    h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => h('li', {}, s)))])),
+    h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => s.syn ? buffCard(s) : h('li', {}, s)))])),
     h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
+}
+/** 시너지 수치 변경 — 스킬마다 항목 · 전 → 후 (안 바뀐 것은 「그대로」, 새로 붙은 것은 NEW) */
+function buffCard({ syn, from, to }) {
+  const lab = k => UP[k](1).split(' ')[0], val = (k, v) => v == null ? '없음' : UP[k](v).replace(/^\S+ /, '')
+  return h('li', { class: 'buff' }, h('p', { class: 't' }, h('mark', {}, '버프'), `시너지 「${syn}」`),
+    Object.keys(to).map(id => h('div', { class: 'sk' }, h('b', {}, `${WEAP[id].icon} ${WEAP[id].name}`),
+      h('div', { class: 'cmp' }, [...new Set([...Object.keys(from[id] || {}), ...Object.keys(to[id])])].map(k => {
+        const a = from[id]?.[k], b = to[id][k]
+        return a === b ? [h('span', {}, lab(k)), h('s', { class: 'same' }, val(k, a)), h('i'), h('em', { class: 'same' }, '그대로')]
+          : [h('span', {}, lab(k)), h('s', { class: a == null ? 'same' : '' }, val(k, a)), h('i', {}, '→'), h('em', { class: a == null ? 'new' : '' }, val(k, b))]
+      })))))
 }
 function guide() {
   mode = 'guide'

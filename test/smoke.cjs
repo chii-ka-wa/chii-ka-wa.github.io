@@ -37,8 +37,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const nb = page.getByRole('button', { name: /패치노트/ })   // 패치노트 — 처음엔 NEW, 보고 나면 사라진다
     if (!/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트에 NEW 없음')
     await nb.click(); await page.waitForTimeout(200)
-    const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.scroll li').length }))
-    if (pn.h !== '패치노트' || pn.n < 5) errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
+    const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.scroll li').length, buff: [...document.querySelectorAll('.buff')].map(b => b.querySelectorAll('.cmp em').length) }))
+    if (pn.h !== '패치노트' || pn.n < 5 || pn.buff.join() !== '6,6') errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
     await page.screenshot({ path: OUT + '1-notes.png' })
     await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
     if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트을 봐도 NEW가 남음')
