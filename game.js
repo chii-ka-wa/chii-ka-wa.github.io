@@ -62,8 +62,11 @@ const PATCH = [
     '맞으면 0.8초 동안 무적(전엔 0.4초) — 둘레의 적도 살짝 밀려나 빠져나갈 틈이 생겨요. 몰려 있을 때 두두두 연달아 맞지 않게',
     '레벨 업 — 체력 10% 회복, 고르고 나면 둘레의 적을 밀쳐 내고 1.2초 무적(고르자마자 몰려 맞지 않게)',
     '보스 · 중간보스를 1분 넘게 두면 화내요 — 빨라지고(1.5배) 기술을 더 자주 · 몸통이 더 아프게. 15초 전부터 보스 체력 줄에 알려 줘요',
-    '보스를 쓰러뜨리면 잠깐 멈추고 쉬어 가는 창 — 지금까지 기록 · 스킬별 준 피해 · 다음 보스',
+    '보스 · 중간보스를 쓰러뜨리면 잠깐 멈추고 쉬어 가는 창 — 지금까지 기록 · 스킬별 준 피해 · 다음 보스',
     '스킬별 준 피해 — 일시정지 · 보스 격파 · 결과 화면에서 어떤 스킬이 얼마나 때렸는지 막대로 보여 줘요',
+    '보스 · 중간보스 체력 1.5배(세이렌 · 인어는 그대로) — 기술을 더 오래 볼 수 있게',
+    '피해야 할 적의 바닥 공격은 색과 상관없이 빨간 점선 테두리와 가운데 ! — 라멘 국물(노란 국물 · 라멘 그림) · 카레 냄비(카레색)와 헷갈리지 않게',
+    '체력이 낮을 때 화면 전체가 깜빡이던 것을 가장자리만 은은하게 붉게(낮을수록 진하게) · 무적일 때 캐릭터도 깜빡이지 않고 반투명 — 눈이 덜 피곤하게',
     '스킬이 나갈 때 왼쪽 위 아이콘이 반짝 — 화면의 어떤 공격이 무슨 스킬인지 알 수 있게. 레벨 업 카드에도 스킬이 하는 일을 한 줄로(예: 가까운 적을 꿰뚫어 찌르기)',
   ]],
   ['2026-11-13', [
@@ -164,6 +167,7 @@ const BOSS = {
   mermaid: { name: '인어', line: '라~♪', note: '세이렌의 코러스 — 곁을 돌다가 날카로운 이빨로 달려들어 문다. 살아 있는 동안 세이렌은 받는 피해 -50%' },
   siren: { name: '세이렌', line: '내 노래를 들어 봐…', note: '노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다', st: 'charm', stCd: 14 },
 }
+const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인어는 그대로)
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'rps'], [1080, 'chef', 1], [1200, 'anoko'],
@@ -1673,7 +1677,7 @@ const HPK = [1, 1.4, 1.8, 2.3, 4.3, 13, 26]   // 보통 적 피 배수 — 0 · 
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
-  const hp = F.hp * (big ? 1 + mm * 0.25 : hpK(mm)) * G.D.hp
+  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm)) * G.D.hp
   const e = {
     type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * (1 + m * 0.055), xp: F.xp,
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
@@ -1901,7 +1905,7 @@ function kill(e, quiet = false) {
   else if (e.kind === 'siren') {   // 클리어 — 남은 적은 모두 도망친다
     G.bosses++; G.won = 2.8; G.endKind = 'siren'; G.dark = null; say('세이렌 격파! 토벌 성공!', 3, '#ffd23f')
     for (const f of G.foes) if (!f.dead) kill(f, true)
-  } else if (e.mid) say(`${B.name} 격파!`, 1.6, '#ffb35e')
+  } else if (e.mid) { say(`${B.name} 격파!`, 1.6, '#ffb35e'); G.rest = { name: `중간보스 ${B.name}`, at: G.t + 1.2 } }
   else { G.bosses++; item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
   shake = e.mid ? 6 : 10; fx({ k: 'ring', x: e.x, y: e.y, R: e.mid ? 120 : 180, T: 0.6, col: '#ffd23f' }); fx({ k: 'flash', x: e.x, y: e.y - 40, R: e.mid ? 110 : 160, col: '#ffd23f', T: 0.6 })
 }
@@ -2097,7 +2101,7 @@ function shots(dt) {
         if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#8fd16a'); fx({ k: 'sprout', x: b.x, y: b.y, R: b.R, T: 0.5 }); shake = Math.max(shake, 3); b.dead = true }
         break
       case 'pot':   // 카레 냄비 — 1초 뒤 매운 폭발(인어 · 세이렌에게 1.5배)
-        if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#ff7a2f', 1.5); fx({ k: 'text', x: b.x, y: b.y - 34, s: '맵다!', col: '#ff7a2f', T: 0.6 }); shake = Math.max(shake, 3); b.dead = true }
+        if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#e8b02a', 1.5); fx({ k: 'text', x: b.x, y: b.y - 34, s: '맵다!', col: '#ffcf4a', T: 0.6 }); shake = Math.max(shake, 3); b.dead = true }
         break
       case 'ring': {   // 야하! 충격파 — 반지름이 커지며 닿은 적을 한 번씩
         if (b.t < 0) { b.x = pl.x; b.y = pl.y; break }
@@ -2255,8 +2259,8 @@ function world(c, ox, oy) {
   // 바닥 — 라멘 국물 · 우라! · 경고 원 · 돌진 길 · 풀뽑기 표시 · 카레 냄비
   for (const b of G.shots) if (b.k === 'zone') {
     const a = Math.min(1, (b.life - b.t) * 2)
-    c.globalAlpha = 0.45 * a; c.fillStyle = '#e8a04f'; oval(c, b.x, b.y, b.R, b.R * 0.8); c.fill()
-    c.globalAlpha = 0.8 * a; c.strokeStyle = '#c4702a'; c.lineWidth = 2; c.stroke()
+    c.globalAlpha = 0.42 * a; c.fillStyle = '#f5d36a'; oval(c, b.x, b.y, b.R, b.R * 0.8); c.fill()
+    c.globalAlpha = 0.8 * a; c.strokeStyle = '#c9a03a'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 0.6 * a; put(c, SPR.E.ramen, b.x, b.y)
     c.fillStyle = '#fff6d8'; for (let i = 0; i < 3; i++) { const q = (b.t * 0.7 + i / 3) % 1; c.globalAlpha = (1 - q) * 0.7 * a; oval(c, b.x + Math.sin(i * 2.1 + b.t * 2) * b.R * 0.4, b.y - q * 30, 3 + q * 4, 3 + q * 4); c.fill() }
     c.globalAlpha = 1
   }
@@ -2276,12 +2280,14 @@ function world(c, ox, oy) {
     const u = z.t / z.T
     c.fillStyle = z.col; c.globalAlpha = 0.18; oval(c, z.x, z.y, z.R, z.R * 0.8); c.fill()
     c.globalAlpha = 0.45; oval(c, z.x, z.y, z.R * u, z.R * 0.8 * u); c.fill()
-    c.globalAlpha = 0.9; c.strokeStyle = z.col; c.lineWidth = 2.5; oval(c, z.x, z.y, z.R, z.R * 0.8); c.stroke(); c.globalAlpha = 1
+    c.globalAlpha = 0.9; c.strokeStyle = z.col; c.lineWidth = 2; oval(c, z.x, z.y, z.R - 3, z.R * 0.8 - 3); c.stroke()
+    c.strokeStyle = '#ff2e2e'; c.lineWidth = 3.5; c.setLineDash([10, 7]); c.lineDashOffset = -G.t * 40; oval(c, z.x, z.y, z.R, z.R * 0.8); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0; c.globalAlpha = 1   // 적 공격은 늘 빨간 점선 + ! — 내 스킬 장판과 헷갈리지 않게
+    txt(c, '!', z.x, z.y + Math.min(10, z.R * 0.25), Math.min(30, 12 + z.R * 0.15), '#ff3b3b')
   }
   for (const e of G.foes) if (e.boss && e.st === 'wind') { const L = e.spd * 4 * 0.75, a = Math.atan2(e.dy, e.dx); c.save(); c.translate(e.x, e.y); c.rotate(a); c.fillStyle = 'rgba(255,60,60,.3)'; c.fillRect(0, -e.r, L, e.r * 2); c.restore() }
   for (const b of G.shots) {
     if (b.k === 'drop') { const u = b.t / b.T; c.strokeStyle = '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = 'rgba(110,190,80,.35)'; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill() }
-    else if (b.k === 'pot') { const u = b.t / b.T; c.strokeStyle = 'rgba(255,110,40,.8)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = 'rgba(255,120,40,.18)'; c.fill(); c.strokeStyle = '#ff5a1f'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
+    else if (b.k === 'pot') { const u = b.t / b.T; c.strokeStyle = 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
   }
   // 보석 · 줍는 것
   for (const g of G.gems) put(c, SPR.gem[g.v >= 20 ? 2 : g.v >= 3 ? 1 : 0], g.x, g.y)
@@ -2357,7 +2363,7 @@ function drawFoe(c, e) {
   put(c, (L ? v.L : v.R)[f], e.x, y, k)
   if (e.flash > 0) { c.globalAlpha = e.boss ? 0.45 : 0.8; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 }   // 맞으면 하얗게(보스는 모양이 보이게 옅게)
   if (e.boss && e.kind === 'siren' && guarded()) { c.globalAlpha = 0.35 + 0.15 * Math.sin(G.t * 4); c.strokeStyle = '#7fd8ff'; c.lineWidth = 3; oval(c, e.x, e.y - e.r * 1.1, e.r * 1.5, e.r * 1.6); c.stroke(); c.globalAlpha = 1 }
-  if (e.slow > 0 && !e.boss) { c.globalAlpha = 0.5; c.fillStyle = '#e8a04f'; oval(c, e.x, e.y, e.r, e.r * 0.4); c.fill(); c.globalAlpha = 1 }
+  if (e.slow > 0 && !e.boss) { c.globalAlpha = 0.5; c.fillStyle = '#f5d36a'; oval(c, e.x, e.y, e.r, e.r * 0.4); c.fill(); c.globalAlpha = 1 }
   const SH = FOES[e.type].shot, d = Math.hypot(pl.x - e.x, pl.y - e.y)   // 쏘기 직전 경고 — 머리 위 빨간 ! (겨누는 것은 조준선도)
   if (SH ? d < SH.range && e.cd < 0.7 : e.act && FIRE.has(e.act.k)) {
     const hy = y - e.r * 2.3 * k - 10, aim = SH || e.act.k === 'volley', on = (G.t * 10 | 0) % 2
@@ -2370,7 +2376,7 @@ function drawMe(c) {
   const C = SPR[G.ch.id], j = pl.jump > 0 ? Math.sin(pl.jump / 0.3 * Math.PI) * 26 : 0, walking = pl.moving && !G.dying
   const s = G.dying || pl.hurtT > 0 ? C.hurt : walking ? C.walk[(G.t * 9 * Math.sqrt(S.move) | 0) % 4] : C.idle[G.t % 3.4 < 0.14 ? 1 : 0]   // 아프면 > < · 걸으면 네 장 · 서 있으면 가끔 깜빡
   const br = walking ? 0 : Math.sin(G.t * 3) * 0.025   // 서 있으면 숨 쉬듯
-  if (pl.inv > 0 && (G.t * 20 | 0) % 2) c.globalAlpha = 0.5
+  if (pl.inv > 0) c.globalAlpha = 0.6   // 무적 — 깜빡이지 않고 반투명
   c.save(); c.translate(pl.x, pl.y - j)
   if (G.dying) c.rotate(Math.min(1, (1.2 - G.dying) * 2) * 1.4 * pl.fx)
   c.scale(pl.fx * (1 + br * 0.6), 1 - br)
@@ -2472,7 +2478,10 @@ function hud(c) {
     c.globalAlpha = 0.35; c.fillStyle = '#fff'; oval(c, joy.ox, joy.oy, 46, 46); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke()
     c.globalAlpha = 0.75; oval(c, joy.px, joy.py, 20, 20); c.fill(); c.stroke(); c.globalAlpha = 1
   }
-  if (pl.hp / S.maxHp < 0.3 && !G.won) { c.fillStyle = `rgba(255,60,60,${0.12 + 0.08 * Math.sin(G.t * 8)})`; c.fillRect(0, 0, W, H) }   // 체력이 낮으면 붉게
+  if (pl.hp / S.maxHp < 0.3 && !G.won) {   // 체력이 낮으면 가장자리만 붉게 — 깜빡이지 않는다(눈 피로), 낮을수록 진하게
+    const k = 1 - pl.hp / S.maxHp / 0.3, g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) / 2)
+    g.addColorStop(0, 'rgba(255,60,60,0)'); g.addColorStop(1, `rgba(255,60,60,${0.22 + 0.2 * k})`); c.fillStyle = g; c.fillRect(0, 0, W, H)
+  }
 }
 
 // ---------------------------------------------------------------- 메뉴(HTML)
@@ -2619,7 +2628,7 @@ function dmgTable() {
   const rows = Object.entries(G.dmg).sort((a, b) => b[1] - a[1]), sum = rows.reduce((q, r) => q + r[1], 0)
   return h('div', { class: 'dmg' }, h('p', { class: 'dt' }, '스킬별 준 피해'), rows.length ? h('ul', {}, rows.map(([id, v]) => h('li', {}, ic(id), h('span', {}, WEAP[id]?.name ?? DMG_NAME[id]), h('i', { style: `--w:${(v / rows[0][1] * 100).toFixed(1)}%` }), h('b', {}, `${Math.round(v).toLocaleString()} · ${Math.round(v / sum * 100)}%`)))) : h('p', { class: 'hint' }, '아직 준 피해가 없어요'))
 }
-/** 보스를 쓰러뜨리면 — 멈추고 쉬어 가는 창(지금까지 · 스킬별 피해 · 다음 보스) */
+/** 보스 · 중간보스를 쓰러뜨리면 — 멈추고 쉬어 가는 창(지금까지 · 스킬별 피해 · 다음 보스) */
 function rest() {
   const r = G.rest; G.rest = null
   mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
