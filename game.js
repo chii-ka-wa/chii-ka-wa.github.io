@@ -47,15 +47,39 @@ const WEAP = {
 const UP = { n: v => `개수 +${v}`, dmg: v => `피해 +${v}`, cd: v => `쿨타임 ${v}초`, area: v => `범위 +${Math.round(v * 100)}%`, spd: v => `속도 +${Math.round(v * 100)}%`, dur: v => `지속 +${v}초`, pierce: v => `관통 +${v}`, bounce: v => `튕김 +${v}` }
 // 시너지 — 짝인 두 스킬을 다 가지면 둘 다 세진다(wstat). 스킬마다 짝은 하나
 const SYN = [
-  ['랏코 선생의 수련', { sasu: { pierce: 1, dmg: 5 }, sword: { n: 1 } }],
+  ['랏코 선생의 수련', { sasu: { pierce: 2, dmg: 8, cd: -0.15 }, sword: { n: 1, dmg: 8, area: 0.2 } }],   // 11-13 버프
   ['우사기 폭주', { stick: { area: 0.2, dmg: 5 }, yaha: { area: 0.2, dmg: 10 } }],
   ['기합 폭발', { ura: { area: 0.2 }, nantoka: { n: 1 } }],
   ['울면서 풀뽑기', { weed: { n: 1 }, tears: { n: 1 } }],
   ['섬 맛집 투어', { ramen: { n: 1, dur: 1 }, curry: { area: 0.2 } }],
-  ['하치와레의 꿈', { guitar: { n: 1 }, pochette: { n: 1 } }],
+  ['하치와레의 꿈', { guitar: { n: 1, dmg: 4, dur: 1 }, pochette: { n: 1, dmg: 5, area: 0.2 } }],   // 11-13 버프
   ['안주 내놔!', { momo: { n: 1 }, kanpai: { bounce: 2, dmg: 3 } }],
 ]
 const synOf = id => SYN.find(s => id in s[1])
+// 업데이트 기록 — 새 항목을 맨 위에 넣는다. 처음 화면 「업데이트 기록」에 NEW 가 뜬다(본 날짜는 save.seen)
+const PATCH = [
+  ['2026-11-13', [
+    '난이도 🌱 쉬움 · ⭐ 보통 · 🔥 어려움 추가 — 지금까지의 토벌이 어려움. 쉬움 · 보통은 적 체력이 낮고 경험치 · 줍는 것이 많아요. 기록은 난이도마다 따로(예전 기록은 어려움)',
+    '멀리서 쏘는 일반 몬스터(가면 키메라 · 복어 · 문어 괴물)는 어려움에서만 나와요',
+    '날아오는 공격을 크게, 빨간 테와 꼬리를 달아 경험치 보석과 구별되게. 쏘기 직전에는 머리 위에 빨간 ! 와 조준선',
+    '시너지 버프 「랏코 선생의 수련」 — 사스마타 관통 +1 · 피해 +5 → 관통 +2 · 피해 +8 · 쿨타임 -0.15초 / 일섬 개수 +1 → 개수 +1 · 피해 +8 · 범위 +20%',
+    '시너지 버프 「하치와레의 꿈」 — 기타 개수 +1 → 개수 +1 · 피해 +4 · 지속 +1초 / 포셰트 개수 +1 → 개수 +1 · 피해 +5 · 범위 +20%',
+    '캐릭터 고르기 · 도감 — 제목과 아래 단추는 고정, 가운데만 스크롤',
+    '휴대폰 — 스킬 줄이 다음 보스 글자와 겹치지 않게',
+    '결과 화면에 난이도를 크게',
+    '업데이트 기록 추가',
+  ]],
+  ['2026-11-12', [
+    '소리 — 직접 만든 배경음악 · 효과음 · 캐릭터 목소리. 🔊 에서 배경음 · 효과음 크기를 따로(게임 중에 열면 멈춰요)',
+    '일시정지에서 스킬 · 아이템을 누르면 자세히(지금 수치 · 다음 레벨 · 시너지)',
+    '캐릭터 · 적 · 도와주는 친구들 그림을 원작에 가깝게 여러 번 다시 그림 — 제대로 걷는 동작, 아플 때 > < 눈',
+    '별똥별 · 검은 별똥별을 털인형 별로',
+    '카니 · 아노코(20분 보스) · 토벌 몬스터 · 보스 · 도와주는 친구들(파자마 파티즈 · 한잎이 두잎이) 추가, 다음 보스까지 남은 시간 표시',
+    '29분까지 세이렌을 못 쓰러뜨리면 검은 별똥별 — 30:00까지 도망치면 생존 클리어',
+    '작은 후원 단추(Ko-fi) · 문의 메일 · 공유 썸네일',
+    '먼작귀 서바이버즈 첫 공개 — 캐릭터 8명 · 스킬 14종 · 아이템 13종 · 시너지 7쌍 · 25분 최종보스 세이렌',
+  ]],
+]
 const mateOf = id => Object.keys(synOf(id)[1]).find(k => k !== id)
 const synText = ([, u]) => Object.entries(u).map(([id, up]) => `${WEAP[id].name} ${Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')}`).join(' / ')
 
@@ -2150,7 +2174,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH[0][0] ? '업데이트 기록' : h('span', {}, '업데이트 기록', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, '☕ 후원'))))
@@ -2189,6 +2213,13 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   if (!cv?._walk?.length) return
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
+function notes() {   // 업데이트 기록 — 위 · 아래 고정, 가운데만 스크롤
+  mode = 'notes'; save.seen = PATCH[0][0]; persist()
+  show(h('div', { class: 'panel guide pick' },
+    h('p', { class: 'h' }, '업데이트 기록'),
+    h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => h('li', {}, s)))])),
+    h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
+}
 function guide() {
   mode = 'guide'
   const li = (pic, name, note, extra) => h('li', {}, typeof pic === 'string' ? h('i', {}, pic) : pic, h('div', {}, h('b', {}, name), h('span', {}, note), extra && h('em', {}, extra)))

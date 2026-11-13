@@ -34,6 +34,14 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!vol.open || vol.bgm !== 0.3 || vol.sfx !== 0) errors.push('[desktop] 소리 크기 ' + JSON.stringify(vol))
     await page.mouse.click(40, 40); await page.waitForTimeout(100)
     if (!(await page.evaluate(() => document.getElementById('sndm').hidden))) errors.push('[desktop] 소리 창이 바깥을 눌러도 안 닫힘')
+    const nb = page.getByRole('button', { name: /업데이트 기록/ })   // 업데이트 기록 — 처음엔 NEW, 보고 나면 사라진다
+    if (!/NEW/.test(await nb.innerText())) errors.push('[desktop] 업데이트 기록에 NEW 없음')
+    await nb.click(); await page.waitForTimeout(200)
+    const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.scroll li').length }))
+    if (pn.h !== '업데이트 기록' || pn.n < 5) errors.push('[desktop] 업데이트 기록 ' + JSON.stringify(pn))
+    await page.screenshot({ path: OUT + '1-notes.png' })
+    await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
+    if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 업데이트 기록을 봐도 NEW가 남음')
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
     const dock = await page.evaluate(() => { const g = document.querySelector('.guide > .scroll'); g.scrollTop = 900; const r = s => document.querySelector(s).getBoundingClientRect(); return g.scrollTop > 0 && r('.guide > .h').top >= 0 && r('.guide > .row').bottom <= innerHeight })   // 도감 — 제목 · 「처음으로」 고정, 가운데만 스크롤
