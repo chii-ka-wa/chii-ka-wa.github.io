@@ -172,6 +172,18 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     }
   })
 
+  await run('shop', { width: 390, height: 844 }, async page => {   // 토벌 보상금 · 영구 강화 상점 — 판이 끝나면 돈이 쌓이고, 사면 다음 판 능력치에 더해진다
+    await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = 300; M.G.kills = 1000; M.pl.inv = 0; M.pl.hp = 1; let n = 0; while (M.mode !== 'over' && n++ < 3000) { if (M.mode === 'box') M.pick0(); M.step(1 / 30) } })
+    const res = await page.evaluate(() => ({ txt: document.querySelector('#ui .coin')?.textContent, coin: JSON.parse(localStorage.getItem('mjg.v1')).coin }))
+    if (!/토벌 보상금 \+\d+/.test(res.txt) || !(res.coin >= 40)) errors.push('[shop] 보상금 ' + JSON.stringify(res))
+    await page.locator('#ui .row button', { hasText: '상점' }).click(); await page.waitForTimeout(400)
+    await page.locator('.shop .buy').first().click()
+    const after = await page.evaluate(() => { const sv = JSON.parse(localStorage.getItem('mjg.v1')); return { coin: sv.coin, manju: sv.up.manju } })
+    if (after.manju !== 1 || after.coin !== res.coin - 40) errors.push('[shop] 사기 ' + JSON.stringify({ res, after }))
+    await page.screenshot({ path: OUT + 'shop.png' }); await noEmoji(page, 'shop')
+    const hp = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); return { hp: M.pl.hp, want: Math.round(M.CHARS[0].hp * (1 + (M.CHARS[0].mod.hp || 0) + 0.04)) } })
+    if (hp.hp !== hp.want) errors.push('[shop] 강화한 체력이 판에 안 들어감 ' + JSON.stringify(hp))
+  })
   await run('help', { width: 1280, height: 800 }, async page => {   // 지원 아이템 — 파자마 파티즈 · 한잎이 두잎이가 나왔다가 사라지는지
     await page.evaluate(() => window.__mjg.startGame(0))
     await sim(page, 120, { god: true, walk: true })

@@ -59,6 +59,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
+    '토벌 보상금 · 영구 강화 상점 — 판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(보통 ×1.25 · 어려움 ×1.5). 처음 화면 「상점」에서 체력 · 힘 · 회복 · 발걸음 · 경험치 · 줍기 · 행운 · 단단함을 조금씩 영구 강화(다 사도 같은 아이템 한 레벨 정도)',
     '한잎이 · 두잎이 지속 시간 12초 → 6초(막는 힘이 세져서)',
     '일시정지에서 화면 배율을 바꿀 수 있어요 — 75%(넓게 보기) ~ 140%(크게 보기). 그림은 배율에 맞춰 다시 그려서 확대해도 흐려지지 않아요(이 브라우저에 기억)',
     '쉬어 가는 창 · 일시정지에서 Enter · Space 를 누르면 계속하기, 잭팟에서는 셋 다 받기',
@@ -177,6 +178,20 @@ const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'rps'], [1080, 'chef', 1], [1200, 'anoko'],
   [1290, 'chef'], [1380, 'bigChimera', 1], [1440, 'dekatsuyo', 1]]
+// 영구 강화(처음 화면 「상점」) — 판마다 받는 토벌 보상금으로 산다. 한 칸이 같은 아이템 한 레벨의 1/5쯤, 다 사도 아이템 한 레벨 몫이라 판의 밸런스가 무너지지 않는다
+//   id = 같은 일을 하는 아이템(아이콘) · per = 한 칸 · max = 칸 수 · cost = 첫 칸 값(n 번째 칸은 cost × n)
+const SHOP = {
+  manju: { name: '체력', lab: '최대 체력', per: 0.04, max: 5, cost: 40 },
+  license: { name: '힘', lab: '주는 피해', per: 0.03, max: 5, cost: 50 },
+  pudding: { name: '회복', lab: '1초에 체력', per: 0.04, max: 5, cost: 40, val: v => `+${+v.toFixed(2)}` },
+  slipper: { name: '발걸음', lab: '이동 속도', per: 0.02, max: 5, cost: 30 },
+  wage: { name: '경험치', lab: '경험치', per: 0.03, max: 5, cost: 40 },
+  pouch: { name: '줍기', lab: '줍는 거리', per: 0.06, max: 5, cost: 25 },
+  clover: { name: '행운', lab: '행운', per: 0.03, max: 5, cost: 30 },
+  armor: { name: '단단함', lab: '받는 피해', per: 1, max: 1, cost: 400, val: v => `-${v}` },
+}
+for (const u of Object.values(SHOP)) u.val ||= v => `+${Math.round(v * 100)}%`   // 보여 주는 값 — 따로 없으면 %
+const perm = id => SHOP[id].per * (save.up[id] || 0)
 const STATUS = {
   weak: { name: '약화', note: '주는 피해 -40%', col: '#ff9f43' },
   charm: { name: '매혹', note: '이동 속도 -40% · 세이렌 쪽으로 끌려간다', col: '#ff6fd0' },
@@ -184,12 +199,12 @@ const STATUS = {
 const ST_T = 8   // 상태이상 지속(초)
 // 난이도 — 어려움이 원래 토벌(배수 1). 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 멀리서 쏘는 일반 몬스터가 안 나온다(보스는 쏜다)
 const DIFF = {
-  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false },
-  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false },
-  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true },
+  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false, coin: 1 },
+  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false, coin: 1.25 },
+  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true, coin: 1.5 },   // coin = 토벌 보상금 배수
 }
 { const E = DIFF.easy, pc = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`   // 설명은 쉬움 기준 — 배수를 바꾸면 글도 따라 바뀐다
-  for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
+  for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)} · 보상금 ${pc(d.coin / E.coin - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
 const bestKey = (id, d) => d === 'hard' ? id : `${id}.${d}`   // 어려움 기록은 예전 기록 그대로
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
@@ -197,6 +212,7 @@ const LS = 'mjg.v1'
 const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = { t 가장 오래 버틴 초, kills, lvl, clears }
 try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 if (!DIFF[save.diff]) save.diff = 'normal'
+save.up ||= {}; save.coin = Math.max(0, save.coin | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
@@ -1362,6 +1378,7 @@ const ICO = {
     g.beginPath(); g.moveTo(0, -2); g.bezierCurveTo(3, 1, 5, 4, 4.5, 6.5); g.bezierCurveTo(4, 9.5, -4, 9.5, -4.5, 6.5); g.bezierCurveTo(-5, 4, -2, 2, 0, -2); g.fillStyle = '#ffd23f'; g.fill()
   },
   // 그 밖
+  coin: g => { el(g, 0, 0, 10.5); ink(g, '#ffd23f', 1.6); el(g, 0, 0, 7); g.lineWidth = 1.2; g.strokeStyle = '#d99a00'; g.stroke(); g.lineCap = 'round'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(0, -3.6); g.lineTo(0, 3.6); g.stroke(); el(g, -4.4, -5, 1.5, 2.3, 0.6); g.fillStyle = '#fffbe0'; g.fill() },   // 토벌 보상금
   zoom: g => { g.lineCap = 'round'; g.lineWidth = 3.4; g.strokeStyle = OUT; g.beginPath(); g.moveTo(4, 4); g.lineTo(10.5, 10.5); g.stroke(); el(g, -2, -2, 7.6); ink(g, '#cfeeff', 1.7); g.lineWidth = 1.8; g.beginPath(); g.moveTo(-5.6, -2); g.lineTo(1.6, -2); g.moveTo(-2, -5.6); g.lineTo(-2, 1.6); g.stroke() },   // 돋보기
   snd: g => { speaker(g); g.lineCap = 'round'; g.lineWidth = 2; g.strokeStyle = OUT; for (const r of [4.5, 8.5]) { g.beginPath(); g.arc(1, 0, r, -0.85, 0.85); g.stroke() } },
   mute: g => { speaker(g); g.lineCap = 'round'; g.lineWidth = 2.2; g.strokeStyle = '#e8473b'; g.beginPath(); g.moveTo(4, -4); g.lineTo(11, 4); g.moveTo(11, -4); g.lineTo(4, 4); g.stroke() },
@@ -1531,19 +1548,19 @@ function startGame(i) { pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
   S = {
-    might: 1 + 0.1 * L('license') + 0.02 * Math.min(25, G.cheer) + (m.might || 0),
-    armor: L('armor') + (m.armor || 0),
-    maxHp: Math.round(G.ch.hp * (1 + 0.2 * L('manju') + (m.hp || 0))),
-    regen: 0.2 * L('pudding') + (m.regen || 0),
+    might: 1 + 0.1 * L('license') + perm('license') + 0.02 * Math.min(25, G.cheer) + (m.might || 0),
+    armor: L('armor') + perm('armor') + (m.armor || 0),
+    maxHp: Math.round(G.ch.hp * (1 + 0.2 * L('manju') + perm('manju') + (m.hp || 0))),
+    regen: 0.2 * L('pudding') + perm('pudding') + (m.regen || 0),
     cdr: Math.max(0.45, 1 - 0.08 * L('clock') - (m.cdr || 0)),
     area: 1 + 0.1 * L('mega') + (m.area || 0),
-    move: 1 + 0.1 * L('slipper') + (m.move || 0),
+    move: 1 + 0.1 * L('slipper') + perm('slipper') + (m.move || 0),
     speed: 1 + 0.1 * L('wind') + (m.speed || 0),
     dur: 1 + 0.1 * L('bento') + (m.dur || 0),
     amount: L('double') + (m.amount || 0),
-    magnet: 80 * (1 + 0.3 * L('pouch') + (m.magnet || 0)),
-    luck: 1 + 0.1 * L('clover') + (m.luck || 0),
-    growth: 0.8 * (1 + 0.08 * L('wage') + (m.growth || 0)),   // 줍는 경험치 — 기본 0.8배
+    magnet: 80 * (1 + 0.3 * L('pouch') + perm('pouch') + (m.magnet || 0)),
+    luck: 1 + 0.1 * L('clover') + perm('clover') + (m.luck || 0),
+    growth: 0.8 * (1 + 0.08 * L('wage') + perm('wage') + (m.growth || 0)),   // 줍는 경험치 — 기본 0.8배
     crit: 0.03 + 0.02 * L('clover') + (m.crit || 0),
     critX: 2 + (m.critX || 0),
     bossX: 1 + (m.bossX || 0),   // 보스 · 정예에게
@@ -2510,7 +2527,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, '상점 ', ic('coin'), ` ${save.coin.toLocaleString()}`), shop), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     STATS.url && h('p', { class: 'fine' }, '게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)를 모아요 · ',
@@ -2583,6 +2600,7 @@ function guide() {
       h('li', {}, '스킬 · 아이템은 6칸씩, 스킬은 Lv 8 · 아이템은 Lv 5 까지. 아주 가끔(1%) 잭팟이 터지면 셋 다 가져요.'),
       h('li', {}, '한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기).'),
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
+      h('li', {}, '판이 끝나면 토벌 보상금(버틴 시간 · 처치 · 보스 · 클리어, 어려울수록 더) — 처음 화면 「상점」에서 체력 · 힘 같은 영구 강화를 조금씩 살 수 있어요. 다 사도 같은 아이템 한 레벨 정도예요.'),
       h('li', {}, '난이도 — ', Object.entries(DIFF).map(([k, d], i) => [i ? ' / ' : '', ic(k), ` ${d.name}: ${d.note}`]), '. 기록은 난이도마다 따로.'),
       h('li', {}, '10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.'),
       h('li', {}, `${FINAL_T / 60}분에 세이렌과 인어 셋이 나와요. 세이렌을 쓰러뜨리면 토벌 성공!`),
@@ -2665,6 +2683,7 @@ function finish(win, quit = false) {
   save.runs++; save.kills += G.kills
   report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
   if (win) { save.clears++; b.clears++ }
+  const pay = bounty(win); save.coin += pay.sum
   b.t = Math.max(b.t, G.t); b.kills = Math.max(b.kills, G.kills); b.lvl = Math.max(b.lvl, G.lvl)
   persist()
   const stat = (k, v, n) => h('div', {}, h('small', {}, k), h('b', {}, v), n && h('span', { class: 'new' }, 'NEW'))
@@ -2674,8 +2693,30 @@ function finish(win, quit = false) {
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? '검은 별똥별에게서 끝까지 도망쳤어요!' : '세이렌을 쫓아냈어요!') : G.final ? '세이렌까지 왔어요! 조금만 더' : `세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
     h('p', { class: `lvl-badge ${G.diff}` }, ic(G.diff), ` ${G.D.name}`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
+    h('p', { class: 'coin' }, ic('coin'), ` 토벌 보상금 +${pay.sum.toLocaleString()}`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || '조금 더 버텨 봐요'}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''} — 모은 돈 ${save.coin.toLocaleString()}`)),
     chips(), dmgTable(),
-    h('div', { class: 'row' }, btn('처음으로', title), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
+    h('div', { class: 'row' }, btn('처음으로', title), btn('상점', shop), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
+}
+/** 토벌 보상금 — 버틴 시간(10초에 1) · 처치(200에 1 — 뒤로 갈수록 처치가 크게 늘어서) · 보스 15 · 클리어 60, 난이도 배수(DIFF.coin) */
+function bounty(win) {
+  const parts = [['버틴 시간', G.t / 10], ['처치', G.kills / 200], ['보스', G.bosses * 15], ['클리어', win ? 60 : 0]].map(([k, v]) => [k, Math.floor(v * G.D.coin)])
+  return { parts, sum: parts.reduce((a, p) => a + p[1], 0) }
+}
+/** 영구 강화 상점 — 칸마다 값이 오른다(n 번째 칸 = cost × n). 산 것은 다음 판부터 stats() 에 더해진다 */
+function shop() {
+  mode = 'shop'; G = null; BOX = null; pauseBtn.hidden = true   // 결과 화면에서 와도 뒤는 처음 화면처럼
+  const have = h('p', { class: 'coin' }), list = h('ul', { class: 'list shop' })
+  const draw = () => {
+    have.replaceChildren(ic('coin'), ` 모은 토벌 보상금 ${save.coin.toLocaleString()}`)
+    list.replaceChildren(...Object.entries(SHOP).map(([id, u]) => {
+      const lv = save.up[id] || 0, full = lv >= u.max, cost = u.cost * (lv + 1)
+      return h('li', {}, ic(id), h('div', {}, h('b', {}, u.name, h('small', {}, ` ${'●'.repeat(lv)}${'○'.repeat(u.max - lv)}`)), h('span', {}, `${u.lab} ${u.val(u.per * lv)}`, full ? ' (끝)' : ` → ${u.val(u.per * (lv + 1))}`)),
+        h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? '다 샀어요' : [ic('coin'), ` ${cost}`]))
+    }))
+  }
+  draw()
+  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, '영구 강화 상점'), have,
+    h('div', { class: 'scroll' }, h('p', { class: 'shop-note' }, '판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요'), list), h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }
 
 // ---------------------------------------------------------------- 돌리기
