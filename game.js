@@ -29,20 +29,20 @@ const CHARS = [
 
 // 스킬 — cd 쿨타임(초) · dmg 피해 · n 개수 · area 크기 배수 · spd 속도 배수 · dur 지속(초) · pierce 꿰뚫는 수. ups[i] = 레벨 i+2 가 될 때 더하는 것(최고 Lv 8)
 const WEAP = {
-  sasu: { name: '사스마타 찌르기', icon: '🔱', note: '가장 가까운 적에게 사스마타를 찔러 넣는다 — 꿰뚫는다', cd: 1.1, dmg: 11, pierce: 2, ups: [{ n: 1 }, { dmg: 5 }, { cd: -0.2 }, { n: 1 }, { dmg: 6 }, { pierce: 2 }, { dmg: 10 }] },
-  stick: { name: '토벌봉', icon: '💥', note: '봉을 휘두르면 양 끝에서 폭발이 일어난다(두 번째는 위아래로)', cd: 1.5, dmg: 13, ups: [{ dmg: 5 }, { area: 0.15 }, { cd: -0.25 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { dmg: 10 }] },
-  yaha: { name: '야하!', icon: '🐰', note: '높이 뛰어올라 내려찍으면 둘레에 충격파 — 밀쳐 낸다', cd: 3.2, dmg: 26, ups: [{ area: 0.15 }, { dmg: 10 }, { cd: -0.5 }, { area: 0.15 }, { dmg: 12 }, { n: 1 }, { dmg: 18, area: 0.15 }] },
-  ura: { name: '우라!', icon: '📢', note: '기합을 계속 질러 둘레의 적에게 피해를 준다', cd: 0.45, dmg: 4, ups: [{ area: 0.1 }, { dmg: 1 }, { area: 0.1 }, { cd: -0.08 }, { dmg: 2 }, { area: 0.1 }, { dmg: 2 }] },
-  weed: { name: '풀뽑기', icon: '🌱', note: '풀뽑기 검정 5급의 솜씨 — 적 발밑의 풀을 뽑아 터뜨린다', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
-  tears: { name: '와아… (울음)', icon: '💧', note: '눈물이 높이 튀어 멀리 떨어진 자리를 적신다', cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
-  guitar: { name: '하치와레의 기타', icon: '🎸', note: '음표가 몸 둘레를 돌며 적을 쳐 낸다', cd: 2.2, dmg: 9, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 3 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 4, dur: 1 }] },
-  nantoka: { name: '어떻게든 되라!', icon: '⭐', note: '화면 안 적에게 별이 번개처럼 꽂힌다', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
-  ramen: { name: '라멘 국물', icon: '🍜', note: '근처 바닥에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다', cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
-  curry: { name: '극매운 카레', icon: '🍛', note: '적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배', cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
-  pochette: { name: '포셰트 부메랑', icon: '👜', note: '던지면 되돌아오는 포셰트 — 오가며 계속 맞힌다', cd: 1.8, dmg: 10, ups: [{ dmg: 4 }, { n: 1 }, { area: 0.25 }, { dmg: 5 }, { n: 1 }, { spd: 0.3 }, { n: 1 }] },
-  momo: { name: '내놔!', icon: '🤲', note: '가장 강한 적(보스 · 정예 먼저)에게 달려들어 낚아채는 큰 한 방', cd: 1.9, dmg: 38, ups: [{ dmg: 14 }, { n: 1 }, { cd: -0.3 }, { dmg: 18 }, { n: 1 }, { cd: -0.3 }, { dmg: 30 }] },
-  kanpai: { name: '건배!', icon: '🍻', note: '잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다', cd: 1.6, dmg: 9, pierce: 1, bounce: 3, ups: [{ bounce: 1 }, { dmg: 4 }, { n: 1 }, { bounce: 2 }, { dmg: 5 }, { cd: -0.3 }, { bounce: 2, dmg: 6 }] },
-  sword: { name: '랏코 선생의 일섬', icon: '⚔️', note: '화면을 가로지르는 칼바람 — 줄 위의 적을 모두 벤다', cd: 2.4, dmg: 20, ups: [{ dmg: 7 }, { area: 0.25 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.25 }, { n: 1, dmg: 10 }] },
+  sasu: { name: '사스마타 찌르기', note: '가장 가까운 적에게 사스마타를 찔러 넣는다 — 꿰뚫는다', cd: 1.1, dmg: 11, pierce: 2, ups: [{ n: 1 }, { dmg: 5 }, { cd: -0.2 }, { n: 1 }, { dmg: 6 }, { pierce: 2 }, { dmg: 10 }] },
+  stick: { name: '토벌봉', note: '봉을 휘두르면 양 끝에서 폭발이 일어난다(두 번째는 위아래로)', cd: 1.5, dmg: 13, ups: [{ dmg: 5 }, { area: 0.15 }, { cd: -0.25 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { dmg: 10 }] },
+  yaha: { name: '야하!', note: '높이 뛰어올라 내려찍으면 둘레에 충격파 — 밀쳐 낸다', cd: 3.2, dmg: 26, ups: [{ area: 0.15 }, { dmg: 10 }, { cd: -0.5 }, { area: 0.15 }, { dmg: 12 }, { n: 1 }, { dmg: 18, area: 0.15 }] },
+  ura: { name: '우라!', note: '기합을 계속 질러 둘레의 적에게 피해를 준다', cd: 0.45, dmg: 4, ups: [{ area: 0.1 }, { dmg: 1 }, { area: 0.1 }, { cd: -0.08 }, { dmg: 2 }, { area: 0.1 }, { dmg: 2 }] },
+  weed: { name: '풀뽑기', note: '풀뽑기 검정 5급의 솜씨 — 적 발밑의 풀을 뽑아 터뜨린다', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
+  tears: { name: '와아… (울음)', note: '눈물이 높이 튀어 멀리 떨어진 자리를 적신다', cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
+  guitar: { name: '하치와레의 기타', note: '음표가 몸 둘레를 돌며 적을 쳐 낸다', cd: 2.2, dmg: 9, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 3 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 4, dur: 1 }] },
+  nantoka: { name: '어떻게든 되라!', note: '화면 안 적에게 별이 번개처럼 꽂힌다', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
+  ramen: { name: '라멘 국물', note: '근처 바닥에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다', cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
+  curry: { name: '극매운 카레', note: '적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배', cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
+  pochette: { name: '포셰트 부메랑', note: '던지면 되돌아오는 포셰트 — 오가며 계속 맞힌다', cd: 1.8, dmg: 10, ups: [{ dmg: 4 }, { n: 1 }, { area: 0.25 }, { dmg: 5 }, { n: 1 }, { spd: 0.3 }, { n: 1 }] },
+  momo: { name: '내놔!', note: '가장 강한 적(보스 · 정예 먼저)에게 달려들어 낚아채는 큰 한 방', cd: 1.9, dmg: 38, ups: [{ dmg: 14 }, { n: 1 }, { cd: -0.3 }, { dmg: 18 }, { n: 1 }, { cd: -0.3 }, { dmg: 30 }] },
+  kanpai: { name: '건배!', note: '잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다', cd: 1.6, dmg: 9, pierce: 1, bounce: 3, ups: [{ bounce: 1 }, { dmg: 4 }, { n: 1 }, { bounce: 2 }, { dmg: 5 }, { cd: -0.3 }, { bounce: 2, dmg: 6 }] },
+  sword: { name: '랏코 선생의 일섬', note: '화면을 가로지르는 칼바람 — 줄 위의 적을 모두 벤다', cd: 2.4, dmg: 20, ups: [{ dmg: 7 }, { area: 0.25 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.25 }, { n: 1, dmg: 10 }] },
 }
 const UP = { n: v => `개수 +${v}`, dmg: v => `피해 +${v}`, cd: v => `쿨타임 ${v}초`, area: v => `범위 +${Math.round(v * 100)}%`, spd: v => `속도 +${Math.round(v * 100)}%`, dur: v => `지속 +${v}초`, pierce: v => `관통 +${v}`, bounce: v => `튕김 +${v}` }
 // 시너지 — 짝인 두 스킬을 다 가지면 둘 다 세진다(wstat). 스킬마다 짝은 하나
@@ -59,9 +59,10 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-13', [
+    '아이콘을 이모지 대신 직접 그린 그림으로 — 휴대폰 · PC 어디서나 똑같이 보여요(스킬 · 아이템 · 난이도 · 소리 단추 등)',
     '배경음악 새로 — 직접 지은 일렉 팝. 토벌 중엔 같은 곡을 캐릭터마다 다른 악기로: 치이카와 오르골 · 하치와레 기타 · 우사기 록 기타 · 모몽가 칩튠 · 쿠리만쥬 일렉 피아노 · 랏코 피리 · 시사 산신 · 카니 마림바(최종보스 곡은 그대로)',
     '휴대폰 — 화면을 두 번 탭해도 확대되지 않게',
-    '난이도 🌱 쉬움 · ⭐ 보통 · 🔥 어려움 추가 — 지금까지의 토벌이 어려움. 쉬움 · 보통은 적 체력이 낮고 경험치 · 줍는 것이 많아요. 기록은 난이도마다 따로(예전 기록은 어려움)',
+    '난이도 쉬움 · 보통 · 어려움 추가 — 지금까지의 토벌이 어려움. 쉬움 · 보통은 적 체력이 낮고 경험치 · 줍는 것이 많아요. 기록은 난이도마다 따로(예전 기록은 어려움)',
     '멀리서 쏘는 일반 몬스터(가면 키메라 · 복어 · 문어 괴물)는 어려움에서만 나와요',
     '날아오는 공격을 크게, 빨간 테와 꼬리를 달아 경험치 보석과 구별되게. 쏘기 직전에는 머리 위에 빨간 ! 와 조준선',
     { syn: '랏코 선생의 수련', from: { sasu: { pierce: 1, dmg: 5 }, sword: { n: 1 } }, to: { sasu: { pierce: 2, dmg: 8, cd: -0.15 }, sword: { n: 1, dmg: 8, area: 0.2 } } },
@@ -72,7 +73,7 @@ const PATCH = [
     '패치노트 추가',
   ]],
   ['2026-11-12', [
-    '소리 — 직접 만든 배경음악 · 효과음 · 캐릭터 목소리. 🔊 에서 배경음 · 효과음 크기를 따로(게임 중에 열면 멈춰요)',
+    '소리 — 직접 만든 배경음악 · 효과음 · 캐릭터 목소리. 오른쪽 위 소리 단추에서 배경음 · 효과음 크기를 따로(게임 중에 열면 멈춰요)',
     '일시정지에서 스킬 · 아이템을 누르면 자세히(지금 수치 · 다음 레벨 · 시너지)',
     '캐릭터 · 적 · 도와주는 친구들 그림을 원작에 가깝게 여러 번 다시 그림 — 제대로 걷는 동작, 아플 때 > < 눈',
     '별똥별 · 검은 별똥별을 털인형 별로',
@@ -88,31 +89,31 @@ const synText = ([, u]) => Object.entries(u).map(([id, up]) => `${WEAP[id].name}
 
 // 아이템(지니면 계속 듣는 것) — 레벨마다 note 만큼
 const PASS = {
-  license: { name: '토벌 자격증', icon: '📜', note: '공격력 +10%', max: 5 },
-  armor: { name: '갑옷씨의 갑옷', icon: '🛡️', note: '받는 피해 -1', max: 5 },
-  manju: { name: '군고구마', icon: '🍠', note: '최대 체력 +20%', max: 5 },
-  pudding: { name: '푸딩', icon: '🍮', note: '초당 체력 +0.2 회복', max: 5 },
-  clock: { name: '알람 시계', icon: '⏰', note: '쿨타임 -8%', max: 5 },
-  mega: { name: '메가폰', icon: '📣', note: '범위 +10%', max: 5 },
-  slipper: { name: '잠옷 슬리퍼', icon: '🥿', note: '이동 속도 +10%', max: 5 },
-  wind: { name: '모몽가의 날갯짓', icon: '💨', note: '투사체 속도 +10%', max: 5 },
-  bento: { name: '도시락', icon: '🍱', note: '지속 시간 +10%', max: 5 },
-  double: { name: '둘이서 같이', icon: '🤝', note: '모든 스킬 투사체 +1', max: 2 },
-  pouch: { name: '큰 주머니', icon: '👝', note: '경험치 줍는 거리 +30%', max: 5 },
-  clover: { name: '네잎클로버', icon: '🍀', note: '행운 +10% (잭팟 · 치명타 · 떨어지는 것)', max: 5 },
-  wage: { name: '토벌 보수', icon: '💰', note: '경험치 +8%', max: 5 },
+  license: { name: '토벌 자격증', note: '공격력 +10%', max: 5 },
+  armor: { name: '갑옷씨의 갑옷', note: '받는 피해 -1', max: 5 },
+  manju: { name: '군고구마', note: '최대 체력 +20%', max: 5 },
+  pudding: { name: '푸딩', note: '초당 체력 +0.2 회복', max: 5 },
+  clock: { name: '알람 시계', note: '쿨타임 -8%', max: 5 },
+  mega: { name: '메가폰', note: '범위 +10%', max: 5 },
+  slipper: { name: '잠옷 슬리퍼', note: '이동 속도 +10%', max: 5 },
+  wind: { name: '모몽가의 날갯짓', note: '투사체 속도 +10%', max: 5 },
+  bento: { name: '도시락', note: '지속 시간 +10%', max: 5 },
+  double: { name: '둘이서 같이', note: '모든 스킬 투사체 +1', max: 2 },
+  pouch: { name: '큰 주머니', note: '경험치 줍는 거리 +30%', max: 5 },
+  clover: { name: '네잎클로버', note: '행운 +10% (잭팟 · 치명타 · 떨어지는 것)', max: 5 },
+  wage: { name: '토벌 보수', note: '경험치 +8%', max: 5 },
 }
-const FILL = { onigiri: { name: '오니기리', icon: '🍙', note: '체력 40% 회복' }, cheer: { name: '응원', icon: '🎉', note: '이번 판 공격력 +2% (최대 +50%)' } }   // 더 올릴 게 없을 때
+const FILL = { onigiri: { name: '오니기리', note: '체력 40% 회복' }, cheer: { name: '응원', note: '이번 판 공격력 +2% (최대 +50%)' } }   // 더 올릴 게 없을 때
 // 줍는 것 — 적이 떨어뜨린다(USE)
 const ITEMS = {
-  onigiri: { name: '오니기리', icon: '🍙', note: '체력 30% 회복' },
-  magnet: { name: '자석', icon: '🧲', note: '흩어진 경험치를 모두 끌어온다' },
-  momonga: { name: '모몽가의 귀여운 척', icon: '🐿️', note: '모두가 넋을 잃어 6초 동안 적이 멈춘다' },
-  firework: { name: '폭죽', icon: '🎆', note: '화면 안의 적을 모두 쓰러뜨린다(보스는 큰 피해)' },
-  earplug: { name: '귀마개', icon: '🎧', note: '상태이상을 모두 푼다(걸린 게 없으면 체력 15%) — 10분부터' },
-  pajama: { name: '꿀맛 페스티벌 티켓', icon: '🎫', note: '파자마 파티즈가 10초 동안 곁에서 공연 — 음표 충격파로 둘레의 적을 밀쳐 내고, 응원으로 쿨타임 -25%' },
-  battery: { name: '건전지', icon: '🔋', note: '한잎이 · 두잎이가 12초 동안 손을 잡고 곁을 돈다 — 날아오는 것을 막고 닿은 적을 밀쳐 낸다' },
-  chest: { name: '보물상자', icon: '🎁', note: '보스가 떨어뜨린다 — 잭팟 확률 50%' },
+  onigiri: { name: '오니기리', note: '체력 30% 회복' },
+  magnet: { name: '자석', note: '흩어진 경험치를 모두 끌어온다' },
+  momonga: { name: '모몽가의 귀여운 척', note: '모두가 넋을 잃어 6초 동안 적이 멈춘다' },
+  firework: { name: '폭죽', note: '화면 안의 적을 모두 쓰러뜨린다(보스는 큰 피해)' },
+  earplug: { name: '귀마개', note: '상태이상을 모두 푼다(걸린 게 없으면 체력 15%) — 10분부터' },
+  pajama: { name: '꿀맛 페스티벌 티켓', note: '파자마 파티즈가 10초 동안 곁에서 공연 — 음표 충격파로 둘레의 적을 밀쳐 내고, 응원으로 쿨타임 -25%' },
+  battery: { name: '건전지', note: '한잎이 · 두잎이가 12초 동안 손을 잡고 곁을 돈다 — 날아오는 것을 막고 닿은 적을 밀쳐 낸다' },
+  chest: { name: '보물상자', note: '보스가 떨어뜨린다 — 잭팟 확률 50%' },
 }
 
 // 토벌 대상 — r 몸 반지름 · hp(시간이 갈수록 세진다) · spd 이동 · dmg 닿으면 · xp 떨어뜨리는 경험치 · col 터질 때 색
@@ -160,9 +161,9 @@ const STATUS = {
 const ST_T = 8   // 상태이상 지속(초)
 // 난이도 — 어려움이 원래 토벌(배수 1). 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 멀리서 쏘는 일반 몬스터가 안 나온다(보스는 쏜다)
 const DIFF = {
-  easy: { name: '쉬움', icon: '🌱', hp: 0.6, xp: 1.5, drop: 2, shot: false },
-  normal: { name: '보통', icon: '⭐', hp: 0.8, xp: 1.25, drop: 1.5, shot: false },
-  hard: { name: '어려움', icon: '🔥', hp: 1, xp: 1, drop: 1, shot: true },
+  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false },
+  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false },
+  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true },
 }
 { const E = DIFF.easy, pc = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`   // 설명은 쉬움 기준 — 배수를 바꾸면 글도 따라 바뀐다
   for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
@@ -176,7 +177,7 @@ if (!DIFF[save.diff]) save.diff = 'normal'
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
-//   크기는 배경음(save.bgm) · 효과음(save.sfx) 따로 0~1 — 🔊 단추를 누르면 나오는 작은 창에서
+//   크기는 배경음(save.bgm) · 효과음(save.sfx) 따로 0~1 — 소리 단추를 누르면 나오는 작은 창에서
 if (save.bgm == null) { save.bgm = save.mute ? 0 : 0.7; save.sfx = save.mute ? 0 : 0.8 } delete save.mute
 const SND = (() => {
   let ac = null, out = null, mus = null, pump = null, sfx = null, who = '', kit = null, noise = null, theme = '', step = 0, at = 0, timer = 0, duck = 1
@@ -274,7 +275,7 @@ const SND = (() => {
   }
   function vol() {   // 배경음 · 효과음 크기를 따로(일시정지면 배경음을 줄인다)
     if (ac) { out.gain.value = 0.9; mus.gain.setTargetAtTime(save.bgm * duck, ac.currentTime, 0.05); sfx.gain.setTargetAtTime(save.sfx * 0.6, ac.currentTime, 0.03) }
-    if (btn) btn.textContent = save.bgm || save.sfx ? '🔊' : '🔇'
+    if (btn) btn.replaceChildren(ic(save.bgm || save.sfx ? 'snd' : 'mute'))
   }
   const ok = (k, gap) => { if (!ac || !save.sfx) return false; const t = ac.currentTime; if (last[k] && t - last[k] < gap) return false; last[k] = t; return true }
   // 캐릭터 목소리 — 높이 · 파형 · 떨림이 다른 짧은 삐약 소리(기쁠 때는 올라가고, 아플 때는 내려간다)
@@ -300,12 +301,12 @@ const SND = (() => {
     end(win) { play(''); if (!ac || !save.sfx) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
   }
   let btn = null
-  api.button = b => {   // 🔊 단추 — 가운데 창에서 배경음 · 효과음 크기를 따로. 게임 중에 열면 멈추고, 닫으면 이어서
+  api.button = b => {   // 소리 단추 — 가운데 창에서 배경음 · 효과음 크기를 따로. 게임 중에 열면 멈추고, 닫으면 이어서
     btn = b; vol()
-    const row = (k, name) => { const v = h('b', {}, Math.round(save[k] * 100)), r = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(save[k] * 100), name: k, 'aria-label': `${name} 크기` })
-      r.oninput = () => { api.set(k, r.value / 100); v.textContent = r.value; if (k === 'sfx') api.kill() }; return h('label', {}, h('span', {}, name), r, v) }
+    const row = (k, pic, name) => { const v = h('b', {}, Math.round(save[k] * 100)), r = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(save[k] * 100), name: k, 'aria-label': `${name} 크기` })
+      r.oninput = () => { api.set(k, r.value / 100); v.textContent = r.value; if (k === 'sfx') api.kill() }; return h('label', {}, h('span', {}, pic, ' ', name), r, v) }
     const close = () => { if (box.hidden) return; box.hidden = true; if (mode === 'sound') { mode = 'play'; pauseBtn.hidden = false } }
-    const box = h('div', { id: 'sndm', hidden: true, role: 'dialog', 'aria-label': '소리 크기' }, h('div', { class: 'panel snd' }, h('p', { class: 'h' }, '🔊 소리 크기'), row('bgm', '🎵 배경음'), row('sfx', '🔔 효과음'), h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn main', onclick: close }, '닫기'))))
+    const box = h('div', { id: 'sndm', hidden: true, role: 'dialog', 'aria-label': '소리 크기' }, h('div', { class: 'panel snd' }, h('p', { class: 'h' }, ic('snd'), ' 소리 크기'), row('bgm', ic('bgm'), '배경음'), row('sfx', ic('sfx'), '효과음'), h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn main', onclick: close }, '닫기'))))
     box.onpointerdown = e => { if (e.target === box) close() }   // 바깥(어두운 곳)을 눌러도 닫힌다
     document.body.append(box)
     b.onclick = e => { e.stopPropagation(); boot(); if (!box.hidden) return close(); box.hidden = false; if (mode === 'play') { mode = 'sound'; calm(); pauseBtn.hidden = true } }
@@ -325,7 +326,7 @@ function h(tag, props, ...kids) {
 // ---------------------------------------------------------------- 그림 — 코드로 그린 캐릭터(발밑이 0, 0)
 // 생김새는 공식 디자인(아래가 넓은 찹쌀떡 몸 · 몸 실루엣에 이어진 귀와 팔 · 가는 선 · 작게 모인 얼굴 · 빗금 볼터치)과 나무위키 「먼작귀/등장인물」 설명을 참고해 새로 그렸다.
 // 그리는 함수는 모두 (g, p) — p = 자세 { foot 발(-1 · 0 · 1), arm 팔, bob 몸 들썩임, blink 눈 감기, hurt 아픈 얼굴, look 얼굴을 보는 쪽으로 }. 걷기 · 숨 · 아픈 얼굴은 이 자세로 미리 따로 그려 둔다
-const OUT = '#3d302b', FONT = '"Jua", system-ui, sans-serif', EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+const OUT = '#3d302b', FONT = '"Jua", system-ui, sans-serif'
 const LW = 0.72   // 캐릭터 테두리 굵기
 function blob(g, x, y, rx, ry, fill, lw = 1) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.fillStyle = fill; g.fill(); g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }
 /** 몸에 이어 붙는 혹(귀 · 팔 · 갈기) — 채우고 바깥 테두리(a0 → a1)만 그어, 몸 테두리 위에 그리면 경계선 없이 이어 보인다 */
@@ -1135,7 +1136,219 @@ const charSprites = id => ({ walk: WALK.map(p => artSprite(id, K, { ...p, look: 
 function flip(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.scale(-1, 1); g.drawImage(s.c, -c.width, 0); return { ...s, c, ox: s.w - s.ox } }
 function white(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.drawImage(s.c, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); return { ...s, c } }
 const put = (c, s, x, y, k = 1) => c.drawImage(s.c, x - s.ox * k, y - s.oy * k, s.w * k, s.h * k)
-const emo = (ch, size) => sprite(size * 1.4, size * 1.4, size * 0.7, size * 0.7, g => { g.font = `${size}px ${EMOJI}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, 0, size * 0.05) })
+// ---- 아이콘 — 이모지 대신 직접 그린 그림(기기마다 다르게 보이지 않게). 24 × 24 칸 가운데가 (0, 0). 문자열이면 그 캐릭터 그림을 줄여서
+const ink = (g, fill, lw = 1.4) => { if (fill) { g.fillStyle = fill; g.fill() } g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }
+const el = (g, x, y, rx, ry = rx, rot = 0) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, TAU) }
+const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath() }
+const starP = (g, x, y, R, r, n = 5, rot = -Math.PI / 2) => { g.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n, q = i % 2 ? r : R; g.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q) } g.closePath() }
+const line2 = (g, col, w, path) => { g.lineCap = 'round'; g.lineJoin = 'round'; path(); g.lineWidth = w + 2.4; g.strokeStyle = OUT; g.stroke(); g.lineWidth = w; g.strokeStyle = col; g.stroke() }   // 테두리 있는 굵은 선
+const both = (g, fill, ...shapes) => { g.lineWidth = 2.8; g.strokeStyle = OUT; for (const f of shapes) { f(); g.stroke() } g.fillStyle = fill; for (const f of shapes) { f(); g.fill() } }   // 겹친 모양을 한 덩어리로(안쪽 선 없이)
+function pochetteArt(g) {   // 치이카와의 분홍 곰 포셰트
+  g.strokeStyle = OUT; g.lineWidth = 1.2; g.beginPath(); g.arc(0, -2, 7.5, Math.PI * 1.1, Math.PI * 1.9); g.stroke()
+  for (const s of [-1, 1]) blob(g, s * 5, -3.6, 2.2, 2.2, '#ffb3c8', 1.1)
+  blob(g, 0, 1.5, 7.5, 6.5, '#ffb3c8', 1.3)
+  g.fillStyle = '#2b211d'; for (const s of [-1, 1]) { g.beginPath(); g.arc(s * 2.4, 0.8, 0.8, 0, TAU); g.fill() }
+  blob(g, 0, 3.2, 2, 1.4, '#ffe3ec', 0.8)
+}
+const sprout = g => {
+  el(g, 0, 8.5, 9, 3.2); ink(g, '#a8784c')
+  line2(g, '#5fae4a', 1.4, () => { g.beginPath(); g.moveTo(0, 7.5); g.quadraticCurveTo(0.6, 1, 0, -3) })
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(0, -3); g.quadraticCurveTo(s * 2.5, -11, s * 10, -8.5); g.quadraticCurveTo(s * 7, -1.5, 0, -3); ink(g, '#7cc860') }
+}
+const bigStar = g => { starP(g, 0, 1, 11.5, 5.2); ink(g, '#ffd23f', 1.5); el(g, -2.4, -1.5, 1.4, 2, 0.4); g.fillStyle = '#fff6c2'; g.fill() }
+const speaker = g => { g.beginPath(); g.moveTo(-10, -3.5); g.lineTo(-5.5, -3.5); g.lineTo(0.5, -9); g.lineTo(0.5, 9); g.lineTo(-5.5, 3.5); g.lineTo(-10, 3.5); g.closePath(); ink(g, '#fff', 1.6) }
+const shieldP = (g, k) => { g.beginPath(); g.moveTo(0, -11.5 * k); g.quadraticCurveTo(6 * k, -8.5 * k, 10 * k, -9 * k); g.quadraticCurveTo(10.5 * k, 5 * k, 0, 11.5 * k); g.quadraticCurveTo(-10.5 * k, 5 * k, -10 * k, -9 * k); g.quadraticCurveTo(-6 * k, -8.5 * k, 0, -11.5 * k); g.closePath() }
+const party = g => {   // 폭죽 콘 · 색종이
+  g.beginPath(); g.moveTo(-10.5, 10.5); g.lineTo(-5.5, -3); g.lineTo(3, 5.5); g.closePath(); ink(g, '#ffd23f')
+  g.save(); g.clip(); g.strokeStyle = '#ff6b6b'; g.lineWidth = 1.8; for (const d of [-3, 2]) { g.beginPath(); g.moveTo(-12 + d, -1 + d); g.lineTo(2 + d, 13 + d); g.stroke() } g.restore()
+  g.beginPath(); g.moveTo(-10.5, 10.5); g.lineTo(-5.5, -3); g.lineTo(3, 5.5); g.closePath(); ink(g)
+  line2(g, '#6cc4ff', 1.3, () => { g.beginPath(); g.moveTo(-1, 0); g.quadraticCurveTo(1, -6, 5, -6); g.quadraticCurveTo(8, -6, 9, -10) })
+  line2(g, '#ff9be0', 1.3, () => { g.beginPath(); g.moveTo(1, 3); g.quadraticCurveTo(6, 2, 7.5, 5); g.quadraticCurveTo(9, 7.5, 11, 6) })
+  for (const [x, y, c] of [[-3, -9, '#8be07a'], [4, -11, '#ff6b6b'], [10.5, -2, '#ffd23f'], [7.5, 10.5, '#b58cff']]) { el(g, x, y, 1.6); ink(g, c, 1) }
+}
+const ICO = {
+  // 스킬
+  sasu: g => { g.rotate(-Math.PI / 4); rr(g, -1.4, -2.5, 2.8, 15, 1.4); ink(g, '#b07a4a'); line2(g, '#c9ced6', 2, () => { g.beginPath(); g.moveTo(-4.8, -10); g.lineTo(-4.8, -6); g.quadraticCurveTo(-4.8, -2, 0, -2); g.quadraticCurveTo(4.8, -2, 4.8, -6); g.lineTo(4.8, -10) }) },
+  stick: g => { starP(g, 0, 0, 11.5, 6, 8, 0.2); ink(g, '#ff9a3c', 1.5); starP(g, 0, 0, 6.5, 3.4, 8, 0.6); g.fillStyle = '#ffe36b'; g.fill() },
+  yaha: 'usagi',
+  ura: g => { starP(g, 0, 0, 11.5, 8.3, 10, 0); ink(g, '#fff', 1.5); g.fillStyle = '#e8473b'; rr(g, -1.6, -7, 3.2, 8.5, 1.6); g.fill(); el(g, 0, 4.8, 1.8); g.fill() },
+  weed: sprout,
+  tears: g => { g.beginPath(); g.moveTo(0, -11); g.bezierCurveTo(4, -5, 8, -1, 8, 3.5); g.arc(0, 3.5, 8, 0, Math.PI); g.bezierCurveTo(-8, -1, -4, -5, 0, -11); ink(g, '#7cc6ff', 1.5); el(g, -3, 3, 1.6, 2.6, 0.3); g.fillStyle = '#fff'; g.fill() },
+  guitar: g => {
+    g.rotate(Math.PI / 5); rr(g, -1.6, -11.5, 3.2, 12, 1); ink(g, '#8a5a3a'); rr(g, -2.6, -13, 5.2, 3.4, 1); ink(g, '#5b3b28')
+    both(g, '#f29b45', () => el(g, 0, 1.6, 5, 4.4), () => el(g, 0, 7, 6.6, 5))
+    el(g, 0, 3.4, 1.9); g.fillStyle = OUT; g.fill(); rr(g, -2.6, 8, 5.2, 1.6, 0.6); g.fill()
+  },
+  nantoka: bigStar,
+  ramen: g => {
+    el(g, 0, -0.5, 10.5, 3.2); ink(g, '#ffe08a')
+    for (const d of [0, 2.6]) line2(g, '#d9a066', 1.3, () => { g.beginPath(); g.moveTo(1 + d, -11.5); g.lineTo(-4 + d, 0) })
+    g.beginPath(); g.moveTo(-11, -0.5); g.quadraticCurveTo(-10.5, 10, 0, 10); g.quadraticCurveTo(10.5, 10, 11, -0.5); g.closePath(); ink(g, '#e8473b', 1.5)
+    g.strokeStyle = '#fff'; g.lineWidth = 1.2; g.setLineDash([2, 1.6]); g.beginPath(); g.moveTo(-8, 4); g.quadraticCurveTo(0, 5.4, 8, 4); g.stroke(); g.setLineDash([])
+  },
+  curry: g => {
+    el(g, 0, 2, 11.5, 7.5); ink(g, '#fff', 1.5)
+    el(g, -3.4, 1, 5.6, 4.2); ink(g, '#fffaf0', 1)
+    el(g, 3, 2.6, 6, 4.2); ink(g, '#c9762c', 1.2)
+    for (const [x, y, c] of [[1.5, 1.5, '#ff8c3a'], [4.8, 3.6, '#ffe08a'], [3.6, 0.4, '#ffe08a']]) { rr(g, x - 1, y - 1, 2, 2, 0.5); ink(g, c, 0.7) }
+  },
+  pochette: g => { g.translate(0, 1.2); g.scale(1.25, 1.25); pochetteArt(g) },
+  momo: g => {
+    for (const s of [-1, 1]) {
+      g.save(); g.translate(s * 5.4, 1.5); g.rotate(s * 0.35)
+      both(g, '#fff', () => el(g, -3, -4.4, 1.9), () => el(g, 0, -5.6, 1.9), () => el(g, 3, -4.4, 1.9), () => el(g, 0, 1.5, 4.6, 5.6))
+      el(g, 0, 2.4, 2, 1.6); g.fillStyle = '#ffc2d6'; g.fill(); g.restore()
+    }
+  },
+  kanpai: g => {
+    line2(g, '#e9f3ff', 2, () => { g.beginPath(); g.arc(6.6, 2, 4, -Math.PI / 2, Math.PI / 2) })
+    rr(g, -8.5, -5.5, 15, 16.5, 2.5); ink(g, '#ffc23a', 1.5)
+    g.fillStyle = '#fff3c4'; for (const [x, y] of [[-4, 4], [0, 7], [2, 1]]) { el(g, x, y, 1); g.fill() }
+    both(g, '#fff', () => el(g, -5.5, -6.5, 3.4, 3), () => el(g, -0.8, -8.2, 3.8, 3.4), () => el(g, 4, -6.5, 3.2, 3))
+  },
+  sword: g => {
+    g.rotate(-Math.PI / 4)
+    g.beginPath(); g.moveTo(-1.6, 3); g.lineTo(-1.6, -8.5); g.quadraticCurveTo(-1.2, -12.5, 1.8, -13); g.lineTo(1.6, 3); g.closePath(); ink(g, '#e6edf5', 1.3)
+    el(g, 0, 3.8, 3.8, 1.4); ink(g, '#d8a93a', 1.1); rr(g, -1.5, 5, 3, 7.5, 1); ink(g, '#3b3540', 1.1)
+    g.strokeStyle = '#fff'; g.lineWidth = 0.7; g.beginPath(); for (const y of [7, 9.5]) { g.moveTo(-1.2, y - 1); g.lineTo(1.2, y + 1); g.moveTo(1.2, y - 1); g.lineTo(-1.2, y + 1) } g.stroke()
+  },
+  // 아이템
+  license: g => {
+    rr(g, -11, -8, 22, 16, 2); ink(g, '#fff4d6', 1.5)
+    g.strokeStyle = '#c9b48a'; g.lineWidth = 1.3; g.beginPath(); for (const [y, w] of [[-4, 12], [-0.5, 9], [3, 10]]) { g.moveTo(-8, y); g.lineTo(-8 + w, y) } g.stroke()
+    el(g, 6.4, 3, 3.3); ink(g, '#e8473b', 1.1); starP(g, 6.4, 3.1, 1.9, 0.8); g.fillStyle = '#fff'; g.fill()
+  },
+  armor: g => { shieldP(g, 1); ink(g, '#8fb3d9', 1.5); shieldP(g, 0.6); ink(g, '#d6e6f5', 1); starP(g, 0, 0.5, 3.4, 1.5); g.fillStyle = '#8fb3d9'; g.fill() },
+  manju: g => {
+    g.rotate(-0.4); el(g, 0, 0, 11, 6.2); ink(g, '#a8455f', 1.5)
+    el(g, 6.2, 0, 3.2, 4.6); ink(g, '#ffd25a', 1); el(g, 6.2, 0, 1.4, 2.2); g.fillStyle = '#ffe9a0'; g.fill()
+    g.strokeStyle = '#7d2f45'; g.lineWidth = 0.9; g.beginPath(); for (const x of [-6, -2.5]) { g.moveTo(x, -2.5); g.lineTo(x + 1.4, -2) } g.moveTo(-4.5, 2.2); g.lineTo(-3, 2.6); g.stroke()
+  },
+  pudding: g => {
+    el(g, 0, 8.6, 11, 2.8); ink(g, '#fff', 1.3)
+    g.beginPath(); g.moveTo(-8, 7.6); g.lineTo(-5.5, -5); g.quadraticCurveTo(0, -7.5, 5.5, -5); g.lineTo(8, 7.6); g.quadraticCurveTo(0, 10, -8, 7.6); ink(g, '#ffd86b', 1.5)
+    g.beginPath(); g.moveTo(-5.6, -5); g.quadraticCurveTo(0, -7.6, 5.6, -5); g.lineTo(6, -2.6); g.quadraticCurveTo(4.6, -1.2, 3.6, -2.4); g.quadraticCurveTo(2.6, 0.4, 1.2, -2); g.quadraticCurveTo(-1.5, -1, -3, -2.2); g.quadraticCurveTo(-5, -0.8, -6.1, -2.6); g.closePath(); ink(g, '#8a4b23', 1.2)
+  },
+  clock: g => {
+    for (const s of [-1, 1]) { line2(g, '#8d8d8d', 1, () => { g.beginPath(); g.moveTo(s * 4.5, 8); g.lineTo(s * 7, 11.5) }); el(g, s * 6.5, -8.4, 3.6, 2.8, s * 0.6); ink(g, '#ffd23f', 1.2) }
+    el(g, 0, 1.4, 9.4); ink(g, '#ff6b6b', 1.5); el(g, 0, 1.4, 6.8); ink(g, '#fff', 1)
+    line2(g, OUT, 0.4, () => { g.beginPath(); g.moveTo(0, -3.5); g.lineTo(0, 1.4); g.lineTo(3.6, 1.4) })
+  },
+  mega: g => {
+    g.rotate(-0.25)
+    rr(g, -12, -2.4, 3.4, 4.8, 1); ink(g, '#d8dde5', 1.1)
+    g.beginPath(); g.moveTo(-9, -3.2); g.lineTo(4.5, -9.2); g.lineTo(4.5, 9.2); g.lineTo(-9, 3.2); g.closePath(); ink(g, '#ff6b6b', 1.5)
+    el(g, 4.5, 0, 2.6, 9.2); ink(g, '#ffd0d0', 1.3)
+    g.lineCap = 'round'; g.lineWidth = 1.6; g.strokeStyle = OUT; for (const r of [3.4, 6]) { g.beginPath(); g.arc(5.5, 0, r, -0.5, 0.5); g.stroke() }
+  },
+  slipper: g => {
+    g.rotate(-0.3); el(g, 0, 3.6, 11.4, 4); ink(g, '#fff6ee', 1.4)
+    g.beginPath(); g.moveTo(-11, 3.2); g.quadraticCurveTo(-10, -7, 0, -5.4); g.quadraticCurveTo(2.6, -5, 2.6, 3.2); g.closePath(); ink(g, '#ff9ec0', 1.4)
+    el(g, -4, -5.2, 2.6); ink(g, '#fff', 1.1)
+  },
+  wind: g => { for (const [y, x, r] of [[-4.5, 3, 3], [2, 6.5, 2.6], [8, 0, 2.4]]) line2(g, '#bfe6ff', 2, () => { g.beginPath(); g.moveTo(-11, y); g.lineTo(x, y); g.arc(x, y - r, r, Math.PI / 2, -Math.PI * 0.85, true) }) },
+  bento: g => {
+    rr(g, -11.5, -8.5, 23, 17, 2.5); ink(g, '#e05a4a', 1.5); rr(g, -9.5, -6.5, 19, 13, 1.5); ink(g, '#fff', 1)
+    g.beginPath(); g.moveTo(1, -6.5); g.lineTo(1, 6.5); g.moveTo(1, 0); g.lineTo(9.5, 0); g.lineWidth = 1; g.stroke()
+    el(g, -4.2, 0, 1.8); ink(g, '#e8473b', 0.8)
+    rr(g, 2.8, -5, 5, 3.8, 1); ink(g, '#ffd23f', 0.9); el(g, 5.4, 3.2, 2.8, 1.7); ink(g, '#ff7b6b', 0.9)
+  },
+  double: g => {   // 둘이서 같이 — 둥근 귀 · 뾰족 귀 두 친구
+    for (const s of [-1, 1]) {
+      const x = s * 5
+      if (s < 0) for (const e of [-1, 1]) { el(g, x + e * 4.2, -4.2, 2, 1.8); ink(g, '#fff', 1.1) }
+      else for (const e of [-1, 1]) { g.beginPath(); g.moveTo(x + e * 2, -4); g.lineTo(x + e * 5.4, -8); g.lineTo(x + e * 5.6, -2); g.closePath(); ink(g, '#fff', 1.1) }
+      el(g, x, 2, 6.6, 6); ink(g, '#fff', 1.4)
+      if (s > 0) { g.save(); el(g, x, 2, 6.6, 6); g.clip(); g.beginPath(); g.moveTo(x - 7, -4); g.lineTo(x + 7, -4); g.lineTo(x + 7, 1); g.lineTo(x + 2, 1); g.lineTo(x, -2); g.lineTo(x - 2, 1); g.lineTo(x - 7, 1); g.closePath(); g.fillStyle = '#7aa7d9'; g.fill(); g.restore(); el(g, x, 2, 6.6, 6); ink(g) }
+      g.fillStyle = OUT; for (const e of [-1, 1]) { el(g, x + e * 2.2, 2.6, 0.9, 1.1); g.fill() }
+      g.fillStyle = 'rgba(255,140,170,.6)'; for (const e of [-1, 1]) { el(g, x + e * 4, 4.8, 1.3, 0.8); g.fill() }
+    }
+  },
+  pouch: g => {
+    g.beginPath(); g.moveTo(-4, -5); g.quadraticCurveTo(-11, 0, -9.4, 7); g.quadraticCurveTo(-8.4, 11, 0, 11); g.quadraticCurveTo(8.4, 11, 9.4, 7); g.quadraticCurveTo(11, 0, 4, -5); g.closePath(); ink(g, '#c79a6e', 1.5)
+    g.beginPath(); g.moveTo(-4, -5); g.lineTo(-6.5, -10.5); g.lineTo(-2, -8.6); g.lineTo(0, -11.5); g.lineTo(2, -8.6); g.lineTo(6.5, -10.5); g.lineTo(4, -5); g.closePath(); ink(g, '#d9b083', 1.3)
+    line2(g, '#e8473b', 1.2, () => { g.beginPath(); g.moveTo(-5, -5); g.quadraticCurveTo(0, -3.2, 5, -5) })
+  },
+  clover: g => {
+    line2(g, '#4c9a46', 1.4, () => { g.beginPath(); g.moveTo(0, 1); g.quadraticCurveTo(2, 7.5, 6.5, 11) })
+    for (let k = 0; k < 4; k++) {
+      g.save(); g.translate(0, -1); g.rotate(k * TAU / 4 + Math.PI / 4); g.scale(0.92, 0.92)
+      g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(-7, -3, -6, -11, -2.5, -10.5); g.quadraticCurveTo(-0.5, -10.2, 0, -8.5); g.quadraticCurveTo(0.5, -10.2, 2.5, -10.5); g.bezierCurveTo(6, -11, 7, -3, 0, -1); ink(g, '#5fbf5a', 1.5); g.restore()
+    }
+  },
+  wage: g => {
+    for (let i = 0; i < 3; i++) { el(g, -3.5, 8 - i * 3.4, 7, 2.6); ink(g, '#ffcf3f', 1.3) }
+    el(g, 5.6, -3, 5.6); ink(g, '#ffd84d', 1.5); el(g, 5.6, -3, 3.4); g.lineWidth = 0.9; g.strokeStyle = '#c9962a'; g.stroke()
+  },
+  // 떨어지는 것
+  onigiri: g => {
+    const P = new Path2D(); P.moveTo(0, -10.5); P.quadraticCurveTo(3, -10.5, 10, 4); P.quadraticCurveTo(11.5, 9.5, 6, 9.5); P.lineTo(-6, 9.5); P.quadraticCurveTo(-11.5, 9.5, -10, 4); P.quadraticCurveTo(-3, -10.5, 0, -10.5); P.closePath()
+    g.fillStyle = '#fff'; g.fill(P); g.save(); g.clip(P); g.fillStyle = '#2f3b2f'; g.fillRect(-4.4, 2, 8.8, 9); g.restore(); g.lineWidth = 1.5; g.strokeStyle = OUT; g.stroke(P); g.lineWidth = 1; g.strokeRect(-4.4, 2, 8.8, 7.5)
+  },
+  magnet: g => {
+    g.rotate(0.5); g.scale(0.88, 0.88); g.lineCap = 'butt'
+    const U = () => { g.beginPath(); g.moveTo(-6, 6); g.lineTo(-6, -1.5); g.arc(0, -1.5, 6, Math.PI, 0); g.lineTo(6, 6) }
+    U(); g.lineWidth = 7.6; g.strokeStyle = OUT; g.stroke(); U(); g.lineWidth = 5; g.strokeStyle = '#e8473b'; g.stroke()
+    for (const s of [-1, 1]) { rr(g, s * 6 - 3.3, 5, 6.6, 5, 0.8); ink(g, '#d8dde5', 1.2) }
+  },
+  momonga: 'momonga',
+  firework: g => {
+    const cols = ['#ff6b6b', '#ffd23f', '#6cc4ff', '#8be07a', '#ff9be0', '#b58cff']
+    for (let k = 0; k < 12; k++) { const a = k * TAU / 12, c = cols[k % 6], co = Math.cos(a), si = Math.sin(a); line2(g, c, 1.6, () => { g.beginPath(); g.moveTo(co * 3.8, si * 3.8); g.lineTo(co * 8.4, si * 8.4) }); el(g, co * 11, si * 11, 1.2); g.fillStyle = c; g.fill() }
+    el(g, 0, 0, 2.4); ink(g, '#fff', 1.1)
+  },
+  earplug: g => { line2(g, '#6cc4ff', 2, () => { g.beginPath(); g.arc(0, 2.5, 8.2, Math.PI, 0) }); for (const s of [-1, 1]) { el(g, s * 8.2, 4.5, 3.6, 5.2); ink(g, '#ff9ec0', 1.4); el(g, s * 8.2, 4.5, 1.7, 3); g.fillStyle = '#ffd6e4'; g.fill() } },
+  pajama: g => {
+    g.rotate(-0.2); g.beginPath(); g.moveTo(-11, -7); g.lineTo(11, -7); g.lineTo(11, -2.6); g.arc(11, 0, 2.6, -Math.PI / 2, Math.PI / 2, true); g.lineTo(11, 7); g.lineTo(-11, 7); g.lineTo(-11, 2.6); g.arc(-11, 0, 2.6, Math.PI / 2, -Math.PI / 2, true); g.closePath(); ink(g, '#ffb3d1', 1.5)
+    g.setLineDash([1.6, 1.6]); g.strokeStyle = '#fff'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(5, -6); g.lineTo(5, 6); g.stroke(); g.setLineDash([])
+    starP(g, -3, 0.4, 4.6, 2); ink(g, '#ffd23f', 1)
+  },
+  battery: g => {
+    g.rotate(-0.3); rr(g, 8.6, -2.8, 3, 5.6, 1); ink(g, '#c9ced6', 1.1); rr(g, -11, -6, 20, 12, 2.2); ink(g, '#fff', 1.5)
+    g.fillStyle = '#7cd35a'; for (let i = 0; i < 3; i++) { rr(g, -9 + i * 5.8, -4, 4.8, 8, 1); g.fill() }
+  },
+  chest: g => {
+    rr(g, -11, -2, 22, 12, 1.5); ink(g, '#c27a3a', 1.5)
+    g.beginPath(); g.moveTo(-11, -1); g.lineTo(-11, -5); g.quadraticCurveTo(0, -12.5, 11, -5); g.lineTo(11, -1); g.closePath(); ink(g, '#d98c45', 1.5)
+    g.fillStyle = '#ffd23f'; for (const x of [-8, 6]) { rr(g, x, -8.4, 2.2, 18.4, 0.6); g.fill() }
+    rr(g, -2.6, -3.4, 5.2, 5.6, 1); ink(g, '#ffd23f', 1.1); el(g, 0, -0.8, 0.8); g.fillStyle = OUT; g.fill()
+  },
+  cheer: party,
+  // 난이도
+  easy: sprout, normal: bigStar,
+  hard: g => {
+    g.beginPath(); g.moveTo(0, -11.5); g.bezierCurveTo(4, -6, 9.5, -2, 9, 4); g.bezierCurveTo(8.5, 9, 4.5, 11.5, 0, 11.5); g.bezierCurveTo(-4.5, 11.5, -8.5, 9, -9, 4); g.bezierCurveTo(-9.2, -1, -5.5, -3, -4.5, -7); g.bezierCurveTo(-2.5, -5, -1, -6, 0, -11.5); g.closePath(); ink(g, '#ff6a3d', 1.5)
+    g.beginPath(); g.moveTo(0, -2); g.bezierCurveTo(3, 1, 5, 4, 4.5, 6.5); g.bezierCurveTo(4, 9.5, -4, 9.5, -4.5, 6.5); g.bezierCurveTo(-5, 4, -2, 2, 0, -2); g.fillStyle = '#ffd23f'; g.fill()
+  },
+  // 그 밖
+  snd: g => { speaker(g); g.lineCap = 'round'; g.lineWidth = 2; g.strokeStyle = OUT; for (const r of [4.5, 8.5]) { g.beginPath(); g.arc(1, 0, r, -0.85, 0.85); g.stroke() } },
+  mute: g => { speaker(g); g.lineCap = 'round'; g.lineWidth = 2.2; g.strokeStyle = '#e8473b'; g.beginPath(); g.moveTo(4, -4); g.lineTo(11, 4); g.moveTo(11, -4); g.lineTo(4, 4); g.stroke() },
+  bgm: g => {
+    for (const [x, y] of [[-6, 7], [6, 4.5]]) { el(g, x, y, 3.6, 2.8, -0.4); ink(g, '#ff7ad9', 1.3) }
+    g.lineCap = 'round'; g.lineWidth = 1.8; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-2.7, 6); g.lineTo(-2.7, -7); g.moveTo(9.3, 3.5); g.lineTo(9.3, -9.5); g.stroke()
+    g.beginPath(); g.moveTo(-3.6, -7.5); g.lineTo(10.2, -10.2); g.lineTo(10.2, -6.6); g.lineTo(-3.6, -3.9); g.closePath(); g.fillStyle = OUT; g.fill()
+  },
+  sfx: g => {
+    el(g, 0, 8.2, 2.4); ink(g, '#ffd23f', 1.2); el(g, 0, -10, 1.6); ink(g, '#ffd23f', 1)
+    g.beginPath(); g.moveTo(-9.5, 6); g.quadraticCurveTo(-7, 4, -7, -1); g.quadraticCurveTo(-7, -8.6, 0, -8.6); g.quadraticCurveTo(7, -8.6, 7, -1); g.quadraticCurveTo(7, 4, 9.5, 6); g.closePath(); ink(g, '#ffd23f', 1.5)
+    el(g, -3, -3, 1.2, 2.4, 0.3); g.fillStyle = '#fff6c2'; g.fill()
+  },
+  syn: g => { for (const [x, y, R, c] of [[-2.5, 1.5, 9.5, '#ffd23f'], [7, -6.5, 4.6, '#ff9be0'], [7.5, 7, 3.4, '#9fd8ff']]) { starP(g, x, y, R, R * 0.34, 4); ink(g, c, 1.2) } },
+  party,
+  cup: g => {
+    line2(g, '#fff', 1.6, () => { g.beginPath(); g.arc(7.2, 2.6, 3.6, -Math.PI / 2, Math.PI / 2) })
+    g.beginPath(); g.moveTo(-9, -3); g.lineTo(8.4, -3); g.lineTo(6.8, 8); g.quadraticCurveTo(6.3, 10, 4.3, 10); g.lineTo(-5, 10); g.quadraticCurveTo(-7, 10, -7.5, 8); g.closePath(); ink(g, '#fff', 1.5)
+    el(g, -0.3, -3, 8.6, 1.8); ink(g, '#8a4b23', 1.2)
+    g.lineCap = 'round'; g.lineWidth = 1.3; g.strokeStyle = '#b9aaa0'; for (const x of [-3, 2]) { g.beginPath(); g.moveTo(x, -6.5); g.quadraticCurveTo(x - 1.6, -8.5, x, -10.5); g.quadraticCurveTo(x + 1.6, -12, x, -12.5); g.stroke() }
+  },
+}
+/** 아이콘 그림(30 × 30, 가운데 기준) — 캔버스에는 put / drawImage, 메뉴에는 ic(id) */
+const icoSpr = (id, k = K) => sprite(30, 30, 15, 15, g => {
+  const P = ICO[id]; if (typeof P !== 'string') { g.scale(1.15, 1.15); return P(g) }
+  const s = artSprite(P, 4), c = crop(s.c, trimRect([s.c])), f = 27 / Math.max(c.width, c.height); g.drawImage(c, -c.width * f / 2, -c.height * f / 2, c.width * f, c.height * f)
+}, k)
+const ICU = {}
+const ic = id => h('img', { class: 'ico', alt: '', draggable: 'false', src: ICU[id] ||= icoSpr(id, 2.4).c.toDataURL() })
 /** 메뉴 · 도감에 쓰는 그림(크게 그린 캔버스) */
 /** 그림의 빈 둘레를 잘라 낸 사각형(여러 장이면 합친 것) */
 function trimRect(cs) {
@@ -1186,17 +1399,9 @@ function sprites() {
   SPR.mermaid = ['mermaid', 'mermaid1', 'mermaid2'].map(enemy); SPR.sirenAngry = enemy('sirenAngry'); SPR.dark = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('darkstar', K, p))
   SPR.pj = PJ.map((o, i) => [{ arm: 1, bob: -1.2 }, { arm: -1 }].map(p => artSprite('pj' + i, K, p)))   // 파자마 파티즈 — 춤 두 장
   const lp = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('leafpair', K, p)); SPR.leaf = { R: lp, L: lp.map(flip) }
-  SPR.pochette = sprite(24, 24, 12, 12, g => {   // 치이카와의 분홍 곰 포셰트
-    g.strokeStyle = OUT; g.lineWidth = 1.2; g.beginPath(); g.arc(0, -2, 7.5, Math.PI * 1.1, Math.PI * 1.9); g.stroke()
-    for (const s of [-1, 1]) blob(g, s * 5, -3.6, 2.2, 2.2, '#ffb3c8', 1.1)
-    blob(g, 0, 1.5, 7.5, 6.5, '#ffb3c8', 1.3)
-    g.fillStyle = '#2b211d'; for (const s of [-1, 1]) { g.beginPath(); g.arc(s * 2.4, 0.8, 0.8, 0, TAU); g.fill() }
-    blob(g, 0, 3.2, 2, 1.4, '#ffe3ec', 0.8)
-  })
-  for (const id in WEAP) SPR.E[id] = emo(WEAP[id].icon, 22)
-  for (const id in PASS) SPR.E[id] = emo(PASS[id].icon, 22)
-  for (const id in ITEMS) SPR.E[id] = emo(ITEMS[id].icon, 22)
-  SPR.note = emo('🎵', 18)
+  SPR.pochette = sprite(24, 24, 12, 12, pochetteArt)
+  for (const id of [...Object.keys(WEAP), ...Object.keys(PASS), ...Object.keys(ITEMS)]) SPR.E[id] = icoSpr(id)
+  SPR.note = icoSpr('bgm')
   SPR.pinkNote = sprite(18, 20, 9, 10, g => { g.font = `18px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = OUT; g.strokeText('♪', 0, 0); g.fillStyle = '#ff7ad9'; g.fillText('♪', 0, 0) })
   SPR.shadow = sprite(40, 14, 20, 7, g => { g.fillStyle = 'rgba(60,90,40,.28)'; g.beginPath(); g.ellipse(0, 0, 18, 6, 0, 0, TAU); g.fill() })
   const gem = col => sprite(12, 14, 6, 7, g => { g.beginPath(); g.moveTo(0, -6); g.lineTo(5, 0); g.lineTo(0, 6); g.lineTo(-5, 0); g.closePath(); g.fillStyle = col; g.fill(); g.lineWidth = 1.2; g.strokeStyle = OUT; g.stroke(); g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.moveTo(0, -4); g.lineTo(2, -1); g.lineTo(0, 0); g.lineTo(-1.5, -1); g.fill() })
@@ -1903,9 +2108,9 @@ function offers(keep = []) {
   return out
 }
 function label(o) {
-  if (o.t === 'f') return { icon: FILL[o.id].icon, name: FILL[o.id].name, lv: '보너스', note: FILL[o.id].note }
-  if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id), d = WEAP[o.id]; return { icon: d.icon, name: d.name, ...(w ? { lv: `Lv ${w.lv} → ${w.lv + 1}`, note: Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ') } : { lv: '새 스킬', note: d.note }) } }
-  const lv = G.passives[o.id], p = PASS[o.id]; return { icon: p.icon, name: p.name, lv: lv ? `Lv ${lv} → ${lv + 1}` : '새 아이템', note: p.note }
+  if (o.t === 'f') return { name: FILL[o.id].name, lv: '보너스', note: FILL[o.id].note }
+  if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id), d = WEAP[o.id]; return { name: d.name, ...(w ? { lv: `Lv ${w.lv} → ${w.lv + 1}`, note: Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ') } : { lv: '새 스킬', note: d.note }) } }
+  const lv = G.passives[o.id], p = PASS[o.id]; return { name: p.name, lv: lv ? `Lv ${lv} → ${lv + 1}` : '새 아이템', note: p.note }
 }
 function take(o) {
   if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id); if (w) { w.lv++; w.st = wstat(w) } else addWeapon(o.id) }
@@ -1919,7 +2124,7 @@ function synCard(o) {
   const m = mateOf(o.id)
   if (!G.weapons.some(w => w.id === m)) return null
   const s = synOf(o.id)
-  return h('div', { class: 'syn' }, h('mark', {}, '시너지'), ` 「${s[0]}」 · 내 ${WEAP[m].icon} ${WEAP[m].name}의 짝`, h('br'), synText(s))
+  return h('div', { class: 'syn' }, h('mark', {}, '시너지'), ` 「${s[0]}」 · 내 `, ic(m), ` ${WEAP[m].name}의 짝`, h('br'), synText(s))
 }
 let BOX = null
 const ACTS = [['rr', '리롤'], ['skips', '스킵'], ['bans', '제외']]
@@ -1934,9 +2139,9 @@ function openBox() {
   const btns = ACTS.map(([k, s], j) => h('button', { type: 'button', class: 'btn act', onclick: () => act(k) }, s, h('em'), h('kbd', {}, j + 4)))
   const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, '셋 다 받기')
   const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}` },
-    h('p', { class: 'box-title' }, chest ? '🎁 보물상자!' : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
+    h('p', { class: 'box-title' }, chest ? [ic('chest'), ' 보물상자!'] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
     jack && h('p', { class: 'jack' }, 'JACKPOT!!'), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
-  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, L.icon), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
+  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
   const sync = () => {
     cards.replaceChildren(...box.opts.map(card)); root.classList.toggle('banning', box.ban)
     hint.textContent = box.ban ? '이번 판에서 뺄 카드를 고르세요 (제외를 다시 누르면 취소)' : jack ? '셋 다 가져요!' : '하나를 고르세요'
@@ -2060,7 +2265,7 @@ function world(c, ox, oy) {
   for (const b of G.shots) {
     if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, SPR.E.kanpai, 0, 0, 0.8); c.restore() }
     else if (b.k === 'ball') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx)); put(c, SPR.sasu[b.col] ||= sprite(34, 18, 16, 9, g => { g.translate(-13.4, 0); sasuShape(g, 18, b.col) }), 0, 0, 1.2); c.restore() }   // 사스마타 — 캐릭터 색 else if (b.k === 'arc') { const u = b.u, hh = b.H * 4 * u * (1 - u); put(c, SPR.shadow, b.x, b.y, 0.35); tear(c, b.x, b.y - hh - 10, 6) }
-    else if (b.k === 'orb') put(c, SPR.note, b.x, b.y - 14)
+    else if (b.k === 'orb') put(c, SPR.note, b.x, b.y - 14, 0.8)
     else if (b.k === 'boom') { c.save(); c.translate(b.x, b.y - 14); c.rotate(Math.sin(b.a) * 0.6); put(c, SPR.pochette, 0, 0, b.r / 10); c.restore() }
     else if (b.k === 'ring' && b.t >= 0) { const u = Math.min(1, b.t / b.T); c.globalAlpha = 1 - Math.max(0, b.t - b.T) / 0.18; c.strokeStyle = '#ffd23f'; c.lineWidth = 6; oval(c, b.x, b.y, b.R * u, b.R * u * 0.8); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 1 }
   }
@@ -2235,7 +2440,7 @@ function title() {
     h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
-    h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, '☕ 후원'))))
+    h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, ic('cup'), ' 후원'))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
 function pickChar(i) {
@@ -2258,10 +2463,10 @@ function chars() {
     h('div', { class: 'chars scroll' }, CHARS.map((ch, i) => {
       const W = WEAP[ch.w]
       return h('button', { type: 'button', class: `char${i === pickCi ? ' on' : ''}`, onclick: () => pickCi === i ? startGame(i) : pickChar(i) },
-        portrait(ch.id), h('b', {}, ch.name), h('small', {}, `${W.icon} ${W.name}`), h('span', { class: 'trait' }, ch.trait), h('span', { class: 'note' }, ch.note),
+        portrait(ch.id), h('b', {}, ch.name), h('small', {}, ic(ch.w), ` ${W.name}`), h('span', { class: 'trait' }, ch.trait), h('span', { class: 'note' }, ch.note),
         h('span', { class: 'best' }, bestText(ch.id)))
     })),
-    h('div', { class: 'diff', role: 'radiogroup', 'aria-label': '난이도' }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, `${d.icon} ${d.name}`))),
+    h('div', { class: 'diff', role: 'radiogroup', 'aria-label': '난이도' }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, [ic(k), ` ${d.name}`]))),
     h('p', { class: 'diff-note' }, DIFF[save.diff].note),
     h('div', { class: 'row' }, btn('← 처음으로', title), btn('토벌 시작!', () => startGame(pickCi), 'main'))))
 }
@@ -2282,7 +2487,7 @@ function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스�
 function buffCard({ syn, from, to }) {
   const lab = k => UP[k](1).split(' ')[0], val = (k, v) => v == null ? '없음' : UP[k](v).replace(/^\S+ /, '')
   return h('li', { class: 'buff' }, h('p', { class: 't' }, h('mark', {}, '버프'), `시너지 「${syn}」`),
-    Object.keys(to).map(id => h('div', { class: 'sk' }, h('b', {}, `${WEAP[id].icon} ${WEAP[id].name}`),
+    Object.keys(to).map(id => h('div', { class: 'sk' }, h('b', {}, ic(id), ` ${WEAP[id].name}`),
       h('div', { class: 'cmp' }, [...new Set([...Object.keys(from[id] || {}), ...Object.keys(to[id])])].map(k => {
         const a = from[id]?.[k], b = to[id][k]
         return a === b ? [h('span', {}, lab(k)), h('s', { class: 'same' }, val(k, a)), h('i'), h('em', { class: 'same' }, '그대로')]
@@ -2304,22 +2509,22 @@ function guide() {
       h('li', {}, '스킬 · 아이템은 6칸씩, 스킬은 Lv 8 · 아이템은 Lv 5 까지. 아주 가끔(1%) 잭팟이 터지면 셋 다 가져요.'),
       h('li', {}, '한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기).'),
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
-      h('li', {}, `난이도 — ${Object.values(DIFF).map(d => `${d.icon} ${d.name}: ${d.note}`).join(' / ')}. 기록은 난이도마다 따로.`),
+      h('li', {}, '난이도 — ', Object.entries(DIFF).map(([k, d], i) => [i ? ' / ' : '', ic(k), ` ${d.name}: ${d.note}`]), '. 기록은 난이도마다 따로.'),
       h('li', {}, '10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.'),
       h('li', {}, `${FINAL_T / 60}분에 세이렌과 인어 셋이 나와요. 세이렌을 쓰러뜨리면 토벌 성공!`),
       h('li', {}, `${DARK_T / 60}분까지 세이렌을 못 쓰러뜨리면 검은 별똥별이 나타나요 — 쓰러뜨릴 수 없으니 ${END_T / 60}:00까지 도망치면 생존 클리어. 기록은 이 브라우저에만 저장돼요.`)),
     h('h3', {}, '캐릭터'),
-    h('ul', { class: 'list' }, CHARS.map(ch => li(portrait(ch.id), `${ch.name} — ${ch.trait}`, ch.note, `시작 스킬: ${WEAP[ch.w].icon} ${WEAP[ch.w].name}`))),
+    h('ul', { class: 'list' }, CHARS.map(ch => li(portrait(ch.id), `${ch.name} — ${ch.trait}`, ch.note, ['시작 스킬: ', ic(ch.w), ` ${WEAP[ch.w].name}`]))),
     h('h3', {}, '스킬 (최고 Lv 8)'),
-    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(w.icon, w.name, w.note, `짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」`))),
+    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(ic(id), w.name, w.note, `짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」`))),
     h('h3', {}, '시너지'),
-    h('ul', { class: 'list' }, SYN.map(s => li('✨', s[0], synText(s)))),
+    h('ul', { class: 'list' }, SYN.map(s => li(ic('syn'), s[0], synText(s)))),
     h('h3', {}, '아이템 (최고 Lv 5)'),
-    h('ul', { class: 'list' }, Object.values(PASS).map(p => li(p.icon, p.name, `레벨마다 ${p.note}${p.max !== 5 ? ` · 최고 Lv ${p.max}` : ''}`))),
+    h('ul', { class: 'list' }, Object.entries(PASS).map(([id, p]) => li(ic(id), p.name, `레벨마다 ${p.note}${p.max !== 5 ? ` · 최고 Lv ${p.max}` : ''}`))),
     h('h3', {}, '줍는 것'),
-    h('ul', { class: 'list' }, Object.values(ITEMS).map(p => li(p.icon, p.name, p.note))),
+    h('ul', { class: 'list' }, Object.entries(ITEMS).map(([id, p]) => li(ic(id), p.name, p.note))),
     h('h3', {}, '도와주는 친구들 (선택은 못 해요 — 아이템을 먹으면 잠깐 나타나요)'),
-    h('ul', { class: 'list' }, li(portrait('pj1'), '파자마 파티즈', '잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 곁을 돌며 공연 — 1초마다 음표 충격파로 둘레의 적을 밀쳐 내고, 응원으로 쿨타임 -25%', '🎫 꿀맛 페스티벌 티켓'), li(portrait('leafpair'), '한잎이 · 두잎이', '늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 12초 동안 곁을 돌며 날아오는 것을 막고 닿은 적을 밀쳐 낸다', '🔋 건전지')),
+    h('ul', { class: 'list' }, li(portrait('pj1'), '파자마 파티즈', '잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 곁을 돌며 공연 — 1초마다 음표 충격파로 둘레의 적을 밀쳐 내고, 응원으로 쿨타임 -25%', [ic('pajama'), ' 꿀맛 페스티벌 티켓']), li(portrait('leafpair'), '한잎이 · 두잎이', '늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 12초 동안 곁을 돌며 날아오는 것을 막고 닿은 적을 밀쳐 낸다', [ic('battery'), ' 건전지'])),
     h('h3', {}, '토벌 대상'),
     h('ul', { class: 'list' }, Object.entries(FOES).filter(([id]) => !(id in BOSS)).map(([id, f]) => li(portrait(id), f.name, f.note))),
     h('h3', {}, '보스'),
@@ -2329,14 +2534,14 @@ function guide() {
 /** 지금 가진 스킬 · 아이템 — pick 을 주면 눌러서 자세히 볼 수 있는 단추로 */
 const chips = pick => {
   const chip = (kind, id, txt) => pick ? h('button', { type: 'button', class: `chip${kind === 'w' ? ' w' : ''}`, onclick: e => pick(kind, id, e.currentTarget) }, txt) : h('span', { class: `chip${kind === 'w' ? ' w' : ''}` }, txt)
-  return h('div', { class: 'build' }, G.weapons.map(w => chip('w', w.id, `${WEAP[w.id].icon} ${WEAP[w.id].name} Lv${w.lv}`)), Object.entries(G.passives).map(([id, lv]) => chip('p', id, `${PASS[id].icon} ${PASS[id].name} Lv${lv}`)))
+  return h('div', { class: 'build' }, G.weapons.map(w => chip('w', w.id, [ic(w.id), ` ${WEAP[w.id].name} Lv${w.lv}`])), Object.entries(G.passives).map(([id, lv]) => chip('p', id, [ic(id), ` ${PASS[id].name} Lv${lv}`])))
 }
 /** 스킬 · 아이템 자세히 — 지금 수치(아이템 · 캐릭터 보정까지), 다음 레벨, 시너지 */
 function skillInfo(kind, id) {
   const r1 = v => +(+v).toFixed(1), kv = (rows, wide) => h('div', { class: `kv${wide ? ' wide' : ''}` }, rows.map(([k, v]) => h('div', {}, h('small', {}, k), h('b', {}, v))))
   if (kind === 'p') {
     const d = PASS[id], lv = G.passives[id]
-    return [h('p', { class: 't' }, `${d.icon} ${d.name}`, h('small', {}, ` Lv${lv}/${d.max}`)), h('p', {}, `레벨마다 ${d.note}`), kv([['지금', d.note.replace(/[\d.]+/, x => r1(x * lv))]], true), h('p', { class: 'next' }, lv < d.max ? `다음 Lv${lv + 1} — ${d.note.replace(/[\d.]+/, x => r1(x * (lv + 1)))}` : '최대 레벨이에요')]
+    return [h('p', { class: 't' }, ic(id), ` ${d.name}`, h('small', {}, ` Lv${lv}/${d.max}`)), h('p', {}, `레벨마다 ${d.note}`), kv([['지금', d.note.replace(/[\d.]+/, x => r1(x * lv))]], true), h('p', { class: 'next' }, lv < d.max ? `다음 Lv${lv + 1} — ${d.note.replace(/[\d.]+/, x => r1(x * (lv + 1)))}` : '최대 레벨이에요')]
   }
   const w = G.weapons.find(x => x.id === id), d = WEAP[id], st = w.st, max = d.ups.length + 1
   const rows = [['피해', r1(st.dmg * S.might)], ['쿨타임', `${r1(st.cd * S.cdr)}초`], ['개수', st.n + S.amount], ['범위', `${Math.round(st.area * S.area * 100)}%`]]
@@ -2346,9 +2551,9 @@ function skillInfo(kind, id) {
   if (st.spd !== 1) rows.push(['속도', `${Math.round(st.spd * S.speed * 100)}%`])
   const sy = synOf(id), mate = mateOf(id), on = G.weapons.some(x => x.id === mate)
   return [
-    h('p', { class: 't' }, `${d.icon} ${d.name}`, h('small', {}, ` Lv${w.lv}/${max}`)), h('p', {}, d.note), kv(rows),
+    h('p', { class: 't' }, ic(id), ` ${d.name}`, h('small', {}, ` Lv${w.lv}/${max}`)), h('p', {}, d.note), kv(rows),
     h('p', { class: 'next' }, w.lv < max ? `다음 Lv${w.lv + 1} — ${Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ')}` : '최대 레벨이에요'),
-    h('p', { class: `syn${on ? ' on' : ''}` }, on ? `✨ 시너지 「${sy[0]}」 켜짐 — ${synText(sy)}` : `시너지 「${sy[0]}」 — ${WEAP[mate].icon} ${WEAP[mate].name}을(를) 얻으면 ${synText(sy)}`),
+    h('p', { class: `syn${on ? ' on' : ''}` }, on ? [ic('syn'), ` 시너지 「${sy[0]}」 켜짐 — ${synText(sy)}`] : [`시너지 「${sy[0]}」 — `, ic(mate), ` ${WEAP[mate].name}을(를) 얻으면 ${synText(sy)}`]),
   ]
 }
 function pause() {
@@ -2369,9 +2574,9 @@ function finish(win, quit = false) {
   const stat = (k, v, n) => h('div', {}, h('small', {}, k), h('b', {}, v), n && h('span', { class: 'new' }, 'NEW'))
   show(h('div', { class: `panel result${win ? ' win' : ''}` },
     portrait(G.ch.id),
-    h('p', { class: 'h' }, win ? (G.endKind === 'time' ? '30분 생존! 🎉' : '토벌 성공! 🎉') : quit ? '토벌 중단' : '쓰러졌다… 와아…'),
+    h('p', { class: 'h' }, win ? [G.endKind === 'time' ? '30분 생존! ' : '토벌 성공! ', ic('party')] : quit ? '토벌 중단' : '쓰러졌다… 와아…'),
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? '검은 별똥별에게서 끝까지 도망쳤어요!' : '세이렌을 쫓아냈어요!') : G.final ? '세이렌까지 왔어요! 조금만 더' : `세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
-    h('p', { class: `lvl-badge ${G.diff}` }, `${G.D.icon} ${G.D.name}`),
+    h('p', { class: `lvl-badge ${G.diff}` }, ic(G.diff), ` ${G.D.name}`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
     chips(),
     h('div', { class: 'row' }, btn('처음으로', title), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
@@ -2392,4 +2597,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { FINAL_T, DARK_T, END_T, sasu: sasuShape, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

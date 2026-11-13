@@ -26,6 +26,12 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     return { ms: (performance.now() - t0) / n, t: M.G?.t, lvl: M.G?.lvl, kills: M.G?.kills, foes: M.G?.foes.length, mode: M.mode, weapons: M.G?.weapons.map(w => w.id + w.lv).join(' ') }
   }, [until, opts])
 
+  // 아이콘은 직접 그린 그림 — 화면 글자에 이모지가 없고, 아이콘 그림이 실제로 그려졌는지
+  const noEmoji = async (page, tag) => {
+    const r = await page.evaluate(() => ({ emoji: (document.body.innerText.match(/\p{Extended_Pictographic}/gu) || []).filter(c => !'♪♥'.includes(c)).join(''), ico: document.querySelectorAll('img.ico').length, bad: [...document.querySelectorAll('img.ico')].filter(i => !i.naturalWidth).length }))
+    if (r.emoji || !r.ico || r.bad) errors.push(`[${tag}] 아이콘 ${JSON.stringify(r)}`)
+  }
+
   await run('desktop', { width: 1280, height: 800 }, async page => {
     await page.screenshot({ path: OUT + '1-title.png' })
     if (await page.locator('a.kofi[href="https://ko-fi.com/godbono"]').count() !== 1) errors.push('[desktop] 후원 단추(Ko-fi) 없음')
@@ -43,12 +49,12 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
     if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트을 봐도 NEW가 남음')
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
-    await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
+    await page.screenshot({ path: OUT + '2-guide.png', fullPage: true }); await noEmoji(page, 'guide')
     const dock = await page.evaluate(() => { const g = document.querySelector('.guide > .scroll'); g.scrollTop = 900; const r = s => document.querySelector(s).getBoundingClientRect(); return g.scrollTop > 0 && r('.guide > .h').top >= 0 && r('.guide > .row').bottom <= innerHeight })   // 도감 — 제목 · 「처음으로」 고정, 가운데만 스크롤
     if (!dock) errors.push('[desktop] 도감 위 · 아래가 고정되지 않음')
     await page.getByRole('button', { name: '← 처음으로' }).click()
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(300)
-    await page.screenshot({ path: OUT + '3-chars.png' })
+    await page.screenshot({ path: OUT + '3-chars.png' }); await noEmoji(page, 'chars')
     const same = await page.evaluate(async () => { const before = document.querySelector('.panel'); document.querySelectorAll('.char')[3].click(); await new Promise(r => setTimeout(r, 50)); const on = document.querySelectorAll('.char.on').length; document.querySelectorAll('.char')[0].click(); return before === document.querySelector('.panel') && on === 1 })
     if (!same) errors.push('[desktop] 캐릭터를 고를 때 화면을 새로 그린다(깜빡임)')
     const dif = await page.evaluate(async () => { const before = document.querySelector('.panel'), B = k => document.querySelector(`.diff [data-k="${k}"]`); B('easy').click(); const note = document.querySelector('.diff-note').textContent; B('hard').click(); return { same: before === document.querySelector('.panel'), note, on: document.querySelector('.diff .on').dataset.k } })
@@ -65,12 +71,12 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.keyboard.press('Escape'); await page.waitForTimeout(200)   // 일시정지 — 스킬을 누르면 자세히
     await page.locator('.build .chip').first().click(); await page.waitForTimeout(100)
     const det = await page.locator('.skill-detail').innerText(); if (!/피해/.test(det) || !/시너지/.test(det)) errors.push('[desktop] 일시정지 스킬 자세히: ' + det.slice(0, 60))
-    await page.screenshot({ path: OUT + '4-pause.png' })
+    await page.screenshot({ path: OUT + '4-pause.png' }); await noEmoji(page, 'pause')
     await page.keyboard.press('Escape'); await page.waitForTimeout(100)
     // 첫 상자가 열릴 때까지
     await page.evaluate(() => { const M = window.__mjg; while (M.mode === 'play' && M.G.t < 120) { M.pl.inv = 1e9; M.step(1 / 30) } })
     await page.waitForTimeout(700)
-    await page.screenshot({ path: OUT + '5-box.png' })
+    await page.screenshot({ path: OUT + '5-box.png' }); await noEmoji(page, 'box')
     console.log('box mode:', await page.evaluate(() => window.__mjg.mode))
     await page.keyboard.press('Digit1'); await page.waitForTimeout(200)
     let r = await sim(page, 330, { god: true, walk: true }); console.log('5:30', r)
