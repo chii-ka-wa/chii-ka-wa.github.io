@@ -107,6 +107,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.evaluate(() => { const M = window.__mjg; M.pl.inv = 0; M.pl.hp = 1; let n = 0; while (M.mode !== 'over' && n++ < 3000) { if (M.mode === 'box') M.pick0(); M.step(1 / 30) } })
     await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + 'm6-dead.png' })
+    const badge = await page.locator('.result .lvl-badge').innerText().catch(() => ''); if (!/보통/.test(badge)) errors.push('[phone] 결과에 난이도가 없다 ' + badge)
     console.log('phone end mode:', await page.evaluate(() => window.__mjg.mode))
   })
 

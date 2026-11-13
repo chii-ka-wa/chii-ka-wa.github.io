@@ -2271,7 +2271,7 @@ function finish(win, quit = false) {
     portrait(G.ch.id),
     h('p', { class: 'h' }, win ? (G.endKind === 'time' ? '30분 생존! 🎉' : '토벌 성공! 🎉') : quit ? '토벌 중단' : '쓰러졌다… 와아…'),
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? '검은 별똥별에게서 끝까지 도망쳤어요!' : '세이렌을 쫓아냈어요!') : G.final ? '세이렌까지 왔어요! 조금만 더' : `세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
-    h('p', { class: 'sub' }, `${G.D.icon} ${G.D.name}`),
+    h('p', { class: `lvl-badge ${G.diff}` }, `${G.D.icon} ${G.D.name}`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
     chips(),
     h('div', { class: 'row' }, btn('처음으로', title), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
