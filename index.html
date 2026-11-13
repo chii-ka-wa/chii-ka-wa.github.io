@@ -53,6 +53,7 @@
 :root { --ink: #4a3b35; --soft: #7a655b; --pink: #ff8fab; --card: #fffdf8; --gold: #ffb400 }
 * { box-sizing: border-box }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #cdeaa8; color: var(--ink); font-family: "Jua", system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none }
+* { touch-action: manipulation }   /* 휴대폰 — 두 번 탭해도 확대되지 않게(손가락 벌려 확대 · 스크롤은 그대로) */
 #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none }
 #pause { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; color: var(--ink); font: inherit; font-size: 13px; box-shadow: 0 3px 0 var(--ink); cursor: pointer }
 #snd { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: calc(64px + env(safe-area-inset-right)); z-index: 5; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; font-size: 18px; line-height: 1; box-shadow: 0 3px 0 var(--ink); cursor: pointer; padding: 0 }   /* 소리 크기 창 열기 */

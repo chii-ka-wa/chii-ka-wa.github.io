@@ -94,6 +94,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
 
   await run('phone', { width: 390, height: 844 }, async page => {
     await page.screenshot({ path: OUT + 'm1-title.png' })
+    const ta = await page.evaluate(() => [...document.querySelectorAll('body, #ui, .panel, .btn, p')].map(e => getComputedStyle(e).touchAction).filter(v => v !== 'manipulation').concat(getComputedStyle(document.getElementById('cv')).touchAction === 'none' ? [] : ['cv']))   // 두 번 탭 확대 막기
+    if (ta.length) errors.push('[phone] 두 번 탭 확대가 막히지 않은 곳 ' + ta.join())
     await page.getByRole('button', { name: /패치노트/ }).click(); await page.waitForTimeout(200)   // 패치노트 — 휴대폰에서도 위 · 아래 고정
     const pm = await page.evaluate(() => { const g = document.querySelector('.panel.pick > .scroll'); g.scrollTop = 400; const r = s => document.querySelector(s).getBoundingClientRect(); return { h: document.querySelector('.panel .h').textContent, top: r('.panel.pick > .h').top >= 0, bottom: r('.panel.pick > .row').bottom <= innerHeight, scrolls: g.scrollTop > 0, wide: document.documentElement.scrollWidth <= innerWidth } })
     if (pm.h !== '패치노트' || !pm.top || !pm.bottom || !pm.scrolls || !pm.wide) errors.push('[phone] 패치노트 ' + JSON.stringify(pm))
