@@ -56,7 +56,7 @@ const SYN = [
   ['안주 내놔!', { momo: { n: 1 }, kanpai: { bounce: 2, dmg: 3 } }],
 ]
 const synOf = id => SYN.find(s => id in s[1])
-// 업데이트 기록 — 새 항목을 맨 위에 넣는다. 처음 화면 「업데이트 기록」에 NEW 가 뜬다(본 날짜는 save.seen)
+// 패치노트 — 새 항목을 맨 위에 넣는다. 처음 화면 「패치노트」에 NEW 가 뜬다(본 날짜는 save.seen)
 const PATCH = [
   ['2026-11-13', [
     '난이도 🌱 쉬움 · ⭐ 보통 · 🔥 어려움 추가 — 지금까지의 토벌이 어려움. 쉬움 · 보통은 적 체력이 낮고 경험치 · 줍는 것이 많아요. 기록은 난이도마다 따로(예전 기록은 어려움)',
@@ -67,7 +67,7 @@ const PATCH = [
     '캐릭터 고르기 · 도감 — 제목과 아래 단추는 고정, 가운데만 스크롤',
     '휴대폰 — 스킬 줄이 다음 보스 글자와 겹치지 않게',
     '결과 화면에 난이도를 크게',
-    '업데이트 기록 추가',
+    '패치노트 추가',
   ]],
   ['2026-11-12', [
     '소리 — 직접 만든 배경음악 · 효과음 · 캐릭터 목소리. 🔊 에서 배경음 · 효과음 크기를 따로(게임 중에 열면 멈춰요)',
@@ -2174,7 +2174,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH[0][0] ? '업데이트 기록' : h('span', {}, '업데이트 기록', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH[0][0] ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, '☕ 후원'))))
@@ -2213,10 +2213,10 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   if (!cv?._walk?.length) return
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
-function notes() {   // 업데이트 기록 — 위 · 아래 고정, 가운데만 스크롤
+function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스크롤
   mode = 'notes'; save.seen = PATCH[0][0]; persist()
   show(h('div', { class: 'panel guide pick' },
-    h('p', { class: 'h' }, '업데이트 기록'),
+    h('p', { class: 'h' }, '패치노트'),
     h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => h('li', {}, s)))])),
     h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }

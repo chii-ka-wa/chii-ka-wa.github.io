@@ -34,14 +34,14 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!vol.open || vol.bgm !== 0.3 || vol.sfx !== 0) errors.push('[desktop] 소리 크기 ' + JSON.stringify(vol))
     await page.mouse.click(40, 40); await page.waitForTimeout(100)
     if (!(await page.evaluate(() => document.getElementById('sndm').hidden))) errors.push('[desktop] 소리 창이 바깥을 눌러도 안 닫힘')
-    const nb = page.getByRole('button', { name: /업데이트 기록/ })   // 업데이트 기록 — 처음엔 NEW, 보고 나면 사라진다
-    if (!/NEW/.test(await nb.innerText())) errors.push('[desktop] 업데이트 기록에 NEW 없음')
+    const nb = page.getByRole('button', { name: /패치노트/ })   // 패치노트 — 처음엔 NEW, 보고 나면 사라진다
+    if (!/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트에 NEW 없음')
     await nb.click(); await page.waitForTimeout(200)
     const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.scroll li').length }))
-    if (pn.h !== '업데이트 기록' || pn.n < 5) errors.push('[desktop] 업데이트 기록 ' + JSON.stringify(pn))
+    if (pn.h !== '패치노트' || pn.n < 5) errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
     await page.screenshot({ path: OUT + '1-notes.png' })
     await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
-    if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 업데이트 기록을 봐도 NEW가 남음')
+    if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트을 봐도 NEW가 남음')
     await page.getByRole('button', { name: '도감' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '2-guide.png', fullPage: true })
     const dock = await page.evaluate(() => { const g = document.querySelector('.guide > .scroll'); g.scrollTop = 900; const r = s => document.querySelector(s).getBoundingClientRect(); return g.scrollTop > 0 && r('.guide > .h').top >= 0 && r('.guide > .row').bottom <= innerHeight })   // 도감 — 제목 · 「처음으로」 고정, 가운데만 스크롤
@@ -94,6 +94,11 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
 
   await run('phone', { width: 390, height: 844 }, async page => {
     await page.screenshot({ path: OUT + 'm1-title.png' })
+    await page.getByRole('button', { name: /패치노트/ }).click(); await page.waitForTimeout(200)   // 패치노트 — 휴대폰에서도 위 · 아래 고정
+    const pm = await page.evaluate(() => { const g = document.querySelector('.panel.pick > .scroll'); g.scrollTop = 400; const r = s => document.querySelector(s).getBoundingClientRect(); return { h: document.querySelector('.panel .h').textContent, top: r('.panel.pick > .h').top >= 0, bottom: r('.panel.pick > .row').bottom <= innerHeight, scrolls: g.scrollTop > 0, wide: document.documentElement.scrollWidth <= innerWidth } })
+    if (pm.h !== '패치노트' || !pm.top || !pm.bottom || !pm.scrolls || !pm.wide) errors.push('[phone] 패치노트 ' + JSON.stringify(pm))
+    await page.screenshot({ path: OUT + 'm1-notes.png' })
+    await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + 'm2-chars.png', fullPage: true })
     const fix = await page.evaluate(() => { const g = document.querySelector('.panel.pick .chars'); g.scrollTop = 300; const r = s => document.querySelector(s).getBoundingClientRect(); return { top: r('.panel.pick > .h').top >= 0, bottom: r('.panel.pick > .row').bottom <= innerHeight, scrolls: g.scrollTop > 0 } })   // 캐릭터만 스크롤 — 제목 · 난이도 아래는 고정
