@@ -56,9 +56,11 @@ const SYN = [
   ['안주 내놔!', { momo: { n: 1 }, kanpai: { bounce: 2, dmg: 3 } }],
 ]
 const synOf = id => SYN.find(s => id in s[1])
-// 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 날짜는 save.seen)
+// 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-13', [
+    '배경음악 새로 — 직접 지은 일렉 팝. 토벌 중엔 같은 곡을 캐릭터마다 다른 악기로: 치이카와 오르골 · 하치와레 기타 · 우사기 록 기타 · 모몽가 칩튠 · 쿠리만쥬 일렉 피아노 · 랏코 피리 · 시사 산신 · 카니 마림바(최종보스 곡은 그대로)',
+    '휴대폰 — 화면을 두 번 탭해도 확대되지 않게',
     '난이도 🌱 쉬움 · ⭐ 보통 · 🔥 어려움 추가 — 지금까지의 토벌이 어려움. 쉬움 · 보통은 적 체력이 낮고 경험치 · 줍는 것이 많아요. 기록은 난이도마다 따로(예전 기록은 어려움)',
     '멀리서 쏘는 일반 몬스터(가면 키메라 · 복어 · 문어 괴물)는 어려움에서만 나와요',
     '날아오는 공격을 크게, 빨간 테와 꼬리를 달아 경험치 보석과 구별되게. 쏘기 직전에는 머리 위에 빨간 ! 와 조준선',
@@ -80,6 +82,7 @@ const PATCH = [
     '먼작귀 서바이버즈 첫 공개 — 캐릭터 8명 · 스킬 14종 · 아이템 13종 · 시너지 7쌍 · 25분 최종보스 세이렌',
   ]],
 ]
+const PATCH_ID = `${PATCH[0][0]}#${PATCH[0][1].length}`
 const mateOf = id => Object.keys(synOf(id)[1]).find(k => k !== id)
 const synText = ([, u]) => Object.entries(u).map(([id, up]) => `${WEAP[id].name} ${Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')}`).join(' / ')
 
@@ -176,18 +179,48 @@ const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } c
 //   크기는 배경음(save.bgm) · 효과음(save.sfx) 따로 0~1 — 🔊 단추를 누르면 나오는 작은 창에서
 if (save.bgm == null) { save.bgm = save.mute ? 0 : 0.7; save.sfx = save.mute ? 0 : 0.8 } delete save.mute
 const SND = (() => {
-  let ac = null, out = null, mus = null, sfx = null, noise = null, theme = '', step = 0, at = 0, timer = 0, duck = 1
+  let ac = null, out = null, mus = null, pump = null, sfx = null, who = '', kit = null, noise = null, theme = '', step = 0, at = 0, timer = 0, duck = 1
   const last = {}, mtof = n => 440 * 2 ** ((n - 69) / 12)
-  const THEMES = {   // 직접 지은 곡 — 8분음표 한 칸(0 은 쉼), 베이스는 4분음표
-    field: { bpm: 112, lead: [76, 79, 81, 79, 76, 0, 74, 72, 74, 76, 79, 76, 74, 0, 72, 0, 72, 76, 79, 81, 84, 81, 79, 76, 79, 76, 74, 76, 72, 0, 0, 0], bass: [48, 48, 43, 43, 41, 41, 48, 43], vol: 0.16 },
+  const THEMES = {   // 직접 지은 곡
+    // 처음 화면 · 토벌 — 일렉 팝. 16분음표 칸, 리드는 8분음표 한 칸(0 쉼 · 1 앞 음을 늘임), 화음은 한 마디씩
+    field: { bpm: 128, vol: 0.19, chords: ['G', 'D', 'Em', 'C', 'G', 'D', 'Em', 'D', 'C', 'D', 'Bm', 'Em', 'C', 'D', 'G', 'D'], lead: [
+      74, 0, 79, 0, 78, 79, 81, 83, 81, 1, 78, 74, 0, 76, 78, 0, 79, 0, 76, 0, 71, 76, 79, 83, 81, 79, 76, 79, 1, 1, 0, 0,
+      74, 0, 79, 0, 78, 79, 81, 83, 86, 0, 84, 83, 81, 0, 78, 0, 79, 81, 83, 0, 76, 0, 79, 78, 76, 74, 1, 1, 1, 0, 0, 0,
+      76, 0, 76, 79, 0, 76, 74, 72, 74, 0, 74, 78, 0, 81, 1, 0, 83, 81, 78, 74, 0, 71, 74, 78, 76, 1, 1, 79, 0, 83, 1, 0,
+      84, 83, 81, 79, 0, 76, 79, 81, 81, 1, 78, 0, 81, 0, 86, 0, 83, 1, 1, 1, 86, 83, 79, 0, 81, 1, 78, 1, 0, 0, 0, 0] },
+    // 최종보스 — 8분음표 한 칸(0 은 쉼), 베이스는 4분음표
     siren: { bpm: 136, lead: [69, 72, 76, 72, 74, 76, 77, 76, 76, 74, 72, 71, 69, 0, 64, 0, 69, 72, 76, 81, 79, 77, 76, 74, 72, 74, 71, 68, 69, 0, 0, 0], bass: [45, 45, 41, 41, 43, 43, 40, 40], vol: 0.17 },
+  }
+  const CH = { G: [55, 67, 71, 74], D: [50, 62, 66, 69], Em: [52, 64, 67, 71], C: [48, 60, 64, 67], Bm: [47, 59, 62, 66] }   // [베이스, 화음 셋]
+  // 악기 — 같은 곡(field)을 캐릭터 성격대로 다른 소리로. o: [[파형, 높이 배수, 어긋남(센트), 크기]] · v 크기 · cut [필터 처음, 끝]Hz · dec 닫히는 시간 · q 날카로움
+  //   ring 울림(초) · atk 처음 · sus 길게 끌기 · vib 떨림(센트) · drive 찌그러뜨림 · oct 옥타브. dr: [킥, 박수 높이(Hz), 하이햇, 출렁임(작을수록 크게)]
+  const CRUNCH = new Float32Array(256).map((_, i) => Math.tanh((i / 127.5 - 1) * 5))
+  const KIT = {
+    '': {   // 처음 화면 — 일렉 신스
+      lead: { o: [['sawtooth', 1, -9], ['sawtooth', 1, 9]], cut: [4800, 2400] }, bass: { o: [['sawtooth']], cut: [1400, 700] }, arp: { o: [['square']] }, dr: [1.5, 1600, 1, 0.25] },
+    chiikawa: {   // 오르골 — 작고 여린 반짝임
+      lead: { o: [['sine'], ['sine', 5.4, 0, 0.2]], ring: 0.8, oct: 1, v: 1.3 }, bass: { o: [['triangle']], v: 1.3 }, arp: { o: [['sine', 2]], ring: 0.3, v: 1.2 }, dr: [0.6, 7000, 0.5, 0.75] },
+    hachiware: {   // 어쿠스틱 기타 — 밝게 뜯는 소리
+      lead: { o: [['sawtooth'], ['triangle', 1, 0, 0.8]], cut: [5000, 600], dec: 0.15, q: 1 }, bass: { o: [['triangle']], cut: [1200, 500], v: 1.4 }, arp: { o: [['sawtooth']], cut: [3000, 500], dec: 0.08, q: 1 }, dr: [1.1, 1800, 0.9, 0.55] },
+    usagi: {   // 록 기타 — 찌그러뜨린 소리 · 센 드럼
+      lead: { o: [['sawtooth', 1, -12], ['square', 1, 12]], drive: 1, cut: [3200, 2200], v: 0.42 }, bass: { o: [['sawtooth']], drive: 1, cut: [900, 600], v: 0.6 }, arp: { o: [['square']], cut: [3000, 3000], v: 0.8 }, dr: [1.9, 1200, 1.3, 0.2] },
+    momonga: {   // 칩튠 — 장난감 같은 네모파 · 살랑 떨림
+      lead: { o: [['square']], vib: 25, sus: 1, v: 0.55 }, bass: { o: [['square']], cut: [700, 500], v: 0.8 }, arp: { o: [['square', 2]], v: 0.7 }, dr: [1.2, 2400, 1.1, 0.4] },
+    kurimanju: {   // 일렉 피아노 — 느긋하게 · 살살 드럼
+      lead: { o: [['sine'], ['sine', 2, 0, 0.3], ['triangle', 1, 0, 0.2]], ring: 1, atk: 0.004, cut: [3000, 1500], v: 0.8 }, bass: { o: [['sine'], ['triangle', 2, 0, 0.2]], v: 1.1 }, arp: { o: [['sine']], ring: 0.4 }, dr: [0.7, 3200, 0.5, 0.85] },
+    rakko: {   // 피리 — 길게 떨리는 숨소리 · 거문고처럼 뜯는 아르페지오
+      lead: { o: [['sine'], ['triangle', 2, 0, 0.1]], atk: 0.06, vib: 18, sus: 1, v: 0.9 }, bass: { o: [['sawtooth']], cut: [600, 400] }, arp: { o: [['triangle']], cut: [4000, 800], dec: 0.1, v: 1.2 }, dr: [1.4, 1500, 0.7, 0.3] },
+    shisa: {   // 산신(오키나와 세 줄 악기) — 쨍하게 튕기는 소리
+      lead: { o: [['square', 1, 0, 0.6], ['sawtooth', 2, 0, 0.4]], cut: [7000, 900], dec: 0.06, q: 8, v: 0.8 }, bass: { o: [['triangle']], v: 1.4 }, arp: { o: [['square']], cut: [5000, 700], dec: 0.05, q: 6, v: 0.8 }, dr: [1.1, 2600, 0.9, 0.5] },
+    kani: {   // 마림바 — 바닷가처럼 통통
+      lead: { o: [['sine'], ['sine', 4, 0, 0.25]], ring: 0.35, atk: 0.003, v: 1.3 }, bass: { o: [['sine'], ['sine', 2, 0, 0.3]], v: 1.6 }, arp: { o: [['sine'], ['sine', 4, 0, 0.2]], ring: 0.15, v: 1.1 }, dr: [1, 2000, 0.8, 0.5] },
   }
   function boot() {
     if (ac) return ac.state === 'suspended' && ac.resume()
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return
-    ac = new C(); out = ac.createGain(); out.connect(ac.destination); mus = ac.createGain(); mus.connect(out); sfx = ac.createGain(); sfx.gain.value = 0.55; sfx.connect(out)
+    ac = new C(); out = ac.createGain(); out.connect(ac.destination); mus = ac.createGain(); mus.connect(out); pump = ac.createGain(); pump.connect(mus); sfx = ac.createGain(); sfx.gain.value = 0.55; sfx.connect(out)
     const b = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; noise = b
-    vol(); if (theme) play(theme, true)
+    vol(); if (theme) play(theme, true, who)
   }
   /** 음 하나 — 파형 · 길이 · 크기 · (끝 음으로 미끄러지기) · (떨림) */
   function tone(f, t, len, type = 'square', vol = 0.2, bus = sfx, f2 = 0, vib = 0) {
@@ -197,20 +230,45 @@ const SND = (() => {
     o.connect(g); g.connect(bus); o.start(t); o.stop(t + len + 0.02)
   }
   function hiss(t, len, vol, hz = 7000, bus = sfx) { const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = noise; f.type = 'bandpass'; f.frequency.value = hz; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len); n.connect(f); f.connect(g); g.connect(bus); n.start(t); n.stop(t + len) }
-  function tick() {   // 조금 앞서 음을 예약한다
-    const T = THEMES[theme]; if (!T || !ac) return
-    const dt = 60 / T.bpm / 2
-    while (at < ac.currentTime + 0.15) {
-      const i = step % 32, n = T.lead[i]
-      if (n) tone(mtof(n), at, dt * 1.6, 'square', T.vol * 0.55, mus)
-      if (i % 2 === 0) { tone(mtof(T.bass[(i / 2 | 0) % 8 * 1]), at, dt * 1.8, 'triangle', T.vol * 1.1, mus); if (i % 4 === 0) tone(150, at, 0.12, 'sine', T.vol * 0.9, mus, 50) }
-      hiss(at, 0.04, T.vol * (i % 2 ? 0.18 : 0.3), 8000, mus)
-      at += dt; step++
+  /** 악기 한 음 — 파형 여럿을 겹치고(V.o) · 찌그러뜨리고(drive) · 필터를 닫으며 뜯는 소리(cut) · 떨림(vib) · 길게 끌기(sus) · 울림 길이(ring) */
+  function inst(f, t, len, vol, bus, V) {
+    f *= 2 ** (V.oct || 0); len = V.ring || len; vol *= V.v || 1
+    const g = ac.createGain(), a = V.atk || 0.008, end = t + Math.max(len, a + 0.03); let into = g
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + a); if (V.sus) g.gain.setValueAtTime(vol, t + len * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, end); g.connect(bus)
+    if (V.cut) { const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = V.q ?? 3; fl.frequency.setValueAtTime(V.cut[0], t); fl.frequency.exponentialRampToValueAtTime(V.cut[1], t + Math.min(len, V.dec || 0.25)); fl.connect(into); into = fl }
+    if (V.drive) { const w = ac.createWaveShaper(); w.curve = CRUNCH; w.connect(into); into = w }
+    let lg = null; if (V.vib) { const l = ac.createOscillator(); lg = ac.createGain(); l.frequency.value = 5.5; lg.gain.value = V.vib; l.connect(lg); l.start(t); l.stop(end + 0.03) }
+    for (const [type, r = 1, det = 0, k = 1] of V.o) {
+      const o = ac.createOscillator(), og = ac.createGain(); o.type = type; o.frequency.value = f * r; o.detune.value = det; og.gain.value = k
+      if (lg) lg.connect(o.detune); o.connect(og); og.connect(into); o.start(t); o.stop(end + 0.03)
     }
   }
-  function play(name, force) {   // 곡 바꾸기(같은 곡이면 그대로)
-    if (name === theme && !force && timer) return
-    theme = name; if (!ac) return
+  function chip(T, i, t, dt) {   // 8분음표 한 칸 — 네모파 리드 · 세모파 베이스
+    i %= 32; const n = T.lead[i]
+    if (n) tone(mtof(n), t, dt * 1.6, 'square', T.vol * 0.55, mus)
+    if (i % 2 === 0) { tone(mtof(T.bass[(i / 2 | 0) % 8]), t, dt * 1.8, 'triangle', T.vol * 1.1, mus); if (i % 4 === 0) tone(150, t, 0.12, 'sine', T.vol * 0.9, mus, 50) }
+    hiss(t, 0.04, T.vol * (i % 2 ? 0.18 : 0.3), 8000, mus)
+  }
+  function electro(T, i, t, dt) {   // 16분음표 한 칸 — 4비트 킥(베이스 · 아르페지오가 출렁) · 박수 · 하이햇 · 옥타브 베이스 · 아르페지오 · 리드. 악기는 kit
+    const s = i % 16, nb = T.chords.length, bar = (i >> 4) % nb, [root, ...tri] = CH[T.chords[bar]], v = T.vol, fill = bar === nb - 1 && s >= 8, [kk, clap, hh, dip] = kit.dr
+    if (s % 4 === 0) { tone(160, t, 0.16, 'sine', v * kk, mus, 42); pump.gain.setValueAtTime(dip, t); pump.gain.linearRampToValueAtTime(1, t + dt * 3) }
+    if (s === 4 || s === 12 || fill) hiss(t, fill ? 0.08 : 0.14, v * (fill ? 0.4 + (s - 8) * 0.07 : 0.9), clap, mus)   // 마지막 마디는 박수를 굴려 처음으로
+    hiss(t, s % 4 === 2 ? 0.09 : 0.03, v * hh * (s % 4 === 2 ? 0.35 : 0.14), 9000, mus)
+    if (s % 2 === 0) inst(mtof(root + (s % 4 ? 12 : 0)), t, dt * 1.6, v * 0.8, pump, kit.bass)
+    if (bar >= 4) inst(mtof(tri[s % 3] + ((s >> 2) % 2) * 12), t, dt * 0.9, v * 0.16, pump, kit.arp)   // 다섯째 마디부터
+    if (s % 2) return
+    const L = T.lead, k = (i >> 1) % L.length, n = L[k]; if (n < 2) return
+    let len = 1; while (L[(k + len) % L.length] === 1) len++
+    inst(mtof(n), t, dt * 2 * len * 0.92, v * 0.35, mus, kit.lead)
+  }
+  function tick() {   // 조금 앞서 음을 예약한다
+    const T = THEMES[theme]; if (!T || !ac) return
+    const dt = 60 / T.bpm / (T.chords ? 4 : 2)
+    while (at < ac.currentTime + 0.15) { (T.chords ? electro : chip)(T, step, at, dt); at += dt; step++ }
+  }
+  function play(name, force, id = '') {   // 곡 바꾸기(같은 곡 · 같은 악기면 그대로) — id: 캐릭터(악기, KIT)
+    if (name === theme && id === who && !force && timer) return
+    theme = name; who = id; kit = KIT[id] || KIT['']; if (!ac) return
     clearInterval(timer); timer = 0; step = 0; at = ac.currentTime + 0.05
     if (name) timer = setInterval(tick, 30)
   }
@@ -1215,7 +1273,7 @@ function newGame(ch) {
   cam.x = cam.y = 0; shake = 0; calm()
   say(`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
-function startGame(i) { pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field'); SND.voice(CHARS[i].id, 'happy') }
+function startGame(i) { pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field', false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -2174,7 +2232,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH[0][0] ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, '☕ 후원'))))
@@ -2214,7 +2272,7 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
 function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스크롤
-  mode = 'notes'; save.seen = PATCH[0][0]; persist()
+  mode = 'notes'; save.seen = PATCH_ID; persist()
   show(h('div', { class: 'panel guide pick' },
     h('p', { class: 'h' }, '패치노트'),
     h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => s.syn ? buffCard(s) : h('li', {}, s)))])),
