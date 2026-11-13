@@ -32,6 +32,12 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (r.emoji || !r.ico || r.bad) errors.push(`[${tag}] 아이콘 ${JSON.stringify(r)}`)
   }
 
+  // 오른쪽 위 소리 단추가 창(.panel)과 겹치지 않는지
+  const clearSnd = async (page, tag) => {
+    const r = await page.evaluate(() => { const a = document.getElementById('snd').getBoundingClientRect(), p = document.querySelector('#ui:not([hidden]) .panel')?.getBoundingClientRect(); return !p || a.bottom <= p.top || a.left >= p.right || a.right <= p.left || a.top >= p.bottom })
+    if (!r) errors.push(`[${tag}] 소리 단추가 창과 겹침`)
+  }
+
   await run('desktop', { width: 1280, height: 800 }, async page => {
     await page.screenshot({ path: OUT + '1-title.png' })
     if (await page.locator('a.kofi[href="https://ko-fi.com/godbono"]').count() !== 1) errors.push('[desktop] 후원 단추(Ko-fi) 없음')
@@ -99,16 +105,16 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   })
 
   await run('phone', { width: 390, height: 844 }, async page => {
-    await page.screenshot({ path: OUT + 'm1-title.png' })
+    await page.screenshot({ path: OUT + 'm1-title.png' }); await clearSnd(page, 'phone m1-title')
     const ta = await page.evaluate(() => [...document.querySelectorAll('body, #ui, .panel, .btn, p')].map(e => getComputedStyle(e).touchAction).filter(v => v !== 'manipulation').concat(getComputedStyle(document.getElementById('cv')).touchAction === 'none' ? [] : ['cv']))   // 두 번 탭 확대 막기
     if (ta.length) errors.push('[phone] 두 번 탭 확대가 막히지 않은 곳 ' + ta.join())
     await page.getByRole('button', { name: /패치노트/ }).click(); await page.waitForTimeout(200)   // 패치노트 — 휴대폰에서도 위 · 아래 고정
     const pm = await page.evaluate(() => { const g = document.querySelector('.panel.pick > .scroll'); g.scrollTop = 400; const r = s => document.querySelector(s).getBoundingClientRect(); return { h: document.querySelector('.panel .h').textContent, top: r('.panel.pick > .h').top >= 0, bottom: r('.panel.pick > .row').bottom <= innerHeight, scrolls: g.scrollTop > 0, wide: document.documentElement.scrollWidth <= innerWidth } })
     if (pm.h !== '패치노트' || !pm.top || !pm.bottom || !pm.scrolls || !pm.wide) errors.push('[phone] 패치노트 ' + JSON.stringify(pm))
-    await page.screenshot({ path: OUT + 'm1-notes.png' })
+    await page.screenshot({ path: OUT + 'm1-notes.png' }); await clearSnd(page, 'phone m1-notes')
     await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
     await page.getByRole('button', { name: '토벌 시작!' }).click(); await page.waitForTimeout(300)
-    await page.screenshot({ path: OUT + 'm2-chars.png', fullPage: true })
+    await page.screenshot({ path: OUT + 'm2-chars.png', fullPage: true }); await clearSnd(page, 'phone m2-chars')
     const fix = await page.evaluate(() => { const g = document.querySelector('.panel.pick .chars'); g.scrollTop = 300; const r = s => document.querySelector(s).getBoundingClientRect(); return { top: r('.panel.pick > .h').top >= 0, bottom: r('.panel.pick > .row').bottom <= innerHeight, scrolls: g.scrollTop > 0 } })   // 캐릭터만 스크롤 — 제목 · 난이도 아래는 고정
     if (!fix.top || !fix.bottom || !fix.scrolls) errors.push('[phone] 캐릭터 고르기 위 · 아래 고정 ' + JSON.stringify(fix))
     await page.locator('.char').nth(2).click(); await page.locator('.char').nth(2).click(); await page.waitForTimeout(200)
@@ -118,7 +124,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.mouse.up()
     await page.evaluate(() => { const M = window.__mjg; while (M.mode === 'play' && M.G.t < 120) { M.pl.inv = 1e9; M.step(1 / 30) } })
     await page.waitForTimeout(700)
-    await page.screenshot({ path: OUT + 'm4-box.png' })
+    await page.screenshot({ path: OUT + 'm4-box.png' }); await clearSnd(page, 'phone m4-box')
     await page.evaluate(() => window.__mjg.pick0())
     const r = await sim(page, 480, { god: true, walk: true }); console.log('phone 8:00', r)
     const ns = await page.evaluate(() => { const G = window.__mjg.G; return { diff: G.diff, shots: G.eshots.filter(b => ['spike', 'net', 'soy'].includes(b.k)).length, far: G.foes.filter(e => ['spiker', 'fugu', 'octo'].includes(e.type)).length } })   // 보통 — 멀리서 쏘는 몬스터가 안 나온다
@@ -127,7 +133,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     // 맞으면 죽는지 — 무적을 풀고 체력을 1로
     await page.evaluate(() => { const M = window.__mjg; M.pl.inv = 0; M.pl.hp = 1; let n = 0; while (M.mode !== 'over' && n++ < 3000) { if (M.mode === 'box') M.pick0(); M.step(1 / 30) } })
     await page.waitForTimeout(300)
-    await page.screenshot({ path: OUT + 'm6-dead.png' })
+    await page.screenshot({ path: OUT + 'm6-dead.png' }); await clearSnd(page, 'phone m6-dead')
     const badge = await page.locator('.result .lvl-badge').innerText().catch(() => ''); if (!/보통/.test(badge)) errors.push('[phone] 결과에 난이도가 없다 ' + badge)
     console.log('phone end mode:', await page.evaluate(() => window.__mjg.mode))
   })
