@@ -26,7 +26,16 @@
 | `game.js` | 게임 전부. 맨 위 「표」(CHARS · WEAP · SYN · PASS · FOES · BOSS · PLAN)만 고쳐도 캐릭터 · 스킬 · 보스 일정이 바뀝니다 |
 | `test/smoke.cjs` | 헤드리스 브라우저로 처음 화면부터 클리어까지 빨리 돌려 보는 점검 |
 
-빌드는 없습니다. 기록은 브라우저 localStorage(`mjg.v1`)에만 저장되고 서버 · DB는 없습니다.
+빌드는 없습니다. 내 기록(최고 기록 · 설정)은 브라우저 localStorage(`mjg.v1`)에만 저장됩니다. 판이 끝날 때 익명 플레이 통계 한 줄만 Supabase 로 보냅니다(아래).
+
+## 익명 플레이 통계(Supabase)
+
+판이 끝나면(쓰러짐 · 클리어 · 30분 생존 · 그만두기) `runs` 표에 한 줄 — 캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 수 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 게임 버전. 이름 · 기기 정보처럼 사람을 알 수 있는 것은 보내지 않습니다.
+
+- 끄기: 처음 화면 아래 「보내지 않기」(이 브라우저에 기억). 브라우저의 추적 거부(GPC · Do Not Track)도 따릅니다
+- `chii-ka-wa.github.io` 에서만 보냅니다 — 로컬 실행 · 점검(test) · 복사본에서는 안 보냄
+- 처음 한 번: Supabase 새 프로젝트 → SQL Editor 에 `supabase/schema.sql` 붙여 넣고 Run → Project Settings › API Keys 의 Project URL 과 공개 키(publishable 또는 anon — **secret · service_role 키는 절대 넣지 말 것**)를 `game.js` 의 `STATS` 에 넣고 푸시
+- 게임(공개 키)은 넣기만 할 수 있고 읽기 · 고치기 · 지우기는 못 합니다(RLS). 보기는 대시보드 Table Editor 나 SQL Editor 에서 `supabase/stats.sql` — 캐릭터 · 난이도별 판 수 · 클리어율, 몇 분에 · 무엇에 많이 쓰러지나, 많이 쓴 스킬, 날마다 판 수
 
 ## 소리
 

@@ -179,6 +179,23 @@ const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = {
 try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 if (!DIFF[save.diff]) save.diff = 'normal'
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
+// ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
+//   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
+//   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
+const STATS = { url: '', key: '', host: 'chii-ka-wa.github.io' }   // url: https://<프로젝트>.supabase.co · key: 공개 키(publishable / anon) — 비우면 안 보낸다
+const statsOn = () => !!STATS.url && !save.noStats && location.hostname === STATS.host && !navigator.globalPrivacyControl && navigator.doNotTrack !== '1'
+const KILLER = { spike: '가면 키메라 독침', net: '복어 기름 그물', soy: '문어 간장', note: '세이렌 음표', paper: '날아오는 종이', shard: '검은 별똥별 조각', rock: '던진 돌', claw: '날아오는 발톱', bomb: '폭발', land: '내려찍기' }
+const killerName = s => !s ? null : typeof s === 'string' ? s : s.kind ? BOSS[s.kind]?.name ?? s.kind : FOES[s.type]?.name ?? KILLER[s.k] ?? s.k ?? null
+function statRow(result) {
+  const b = G.final ? G.final.siren : G.foes.find(e => e.boss && !e.dead)
+  return { v: PATCH_ID, ch: G.ch.id, diff: G.diff, result, t: Math.round(G.t), lvl: G.lvl, kills: G.kills, killer: result === 'dead' ? G.killer || null : null,
+    boss: G.dark ? '검은 별똥별' : b ? BOSS[b.kind]?.name ?? null : null, weapons: G.weapons.map(w => w.id + w.lv).join(' '), touch: matchMedia('(hover: none)').matches }
+}
+function report(result) {
+  if (!statsOn()) return
+  fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
+    headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } }).catch(() => {})
+}
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
 //   크기는 배경음(save.bgm) · 효과음(save.sfx) 따로 0~1 — 소리 단추를 누르면 나오는 작은 창에서
@@ -1742,7 +1759,7 @@ function foes(dt) {
       if (!frozen) { e.x += e.rush[0] * dt; e.y += e.rush[1] * dt }
       e.fx = e.rush[0] < 0 ? -1 : 1
       if (Math.abs(e.x - cam.x) > VW + 200 || Math.abs(e.y - cam.y) > VH + 200) e.dead = true
-      else if (!frozen && d < e.r + pl.r - 2) ouch(e.dmg)
+      else if (!frozen && d < e.r + pl.r - 2) ouch(e.dmg, e)
       continue
     }
     if (!e.boss && d > far) { ring(e, true); continue }   // 너무 멀어진 적은 앞쪽으로 다시
@@ -1756,7 +1773,7 @@ function foes(dt) {
     if (Math.abs(dx) > 0.15) e.fx = dx > 0 ? 1 : -1
     const SH = FOES[e.type].shot   // 멀리서 쏘는 적 — 가면 키메라 독침 · 복어 기름 그물 · 문어 간장
     if (!frozen && SH && d < SH.range && (e.cd -= dt) <= 0) { e.cd = SH.cd + rnd(); G.eshots.push({ k: SH.k, x: e.x, y: e.y, vx: dx * SH.spd, vy: dy * SH.spd, t: 0, life: 2.6, dmg: e.dmg + 1, r: SH.r, slow: SH.slow }) }
-    if (!frozen && d < e.r + pl.r - 2 && e.z < 20) ouch((e.boss ? Math.max(e.dmg, pct(e.mid ? 0.08 : 0.1)) : e.dmg) * (e.st === 'dash' ? 1.5 : 1))   // 뛰어오른 보스는 안 닿는다
+    if (!frozen && d < e.r + pl.r - 2 && e.z < 20) ouch((e.boss ? Math.max(e.dmg, pct(e.mid ? 0.08 : 0.1)) : e.dmg) * (e.st === 'dash' ? 1.5 : 1), e)   // 뛰어오른 보스는 안 닿는다
   }
 }
 // 돌진 — 걷다가 멈칫(붉게) 하고 그 방향으로
@@ -1874,11 +1891,12 @@ function kill(e, quiet = false) {
   else { G.bosses++; item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(`${B.name} 격파!`, 2.2, '#ffd23f') }
   shake = e.mid ? 6 : 10; fx({ k: 'ring', x: e.x, y: e.y, R: e.mid ? 120 : 180, T: 0.6, col: '#ffd23f' }); fx({ k: 'flash', x: e.x, y: e.y - 40, R: e.mid ? 110 : 160, col: '#ffd23f', T: 0.6 })
 }
-function ouch(d) {
+/** 다침 — src: 때린 것(적 · 보스 · 날아온 것 · 장판, 또는 이름). 쓰러지면 G.killer 에 이름(익명 통계) */
+function ouch(d, src) {
   if (pl.inv > 0 || G.dying || G.won) return
   d = Math.max(1, Math.round(d - S.armor)); pl.hp -= d; pl.inv = 0.4; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
   num(pl.x, pl.y - 48, d, 'hurt')
-  if (pl.hp <= 0) { pl.hp = 0; G.dying = 1.2; say('와아…', 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }
+  if (pl.hp <= 0) { pl.hp = 0; G.dying = 1.2; G.killer = killerName(src); say('와아…', 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }
 }
 
 // ---- 경험치 · 줍는 것
@@ -1955,7 +1973,7 @@ function darkStep(dt) {
   const D = G.dark, [dx, dy] = toward(pl, D.x, D.y), sp = 118 + D.t * 0.6   // 점점 빨라진다(30분엔 거의 내 속도)
   D.t += dt
   if (G.freeze <= 0) { D.x += dx * sp * dt; D.y += dy * sp * dt }
-  if ((D.x - pl.x) ** 2 + (D.y - pl.y) ** 2 < (pl.r + 16) ** 2) ouch(pct(0.3))
+  if ((D.x - pl.x) ** 2 + (D.y - pl.y) ** 2 < (pl.r + 16) ** 2) ouch(pct(0.3), '검은 별똥별')
   if ((D.cd -= dt) <= 0) {   // 3초마다 별 조각을 사방으로
     D.cd = 3
     for (let i = 0; i < 10; i++) { const q = i / 10 * TAU + rnd() * 0.3; G.eshots.push({ k: 'shard', x: D.x, y: D.y, vx: Math.cos(q) * 160, vy: Math.sin(q) * 160, t: 0, life: 3, dmg: pct(0.08), r: 6 }) }
@@ -2001,7 +2019,7 @@ function step(dt) {
     if ((z.t += dt) < z.T) continue
     z.dead = true
     if (z.k === 'rush') { rushNow(z); continue }
-    if (((pl.x - z.x) / (z.R + 4)) ** 2 + ((pl.y - z.y) / ((z.R + 4) * 0.8)) ** 2 < 1) ouch(z.dmg)
+    if (((pl.x - z.x) / (z.R + 4)) ** 2 + ((pl.y - z.y) / ((z.R + 4) * 0.8)) ** 2 < 1) ouch(z.dmg, z)
     fx({ k: 'ring', x: z.x, y: z.y, R: z.R, T: 0.4, col: z.col }); fx({ k: 'boom', x: z.x, y: z.y, R: z.R * 0.9, col: z.col, T: 0.35 })
     for (let i = 0; i < 8; i++) { const a = rnd() * TAU; part(z.x, z.y, Math.cos(a) * 160, Math.sin(a) * 90 - 80, i % 2 ? z.col : '#fff', 0.35, 2.6) }
     shake = Math.max(shake, z.k === 'land' ? 8 : 4)
@@ -2009,7 +2027,7 @@ function step(dt) {
   for (const b of G.eshots) {   // 날아오는 것 — 피하는 수밖에
     b.t += dt
     if (G.freeze <= 0) { b.x += b.vx * dt; b.y += b.vy * dt }
-    if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < (pl.r + b.r) ** 2) { ouch(b.dmg); b.dead = true; if (b.slow) { pl.slowT = Math.max(pl.slowT, b.slow); fx({ k: 'text', x: pl.x, y: pl.y - 50, s: '끈적!', col: '#f2c94c', T: 0.6 }) } }
+    if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < (pl.r + b.r) ** 2) { ouch(b.dmg, b); b.dead = true; if (b.slow) { pl.slowT = Math.max(pl.slowT, b.slow); fx({ k: 'text', x: pl.x, y: pl.y - 50, s: '끈적!', col: '#f2c94c', T: 0.6 }) } }
     if (b.t > b.life) b.dead = true
   }
   for (const g of G.gems) {   // 경험치 · 아이템 줍기
@@ -2449,6 +2467,8 @@ function title() {
     h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
+    STATS.url && h('p', { class: 'fine' }, '게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)를 모아요 · ',
+      h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? '다시 보내기' : '보내지 않기' } }, save.noStats ? '다시 보내기' : '보내지 않기')),
     h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, ic('cup'), ' 후원'))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
@@ -2576,6 +2596,7 @@ function finish(win, quit = false) {
   mode = 'over'; BOX = null; calm(); pauseBtn.hidden = true; SND.duck(false); SND.end(win)
   const b = save.best[bestKey(G.ch.id, G.diff)] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
   save.runs++; save.kills += G.kills
+  report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
   if (win) { save.clears++; b.clears++ }
   b.t = Math.max(b.t, G.t); b.kills = Math.max(b.kills, G.kills); b.lvl = Math.max(b.lvl, G.lvl)
   persist()
@@ -2605,4 +2626,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
