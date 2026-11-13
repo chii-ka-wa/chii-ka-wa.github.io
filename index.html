@@ -224,6 +224,17 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 .shop b { display: flex; justify-content: space-between; align-items: center; gap: 8px }   /* 이름은 왼쪽, 칸 동그라미는 오른쪽 끝에 — 줄마다 같은 자리 */
 .shop b small { font-family: system-ui, sans-serif; font-size: 12px; color: var(--pink); letter-spacing: 1px; white-space: nowrap }
 .guide .scroll .shop-note { margin: 0 0 10px; text-align: center }
+.ach li { grid-template-columns: 44px 1fr }   /* 업적 */
+.ach b { display: flex; justify-content: space-between; align-items: center; gap: 8px }
+.pips { display: flex; gap: 3px }
+.pips i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #cfc3b6; background: #fff }
+.pips i.t1 { background: #e0a46a; border-color: #a8683a } .pips i.t2 { background: #dfe4ea; border-color: #97a2ae } .pips i.t3 { background: #ffd23f; border-color: #d99a00 }
+.ach .prog { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px }
+.ach .prog i { height: 8px; border-radius: 4px; background: linear-gradient(var(--pink), var(--pink)) left / var(--w) 100% no-repeat, #f1e6d6 }
+.ach-new { margin: 6px auto; max-width: 460px }
+.ach-new .dt { margin: 0 0 4px; font-size: 15px; color: #c07a2c }
+.ach-new span { display: inline-flex; align-items: center; gap: 2px; margin: 2px 4px; padding: 2px 10px 2px 4px; border-radius: 999px; background: #fff6d6; border: 2px solid #e8c66a; font-size: 14px }
+.ach-new .ico { width: 24px; height: 24px }
 .btn.buy { font-size: 15px; padding: 6px 12px; min-width: 84px; white-space: nowrap }
 </style>
 </head>

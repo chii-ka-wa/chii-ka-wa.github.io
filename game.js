@@ -59,6 +59,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
+    '업적 12가지 — 토벌 대원 · 고블린 퇴치 · 파자마 파티즈 팬클럽 · 토벌 달인 · 부자 토벌대 · 복권 당첨 · 커다란 토벌 · 모두 함께 · 세이렌 토벌 · 끝까지 도망 · 진짜 토벌 · 스치지도 않았다. 동 · 은 · 금메달(쉬운 것은 많이, 어려운 것은 적게), 금메달 하나마다 토벌 보상금 +1%',
     '적이 아주 많아지는 20분 뒤에 느려지던 것 — 기기가 버거워하면 저절로 화면을 가볍게(해상도를 조금 낮추고 작은 적 그림자를 빼요, 게임 규칙은 그대로). 맞은 적은 하얀 그림 한 장만 그려 더 가볍게',
     '토벌 보상금 · 영구 강화 상점 — 판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(보통 ×1.25 · 어려움 ×1.5). 처음 화면 「상점」에서 체력 · 힘 · 회복 · 발걸음 · 경험치 · 줍기 · 행운 · 단단함을 조금씩 영구 강화(다 사도 같은 아이템 한 레벨 정도)',
     '한잎이 · 두잎이 지속 시간 12초 → 6초(막는 힘이 세져서)',
@@ -193,6 +194,25 @@ const SHOP = {
 }
 for (const u of Object.values(SHOP)) u.val ||= v => `+${Math.round(v * 100)}%`   // 보여 주는 값 — 따로 없으면 %
 const perm = id => SHOP[id].per * (save.up[id] || 0)
+// 업적 — 동 · 은 · 금. 쉬운 것은 횟수를 많이, 어려운 것은 적게. 금메달 하나마다 토벌 보상금 +1%. ico = 메달 가운데 그림(아이콘 id, a_ 는 캐릭터 그림)
+const ACH = {
+  runs: { name: '토벌 대원', note: '토벌에 나간 판', ico: 'sasu', tiers: [10, 50, 200] },
+  goblin: { name: '고블린 퇴치', note: '쓰러뜨린 고블린(돌격대 · 황금 고블린 포함)', ico: 'a_goblin', tiers: [2000, 20000, 100000] },
+  pajama: { name: '파자마 파티즈 팬클럽', note: '꿀맛 페스티벌 공연을 본 횟수', ico: 'pajama', tiers: [10, 50, 200] },
+  lv8: { name: '토벌 달인', note: '판이 끝날 때 Lv 8 이던 스킬(판마다 더한다)', ico: 'license', tiers: [10, 60, 250] },
+  coin: { name: '부자 토벌대', note: '번 토벌 보상금', ico: 'coin', tiers: [1000, 10000, 50000] },
+  jackpot: { name: '복권 당첨', note: '터진 잭팟', ico: 'clover', tiers: [5, 25, 100] },
+  boss: { name: '커다란 토벌', note: '쓰러뜨린 보스(세이렌 포함 · 중간보스 빼고)', ico: 'a_dekatsuyo', tiers: [10, 50, 150] },
+  friends: { name: '모두 함께', note: '클리어해 본 캐릭터(종류)', ico: 'a_chiikawa', tiers: [2, 5, 8] },
+  clear: { name: '세이렌 토벌', note: '세이렌을 쓰러뜨린 판', ico: 'a_siren', tiers: [1, 3, 10] },
+  survive: { name: '끝까지 도망', note: '검은 별똥별에게서 30분 생존한 판', ico: 'a_darkstar', tiers: [1, 3, 10] },
+  hard: { name: '진짜 토벌', note: '어려움으로 클리어한 판', ico: 'hard', tiers: [1, 3, 7] },
+  nohit: { name: '스치지도 않았다', note: '처음 5분을 한 번도 안 맞고 버틴 판', ico: 'armor', tiers: [1, 3, 10] },
+}
+const TIER = ['', '동메달', '은메달', '금메달']
+const achVal = id => id === 'runs' ? save.runs : id === 'friends' ? new Set(Object.entries(save.best).filter(([, b]) => b.clears).map(([k]) => k.split('.')[0])).size : save.ach[id] || 0
+const tierOf = id => ACH[id].tiers.filter(n => achVal(id) >= n).length
+const golds = () => Object.keys(ACH).filter(id => tierOf(id) === 3).length
 const STATUS = {
   weak: { name: '약화', note: '주는 피해 -40%', col: '#ff9f43' },
   charm: { name: '매혹', note: '이동 속도 -40% · 세이렌 쪽으로 끌려간다', col: '#ff6fd0' },
@@ -214,6 +234,7 @@ const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = {
 try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 if (!DIFF[save.diff]) save.diff = 'normal'
 save.up ||= {}; save.coin = Math.max(0, save.coin | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금
+save.ach ||= { clear: save.clears || 0 }   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
@@ -1379,6 +1400,7 @@ const ICO = {
     g.beginPath(); g.moveTo(0, -11.5); g.bezierCurveTo(4, -6, 9.5, -2, 9, 4); g.bezierCurveTo(8.5, 9, 4.5, 11.5, 0, 11.5); g.bezierCurveTo(-4.5, 11.5, -8.5, 9, -9, 4); g.bezierCurveTo(-9.2, -1, -5.5, -3, -4.5, -7); g.bezierCurveTo(-2.5, -5, -1, -6, 0, -11.5); g.closePath(); ink(g, '#ff6a3d', 1.5)
     g.beginPath(); g.moveTo(0, -2); g.bezierCurveTo(3, 1, 5, 4, 4.5, 6.5); g.bezierCurveTo(4, 9.5, -4, 9.5, -4.5, 6.5); g.bezierCurveTo(-5, 4, -2, 2, 0, -2); g.fillStyle = '#ffd23f'; g.fill()
   },
+  a_goblin: 'goblin', a_dekatsuyo: 'dekatsuyo', a_chiikawa: 'chiikawa', a_siren: 'siren', a_darkstar: 'darkstar',   // 업적 메달 가운데 그림
   // 그 밖
   coin: g => { el(g, 0, 0, 10.5); ink(g, '#ffd23f', 1.6); el(g, 0, 0, 7); g.lineWidth = 1.2; g.strokeStyle = '#d99a00'; g.stroke(); g.lineCap = 'round'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(0, -3.6); g.lineTo(0, 3.6); g.stroke(); el(g, -4.4, -5, 1.5, 2.3, 0.6); g.fillStyle = '#fffbe0'; g.fill() },   // 토벌 보상금
   zoom: g => { g.lineCap = 'round'; g.lineWidth = 3.4; g.strokeStyle = OUT; g.beginPath(); g.moveTo(4, 4); g.lineTo(10.5, 10.5); g.stroke(); el(g, -2, -2, 7.6); ink(g, '#cfeeff', 1.7); g.lineWidth = 1.8; g.beginPath(); g.moveTo(-5.6, -2); g.lineTo(1.6, -2); g.moveTo(-2, -5.6); g.lineTo(-2, 1.6); g.stroke() },   // 돋보기
@@ -1409,6 +1431,16 @@ const icoSpr = (id, k = K) => sprite(30, 30, 15, 15, g => {
   const s = artSprite(P, 4), c = crop(s.c, trimRect([s.c])), f = 27 / Math.max(c.width, c.height); g.drawImage(c, -c.width * f / 2, -c.height * f / 2, c.width * f, c.height * f)
 }, k)
 const ICU = {}
+/** 업적 메달 — 리본 두 갈래 · 동 · 은 · 금(아직이면 회색) 둥근 판 · 가운데 그림. 이모지 없이 직접 그린다 */
+const MEDAL = [['#e6ddd3', '#b9ada1', '#cfc5ba'], ['#e0a46a', '#a8683a', '#ff9db5'], ['#dfe4ea', '#97a2ae', '#8fc4ff'], ['#ffd23f', '#d99a00', '#ff6b8a']]   // [판, 테, 리본]
+const medalSpr = (id, t) => sprite(30, 30, 15, 15, g => {
+  const [disc, rim, rib] = MEDAL[t]
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 8.5, -14.5); g.lineTo(s * 3, -14.5); g.lineTo(s * -1.5, -4); g.lineTo(s * 4, -4); g.closePath(); ink(g, rib, 1.3) }
+  el(g, 0, 4, 10.6); ink(g, disc, 1.6); el(g, 0, 4, 8.4); g.lineWidth = 1.1; g.strokeStyle = rim; g.stroke()
+  if (t === 3) { g.fillStyle = 'rgba(255,255,255,.75)'; el(g, -5, -0.5, 1.6, 2.6, 0.7); g.fill() }   // 금은 반짝
+  g.globalAlpha = t ? 1 : 0.35; g.drawImage(icoSpr(ACH[id].ico, 2.4).c, -6.8, -2.8, 13.6, 13.6); g.globalAlpha = 1
+}, 2.4)
+const medal = (id, t) => h('img', { class: 'ico medal', alt: TIER[t] || '아직', draggable: 'false', src: ICU[`m.${id}.${t}`] ||= medalSpr(id, t).c.toDataURL() })
 const ic = id => h('img', { class: 'ico', alt: '', draggable: 'false', src: ICU[id] ||= icoSpr(id, 2.4).c.toDataURL() })
 /** 메뉴 · 도감에 쓰는 그림(크게 그린 캔버스) */
 /** 그림의 빈 둘레를 잘라 낸 사각형(여러 장이면 합친 것) */
@@ -1537,7 +1569,7 @@ function newGame(ch) {
   const b = 2 + (ch.mod.boxes || 0)
   G = {
     ch, diff: save.diff, D: DIFF[save.diff], t: 0, foes: [], shots: [], eshots: [], gems: [], items: [], fx: [], parts: [], nums: [], haz: [], help: [], weapons: [], passives: {},
-    kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
+    kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
   }
@@ -1922,7 +1954,7 @@ function hurt(e, dmg, ox, oy, kb = 0, sea = 1) {
 }
 function kill(e, quiet = false) {
   e.dead = true
-  if (!quiet) { G.kills++; gem(e.x, e.y, e.xp); SND.kill() }
+  if (!quiet) { G.kills++; gem(e.x, e.y, e.xp); SND.kill(); if (e.type === 'goblin' || e.type === 'rusher' || e.type === 'golden') G.gob++ }
   const col = FOES[e.type].col
   if (G.fx.length < 180) fx({ k: 'puff', x: e.x, y: e.y - e.r, R: e.r * 1.4, T: 0.4 })
   for (let i = 0; i < (e.boss ? 36 : e.elite ? 14 : 3); i++) { const a = rnd() * TAU, s = 40 + rnd() * (e.boss ? 240 : 110); part(e.x, e.y - e.r, Math.cos(a) * s, Math.sin(a) * s - 60, i % 3 ? col : '#fff', 0.35 + rnd() * 0.35, 2 + rnd() * (e.boss ? 4 : 2.5)) }
@@ -1946,6 +1978,7 @@ function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return;
 /** 다침 — src: 때린 것(적 · 보스 · 날아온 것 · 장판, 또는 이름). 쓰러지면 G.killer 에 이름(익명 통계) */
 function ouch(d, src) {
   if (pl.inv > 0 || G.dying || G.won) return
+  G.hit0 ??= G.t   // 처음 맞은 때(업적 「스치지도 않았다」)
   d = Math.max(1, Math.round(d - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
   shove(80, 380)   // 맞으면 0.8초 무적 + 둘레를 밀쳐 빠져나갈 틈
   num(pl.x, pl.y - 48, d, 'hurt')
@@ -1985,6 +2018,7 @@ const USE = {
 // ---- 도와주는 친구들 — 아이템을 먹으면 잠깐 나타난다
 /** 파자마 파티즈(10초 · 곁을 돌며 공연) · 한잎이와 두잎이(6초 · 손잡고 곁을 돌며 지켜 준다). 이미 있으면 시간만 다시 */
 function summonHelp(k) {
+  if (k === 'pajama') G.pj++
   const h = G.help.find(x => x.k === k)
   if (h) { h.t = 0; return }
   G.help.push(k === 'pajama' ? { k, t: 0, T: 10, a: 0, tick: 0.3, shot: 0, n: 0 } : { k, t: 0, T: 6, a: 0, hit: new Map() })
@@ -2529,7 +2563,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, '먼작귀', h('span', {}, '서바이버즈')),
     h('p', { class: 'sub' }, '먼가 작고 귀여운 녀석들의 토벌 생존기'),
-    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, '상점 ', ic('coin'), ` ${save.coin.toLocaleString()}`), shop), btn('토벌 시작!', chars, 'main')),
+    h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, '상점 ', ic('coin'), ` ${save.coin.toLocaleString()}`), shop), btn(h('span', {}, '업적 ', medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     STATS.url && h('p', { class: 'fine' }, '게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)를 모아요 · ',
@@ -2602,6 +2636,7 @@ function guide() {
       h('li', {}, '스킬 · 아이템은 6칸씩, 스킬은 Lv 8 · 아이템은 Lv 5 까지. 아주 가끔(1%) 잭팟이 터지면 셋 다 가져요.'),
       h('li', {}, '한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기).'),
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
+      h('li', {}, '업적 — 처음 화면 「업적」. 판이 끝날 때 쌓여서 동 · 은 · 금메달을 따요. 금메달 하나마다 토벌 보상금 +1%.'),
       h('li', {}, '판이 끝나면 토벌 보상금(버틴 시간 · 처치 · 보스 · 클리어, 어려울수록 더) — 처음 화면 「상점」에서 체력 · 힘 같은 영구 강화를 조금씩 살 수 있어요. 다 사도 같은 아이템 한 레벨 정도예요.'),
       h('li', {}, '난이도 — ', Object.entries(DIFF).map(([k, d], i) => [i ? ' / ' : '', ic(k), ` ${d.name}: ${d.note}`]), '. 기록은 난이도마다 따로.'),
       h('li', {}, '10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.'),
@@ -2686,6 +2721,7 @@ function finish(win, quit = false) {
   report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
   if (win) { save.clears++; b.clears++ }
   const pay = bounty(win); save.coin += pay.sum
+  const got = achieve(win, pay.sum)
   b.t = Math.max(b.t, G.t); b.kills = Math.max(b.kills, G.kills); b.lvl = Math.max(b.lvl, G.lvl)
   persist()
   const stat = (k, v, n) => h('div', {}, h('small', {}, k), h('b', {}, v), n && h('span', { class: 'new' }, 'NEW'))
@@ -2696,13 +2732,38 @@ function finish(win, quit = false) {
     h('p', { class: `lvl-badge ${G.diff}` }, ic(G.diff), ` ${G.D.name}`),
     h('div', { class: 'stats' }, stat('버틴 시간', fmt(G.t), rec), stat('레벨', G.lvl), stat('처치', G.kills.toLocaleString()), stat('보스', G.bosses)),
     h('p', { class: 'coin' }, ic('coin'), ` 토벌 보상금 +${pay.sum.toLocaleString()}`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || '조금 더 버텨 봐요'}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''} — 모은 돈 ${save.coin.toLocaleString()}`)),
+    got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, '업적 달성!'), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? ' — 보상금 +1%' : ''}`))),
     chips(), dmgTable(),
     h('div', { class: 'row' }, btn('처음으로', title), btn('상점', shop), btn('캐릭터 바꾸기', chars), btn('다시 하기', () => startGame(pickCi), 'main'))))
 }
 /** 토벌 보상금 — 버틴 시간(10초에 1) · 처치(200에 1 — 뒤로 갈수록 처치가 크게 늘어서) · 보스 15 · 클리어 60, 난이도 배수(DIFF.coin) */
 function bounty(win) {
   const parts = [['버틴 시간', G.t / 10], ['처치', G.kills / 200], ['보스', G.bosses * 15], ['클리어', win ? 60 : 0]].map(([k, v]) => [k, Math.floor(v * G.D.coin)])
-  return { parts, sum: parts.reduce((a, p) => a + p[1], 0) }
+  const base = parts.reduce((a, p) => a + p[1], 0), g = golds(), bonus = Math.ceil(base * g / 100)   // 업적 금메달 하나마다 +1%(올림 — 금메달이 있으면 적어도 1)
+  if (bonus) parts.push([`금메달 ${g}개 보너스`, bonus])
+  return { parts, sum: base + bonus }
+}
+/** 판이 끝나면 업적 누적을 더하고, 새로 딴 메달 [id, 단계] 를 돌려준다 */
+function achieve(win, coin) {
+  const A = save.ach, before = Object.fromEntries(Object.keys(ACH).map(id => [id, tierOf(id)])), add = (k, n) => { A[k] = (A[k] || 0) + n }
+  add('goblin', G.gob); add('pajama', G.pj); add('lv8', G.weapons.filter(w => w.lv >= 8).length); add('coin', coin); add('jackpot', G.jackpots); add('boss', G.bosses)
+  if (win) { add(G.endKind === 'time' ? 'survive' : 'clear', 1); if (G.diff === 'hard') add('hard', 1) }
+  if (G.t >= 300 && (G.hit0 ?? G.t) >= 300) add('nohit', 1)
+  return Object.keys(ACH).filter(id => tierOf(id) > before[id]).map(id => [id, tierOf(id)])
+}
+/** 업적 — 메달 · 다음 메달까지 막대. 금메달 하나마다 토벌 보상금 +1% */
+function achs() {
+  mode = 'ach'; G = null; BOX = null; pauseBtn.hidden = true
+  const g = golds(), n = Object.keys(ACH).length
+  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, '업적'), h('p', { class: 'coin' }, medal('runs', 3), ` 금메달 ${g} / ${n} — 토벌 보상금 +${g}%`),
+    h('div', { class: 'scroll' }, h('p', { class: 'shop-note' }, '동 · 은 · 금메달을 차례로 따요. 쉬운 업적은 많이, 어려운 업적은 적게 해도 돼요. 금메달 하나마다 토벌 보상금 +1%'),
+      h('ul', { class: 'list ach' }, Object.entries(ACH).map(([id, a]) => {
+        const t = tierOf(id), v = achVal(id), next = a.tiers[t]
+        return h('li', {}, medal(id, t), h('div', {}, h('b', {}, a.name, h('small', { class: 'pips', 'aria-label': TIER[t] || '아직' }, [1, 2, 3].map(i => h('i', { class: i <= t ? `t${i}` : '' })))),
+          h('span', {}, `${a.note} — ${a.tiers.map((x, i) => `${TIER[i + 1][0]} ${x.toLocaleString()}`).join(' · ')}`),
+          t < 3 ? h('span', { class: 'prog' }, h('i', { style: `--w:${(Math.min(1, v / next) * 100).toFixed(1)}%` }), `${v.toLocaleString()} / ${next.toLocaleString()} → ${TIER[t + 1]}`) : h('em', {}, '금메달 — 토벌 보상금 +1%')))
+      }))),
+    h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }
 /** 영구 강화 상점 — 칸마다 값이 오른다(n 번째 칸 = cost × n). 산 것은 다음 판부터 stats() 에 더해진다 */
 function shop() {

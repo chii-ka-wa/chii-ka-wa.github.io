@@ -186,6 +186,18 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const hp = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); return { hp: M.pl.hp, want: Math.round(M.CHARS[0].hp * (1 + (M.CHARS[0].mod.hp || 0) + 0.04)) } })
     if (hp.hp !== hp.want) errors.push('[shop] 강화한 체력이 판에 안 들어감 ' + JSON.stringify(hp))
   })
+  await run('ach', { width: 390, height: 844 }, async page => {   // 업적 — 판이 끝나면 쌓이고 새 메달을 보여 준다, 금메달마다 보상금 +1%
+    await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ ach: { goblin: 1995, pajama: 200, jackpot: 100 } }))); await page.reload(); await page.waitForTimeout(500)   // 금메달 둘 · 고블린은 동메달 바로 앞
+    await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = 300; M.G.gob = 10; M.G.kills = 20000; let n = 0; while (M.mode !== 'over' && n++ < 6000) { if (M.mode === 'box') M.pick0(); if (M.mode === 'pause') M.resume(); M.pl.inv = 0; M.pl.hp = Math.min(M.pl.hp, 1); M.step(1 / 30) } })
+    const r = await page.evaluate(() => ({ got: document.querySelector('#ui .ach-new')?.textContent, coin: document.querySelector('#ui .coin small')?.textContent, ach: JSON.parse(localStorage.getItem('mjg.v1')).ach }))
+    if (!/고블린 퇴치 동메달/.test(r.got) || !/금메달 2개 보너스 \d+/.test(r.coin) || !(r.ach.goblin >= 2005)) errors.push('[ach] 업적 달성 ' + JSON.stringify(r))
+    await page.screenshot({ path: OUT + 'ach-result.png' }); await noEmoji(page, 'ach-result')
+    await page.locator('#ui .row button', { hasText: '처음으로' }).click(); await page.waitForTimeout(300)
+    await page.locator('#ui .row button', { hasText: '업적' }).click(); await page.waitForTimeout(400)
+    const list = await page.evaluate(() => ({ rows: document.querySelectorAll('.ach li').length, head: document.querySelector('#ui .coin')?.textContent, bad: [...document.querySelectorAll('img.medal')].filter(i => !i.naturalWidth).length }))
+    if (list.rows !== 12 || !/금메달 2 \/ 12 — 토벌 보상금 \+2%/.test(list.head) || list.bad) errors.push('[ach] 업적 화면 ' + JSON.stringify(list))
+    await page.screenshot({ path: OUT + 'ach.png' }); await noEmoji(page, 'ach')
+  })
   await run('perf', { width: 1280, height: 800 }, async page => {   // 자동 화질 — 처음보다 많이 느려지면 픽셀을 줄이고, 30fps 로 묶인 기기는 괜히 안 내리고, 새 판은 되돌린다
     const q = await page.evaluate(() => {
       const M = window.__mjg, cv = document.getElementById('cv'), feed = (t, ms, n) => { M.G.t = t; for (let i = 0; i < n; i++) M.autoQ(ms) }
