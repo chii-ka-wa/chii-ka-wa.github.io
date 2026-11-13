@@ -165,6 +165,13 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 .skill-detail .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 4px 8px; margin: 6px 0 }
 .skill-detail .kv div { background: #fdf6e8; border-radius: 8px; padding: 3px 8px }
 .skill-detail .kv.wide { grid-template-columns: 1fr }
+.dmg { margin: 10px auto; max-width: 460px; text-align: left }
+.dmg .dt { margin: 0 0 4px; font-size: 14px; color: var(--soft); text-align: center }
+.dmg ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1.4em minmax(0, 8em) 1fr auto; align-items: center; gap: 4px 6px; font-size: 14px }
+.dmg li { display: contents }
+.dmg span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.dmg i { height: 10px; border-radius: 5px; background: linear-gradient(var(--pink), var(--pink)) left / var(--w) 100% no-repeat, #f1e6d6 }
+.dmg b { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap }
 .skill-detail .kv small { display: block; color: var(--soft); font-size: 11px }
 .skill-detail .next { color: #2f7a3a }
 .skill-detail .syn { color: var(--soft) } .skill-detail .syn.on { color: #c77800; font-weight: 600 }

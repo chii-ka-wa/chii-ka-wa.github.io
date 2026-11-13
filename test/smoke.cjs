@@ -17,14 +17,15 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.close()
   }
   const sim = (page, until, opts = {}) => page.evaluate(([until, opts]) => {
-    const M = window.__mjg, t0 = performance.now(); let n = 0
+    const M = window.__mjg, t0 = performance.now(); let n = 0, rests = 0
     while (M.G && M.G.t < until && M.mode !== 'over') {
       if (opts.god) M.pl.inv = 1e9
       if (M.mode === 'box') M.pick0()
+      if (M.mode === 'pause') { if (opts.stopRest) break; rests++; M.resume() }   // 보스 격파 쉬는 창
       M.step(1 / 30); n++
       if (opts.walk) { M.pl.x += Math.cos(M.G.t * 0.3) * 2; M.pl.y += Math.sin(M.G.t * 0.21) * 2 }
     }
-    return { ms: (performance.now() - t0) / n, t: M.G?.t, lvl: M.G?.lvl, kills: M.G?.kills, foes: M.G?.foes.length, mode: M.mode, weapons: M.G?.weapons.map(w => w.id + w.lv).join(' ') }
+    return { ms: (performance.now() - t0) / n, t: M.G?.t, lvl: M.G?.lvl, kills: M.G?.kills, foes: M.G?.foes.length, mode: M.mode, rests, weapons: M.G?.weapons.map(w => w.id + w.lv).join(' ') }
   }, [until, opts])
 
   // 아이콘은 직접 그린 그림 — 화면 글자에 이모지가 없고, 아이콘 그림이 실제로 그려졌는지
@@ -90,6 +91,13 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.evaluate(() => { const M = window.__mjg; M.step(1 / 30) }); await page.waitForTimeout(100)
     await page.evaluate(() => window.__mjg.step(0.001))
     await page.screenshot({ path: OUT + '6-boss5.png' })
+    r = await sim(page, 900, { god: true, walk: true, stopRest: true }); console.log('rest', r)   // 보스를 쓰러뜨리면 쉬는 창 — 스킬별 피해
+    const rs = await page.evaluate(() => ({ mode: window.__mjg.mode, h: document.querySelector('#ui .panel .h')?.textContent, rows: document.querySelectorAll('#ui .dmg li').length }))
+    if (rs.mode !== 'pause' || !/토벌!/.test(rs.h) || !rs.rows) errors.push('[desktop] 보스 격파 쉬는 창 ' + JSON.stringify(rs))
+    await page.waitForTimeout(500); await page.screenshot({ path: OUT + '6-rest.png' }); await noEmoji(page, 'rest')
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100)
+    const rage = await page.evaluate(() => { const M = window.__mjg, b = M.summon('dekatsuyo', true), s0 = b.spd; b.age = 61; M.step(1 / 30); const o = { rage: b.rage, spd: b.spd / s0 }; b.dead = true; return o })   // 보스를 오래 두면 화낸다
+    if (!rage.rage || rage.spd < 1.4) errors.push('[desktop] 보스 화내기 ' + JSON.stringify(rage))
     const F = await page.evaluate(() => window.__mjg.FINAL_T)
     r = await sim(page, F + 5, { god: true, walk: true }); console.log('final+5s', r)
     await page.screenshot({ path: OUT + '7-siren.png' })
