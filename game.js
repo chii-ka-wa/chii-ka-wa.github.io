@@ -67,6 +67,7 @@ const PATCH = [
     '보스 · 중간보스 체력 1.5배(세이렌 · 인어는 그대로) — 기술을 더 오래 볼 수 있게',
     '피해야 할 적의 바닥 공격은 색과 상관없이 빨간 점선 테두리와 가운데 ! — 라멘 국물(노란 국물 · 라멘 그림) · 카레 냄비(카레색)와 헷갈리지 않게',
     '체력이 낮을 때 화면 전체가 깜빡이던 것을 가장자리만 은은하게 붉게(낮을수록 진하게) · 무적일 때 캐릭터도 깜빡이지 않고 반투명 — 눈이 덜 피곤하게',
+    '일시정지 창 제목 옆에 지금 난이도(쉬움 · 보통 · 어려움)를 보여 줘요',
     '스킬이 나갈 때 왼쪽 위 아이콘이 반짝 — 화면의 어떤 공격이 무슨 스킬인지 알 수 있게. 레벨 업 카드에도 스킬이 하는 일을 한 줄로(예: 가까운 적을 꿰뚫어 찌르기)',
   ]],
   ['2026-11-13', [
@@ -2620,7 +2621,7 @@ function pause() {
   mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
   const det = h('div', { class: 'skill-detail' }, h('p', { class: 'hint' }, '스킬 · 아이템을 누르면 자세히 볼 수 있어요'))
   const pick = (kind, id, el) => { for (const c of ui.querySelectorAll('.build .chip')) c.classList.toggle('on', c === el); det.replaceChildren(...skillInfo(kind, id)) }
-  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지'), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main'))))
+  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지', h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main'))))
 }
 const DMG_NAME = { pajama: '파자마 파티즈', battery: '한잎이 · 두잎이', firework: '폭죽' }
 /** 이번 판 스킬(· 친구 · 폭죽)별 준 피해 — 많은 순, 막대 · 몫 */

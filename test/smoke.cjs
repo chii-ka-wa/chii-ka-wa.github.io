@@ -79,6 +79,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.keyboard.press('Escape'); await page.waitForTimeout(200)   // 일시정지 — 스킬을 누르면 자세히
     await page.locator('.build .chip').first().click(); await page.waitForTimeout(100)
     const det = await page.locator('.skill-detail').innerText(); if (!/피해/.test(det) || !/시너지/.test(det)) errors.push('[desktop] 일시정지 스킬 자세히: ' + det.slice(0, 60))
+    const pill = await page.locator('.h .pill').innerText(); if (!/쉬움|보통|어려움/.test(pill)) errors.push('[desktop] 일시정지 옆 난이도: ' + pill)
     await page.screenshot({ path: OUT + '4-pause.png' }); await noEmoji(page, 'pause')
     await page.keyboard.press('Escape'); await page.waitForTimeout(100)
     // 첫 상자가 열릴 때까지
