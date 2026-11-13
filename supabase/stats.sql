@@ -25,3 +25,9 @@ from runs, unnest(string_to_array(weapons, ' ')) as w where w <> '' group by 1 o
 -- 6. 날마다 판 수 · 휴대폰 비율
 select created_at::date as 날짜, count(*) as 판, round(100.0 * count(*) filter (where touch) / count(*), 1) as 휴대폰_비율
 from runs group by 1 order by 1 desc;
+
+-- 7. 강화한 판 · 안 한 판(상점에서 산 칸 수 — 다 사면 36). 상점이 생긴 2026-11-14 판부터
+select diff as 난이도, case when up = 0 then '① 강화 없음' when up <= 10 then '② 1~10칸' when up <= 25 then '③ 11~25칸' else '④ 26칸 이상' end as 강화,
+       count(*) as 판, round(avg(t) / 60.0, 1) as 평균_버틴_분, round(avg(lvl), 1) as 평균_레벨,
+       round(100.0 * count(*) filter (where result in ('clear', 'survive')) / count(*), 1) as 클리어율
+from runs where v >= '2026-11-14' and result <> 'quit' group by 1, 2 order by 1, 2;

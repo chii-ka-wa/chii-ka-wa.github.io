@@ -13,8 +13,11 @@ create table if not exists public.runs (
   killer     text check (char_length(killer) <= 40),                              -- 쓰러뜨린 것(쓰러졌을 때만)
   boss       text check (char_length(boss) <= 40),                                -- 그때 나와 있던 보스
   weapons    text check (char_length(weapons) <= 300),                            -- 스킬 id + 레벨(예: sasu8 ramen8)
-  touch      boolean not null default false                                       -- 휴대폰 · 태블릿(손가락)
+  touch      boolean not null default false,                                      -- 휴대폰 · 태블릿(손가락)
+  up         int  not null default 0 check (up between 0 and 100)                 -- 상점에서 산 영구 강화 칸 수(0 = 강화 없이)
 );
+-- 예전에 만든 표에 강화 칸 수 열 더하기(이미 있으면 그냥 넘어간다) — 그 전 판은 상점이 없던 때라 0
+alter table public.runs add column if not exists up int not null default 0 check (up between 0 and 100);
 alter table public.runs enable row level security;
 drop policy if exists "game inserts only" on public.runs;
 create policy "game inserts only" on public.runs for insert to anon with check (true);

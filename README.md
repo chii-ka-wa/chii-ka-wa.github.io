@@ -35,12 +35,12 @@
 
 ## 익명 플레이 통계(Supabase)
 
-판이 끝나면(쓰러짐 · 클리어 · 30분 생존 · 그만두기) `runs` 표에 한 줄 — 캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 수 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 게임 버전. 이름 · 기기 정보처럼 사람을 알 수 있는 것은 보내지 않습니다.
+판이 끝나면(쓰러짐 · 클리어 · 30분 생존 · 그만두기) `runs` 표에 한 줄 — 캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 수 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 영구 강화 칸 수(`up`) · 게임 버전. 이름 · 기기 정보처럼 사람을 알 수 있는 것은 보내지 않습니다.
 
 - 끄기: 처음 화면 아래 「보내지 않기」(이 브라우저에 기억). 브라우저의 추적 거부(GPC · Do Not Track)도 따릅니다
 - `chii-ka-wa.github.io` 에서만 보냅니다 — 로컬 실행 · 점검(test) · 복사본에서는 안 보냄
 - 처음 한 번: Supabase 새 프로젝트 → SQL Editor 에 `supabase/schema.sql` 붙여 넣고 Run → Project Settings › API Keys 의 Project URL 과 공개 키(publishable 또는 anon — **secret · service_role 키는 절대 넣지 말 것**)를 `game.js` 의 `STATS` 에 넣고 푸시
-- 게임(공개 키)은 넣기만 할 수 있고 읽기 · 고치기 · 지우기는 못 합니다(RLS). 보기는 대시보드 Table Editor 나 SQL Editor 에서 `supabase/stats.sql` — 캐릭터 · 난이도별 판 수 · 클리어율, 몇 분에 · 무엇에 많이 쓰러지나, 많이 쓴 스킬, 날마다 판 수
+- 게임(공개 키)은 넣기만 할 수 있고 읽기 · 고치기 · 지우기는 못 합니다(RLS). 보기는 대시보드 Table Editor 나 SQL Editor 에서 `supabase/stats.sql` — 캐릭터 · 난이도별 판 수 · 클리어율, 몇 분에 · 무엇에 많이 쓰러지나, 많이 쓴 스킬, 날마다 판 수, 강화한 판 · 안 한 판(클리어율 · 버틴 시간). `up` 열은 예전 표라면 `schema.sql` 의 `alter table … add column if not exists up …` 한 줄을 SQL Editor 에서 Run(그 전까지 게임은 `up` 을 빼고 보낸다)
 
 ## 소리
 

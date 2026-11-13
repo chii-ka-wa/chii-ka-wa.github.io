@@ -224,12 +224,14 @@ const killerName = s => !s ? null : typeof s === 'string' ? s : s.kind ? BOSS[s.
 function statRow(result) {
   const b = G.final ? G.final.siren : G.foes.find(e => e.boss && !e.dead)
   return { v: PATCH_ID, ch: G.ch.id, diff: G.diff, result, t: Math.round(G.t), lvl: G.lvl, kills: G.kills, killer: result === 'dead' ? G.killer || null : null,
-    boss: G.dark ? '검은 별똥별' : b ? BOSS[b.kind]?.name ?? null : null, weapons: G.weapons.map(w => w.id + w.lv).join(' '), touch: matchMedia('(hover: none)').matches }
+    boss: G.dark ? '검은 별똥별' : b ? BOSS[b.kind]?.name ?? null : null, weapons: G.weapons.map(w => w.id + w.lv).join(' '), touch: matchMedia('(hover: none)').matches,
+    up: Object.values(save.up).reduce((a, n) => a + n, 0) }   // 상점에서 산 영구 강화 칸 수(0 = 강화 없이)
 }
 function report(result) {
   if (!statsOn()) return
-  fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
-    headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } }).catch(() => {})
+  const row = statRow(result), send = () => fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(row),
+    headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } })
+  send().then(r => { if (r.status === 400 && 'up' in row) { delete row.up; return send() } }).catch(() => {})   // ponytail: 표에 up 열이 아직 없으면(schema.sql 의 alter 전) up 을 빼고 한 번 더 — 열을 더한 뒤엔 지워도 된다
 }
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
@@ -2710,7 +2712,7 @@ function shop() {
     have.replaceChildren(ic('coin'), ` 모은 토벌 보상금 ${save.coin.toLocaleString()}`)
     list.replaceChildren(...Object.entries(SHOP).map(([id, u]) => {
       const lv = save.up[id] || 0, full = lv >= u.max, cost = u.cost * (lv + 1)
-      return h('li', {}, ic(id), h('div', {}, h('b', {}, u.name, h('small', {}, ` ${'●'.repeat(lv)}${'○'.repeat(u.max - lv)}`)), h('span', {}, `${u.lab} ${u.val(u.per * lv)}`, full ? ' (끝)' : ` → ${u.val(u.per * (lv + 1))}`)),
+      return h('li', {}, ic(id), h('div', {}, h('b', {}, u.name, h('small', { 'aria-label': `${lv} / ${u.max}칸` }, '●'.repeat(lv) + '○'.repeat(u.max - lv))), h('span', {}, `${u.lab} ${u.val(u.per * lv)}`, full ? ' (끝)' : ` → ${u.val(u.per * (lv + 1))}`)),
         h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? '다 샀어요' : [ic('coin'), ` ${cost}`]))
     }))
   }
