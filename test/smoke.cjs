@@ -10,6 +10,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   const run = async (name, viewport, fn) => {
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
+    page.on('request', q => { if (q.url().includes('.supabase.co')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
     await fn(page)

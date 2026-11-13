@@ -59,6 +59,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-13', [
+    '판이 끝나면 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)를 모아 게임을 고치는 데 써요 — 개인을 알 수 있는 정보는 없고, 처음 화면 아래 「보내지 않기」로 끌 수 있어요',
     { help: '도와주는 친구들', parts: [
       ['pajama', '파자마 파티즈', [['도는 거리', '60', '92'], ['한 바퀴', '4.2초', '2.4초'], ['충격파', '1초마다', '0.6초마다'], ['충격파 크기', '46', '64'], ['피해(10분)', '70', '116'], ['음표 쏘기', '없음', '1초에 4개 · 2마리 꿰뚫음']]],
       ['battery', '한잎이 · 두잎이', [['도는 거리', '46', '50~94'], ['한 바퀴', '2.6초', '1.5초'], ['닿는 크기', '20', '36'], ['피해(10분)', '48', '118'], ['다시 때리기', '0.35초', '0.25초'], ['막는 크기', '24', '40']]]] },
@@ -182,7 +183,7 @@ const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } c
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
 //   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
-const STATS = { url: '', key: '', host: 'chii-ka-wa.github.io' }   // url: https://<프로젝트>.supabase.co · key: 공개 키(publishable / anon) — 비우면 안 보낸다
+const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — 넣기만 된다(RLS). url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
 const statsOn = () => !!STATS.url && !save.noStats && location.hostname === STATS.host && !navigator.globalPrivacyControl && navigator.doNotTrack !== '1'
 const KILLER = { spike: '가면 키메라 독침', net: '복어 기름 그물', soy: '문어 간장', note: '세이렌 음표', paper: '날아오는 종이', shard: '검은 별똥별 조각', rock: '던진 돌', claw: '날아오는 발톱', bomb: '폭발', land: '내려찍기' }
 const killerName = s => !s ? null : typeof s === 'string' ? s : s.kind ? BOSS[s.kind]?.name ?? s.kind : FOES[s.type]?.name ?? KILLER[s.k] ?? s.k ?? null
