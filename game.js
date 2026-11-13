@@ -59,6 +59,9 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-13', [
+    { help: '도와주는 친구들', parts: [
+      ['pajama', '파자마 파티즈', [['도는 거리', '60', '92'], ['한 바퀴', '4.2초', '2.4초'], ['충격파', '1초마다', '0.6초마다'], ['충격파 크기', '46', '64'], ['피해(10분)', '70', '116'], ['음표 쏘기', '없음', '1초에 4개 · 2마리 꿰뚫음']]],
+      ['battery', '한잎이 · 두잎이', [['도는 거리', '46', '50~94'], ['한 바퀴', '2.6초', '1.5초'], ['닿는 크기', '20', '36'], ['피해(10분)', '48', '118'], ['다시 때리기', '0.35초', '0.25초'], ['막는 크기', '24', '40']]]] },
     '휴대폰 · 태블릿 — 오른쪽 위 소리 단추가 창 제목과 겹치지 않게',
     '아이콘을 이모지 대신 직접 그린 그림으로 — 휴대폰 · PC 어디서나 똑같이 보여요(스킬 · 아이템 · 난이도 · 소리 단추 등)',
     '배경음악 새로 — 직접 지은 일렉 팝. 토벌 중엔 같은 곡을 캐릭터마다 다른 악기로: 치이카와 오르골 · 하치와레 기타 · 우사기 록 기타 · 모몽가 칩튠 · 쿠리만쥬 일렉 피아노 · 랏코 피리 · 시사 산신 · 카니 마림바(최종보스 곡은 그대로)',
@@ -112,8 +115,8 @@ const ITEMS = {
   momonga: { name: '모몽가의 귀여운 척', note: '모두가 넋을 잃어 6초 동안 적이 멈춘다' },
   firework: { name: '폭죽', note: '화면 안의 적을 모두 쓰러뜨린다(보스는 큰 피해)' },
   earplug: { name: '귀마개', note: '상태이상을 모두 푼다(걸린 게 없으면 체력 15%) — 10분부터' },
-  pajama: { name: '꿀맛 페스티벌 티켓', note: '파자마 파티즈가 10초 동안 곁에서 공연 — 음표 충격파로 둘레의 적을 밀쳐 내고, 응원으로 쿨타임 -25%' },
-  battery: { name: '건전지', note: '한잎이 · 두잎이가 12초 동안 손을 잡고 곁을 돈다 — 날아오는 것을 막고 닿은 적을 밀쳐 낸다' },
+  pajama: { name: '꿀맛 페스티벌 티켓', note: '파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%' },
+  battery: { name: '건전지', note: '한잎이 · 두잎이가 12초 동안 손을 잡고 빠르게 돈다(멀어졌다 가까워졌다) — 날아오는 것을 막고 닿은 적을 세게 밀쳐 낸다' },
   chest: { name: '보물상자', note: '보스가 떨어뜨린다 — 잭팟 확률 50%' },
 }
 
@@ -1913,25 +1916,29 @@ const USE = {
 function summonHelp(k) {
   const h = G.help.find(x => x.k === k)
   if (h) { h.t = 0; return }
-  G.help.push(k === 'pajama' ? { k, t: 0, T: 10, a: 0, tick: 0.3 } : { k, t: 0, T: 12, a: 0, hit: new Map() })
+  G.help.push(k === 'pajama' ? { k, t: 0, T: 10, a: 0, tick: 0.3, shot: 0, n: 0 } : { k, t: 0, T: 12, a: 0, hit: new Map() })
   say(k === 'pajama' ? '파자마 파티즈의 응원 공연! ♪' : '한잎이 · 두잎이가 지켜 줄게요!', 2.2, k === 'pajama' ? '#ff9be0' : '#a6e07a')
 }
-const helpPos = (h, i) => h.k === 'pajama' ? [pl.x + Math.cos(h.a + i / 4 * TAU) * 60, pl.y + Math.sin(h.a + i / 4 * TAU) * 48] : [pl.x + Math.cos(h.a) * 46, pl.y + Math.sin(h.a) * 38]
+const helpPos = (h, i) => { const a = h.k === 'pajama' ? h.a + i / 4 * TAU : h.a, r = h.k === 'pajama' ? 92 : 72 + 22 * Math.sin(h.t * 2.2); return [pl.x + Math.cos(a) * r, pl.y + Math.sin(a) * r * 0.8] }   // 한잎이 · 두잎이는 멀어졌다 가까워졌다
 function helpers(dt) {
   for (const h of G.help) {
     if ((h.t += dt) > h.T) { h.dead = true; continue }
-    if (h.k === 'pajama') {   // 1초마다 넷이 음표 충격파 — 둘레의 적을 때리고 밀쳐 낸다
-      h.a += dt * 1.5
+    if (h.k === 'pajama') {   // 넓게 돌며 — 0.6초마다 넷이 음표 충격파(때리고 밀쳐 낸다), 돌아가며 가까운 적에게 음표를 쏜다
+      h.a += dt * 2.6
+      const D = (16 + G.t / 6) * S.might
       if ((h.tick -= dt) <= 0) {
-        h.tick = 1; const D = (10 + G.t / 10) * S.might
-        for (let i = 0; i < 4; i++) { const [x, y] = helpPos(h, i); near(x, y, 46, e => { hurt(e, D, x, y, 140) }); fx({ k: 'ring', x, y, R: 46, T: 0.4, col: PJ[i].col }) }
-        const [x, y] = helpPos(h, rnd() * 4 | 0); fx({ k: 'text', x, y: y - 30, s: '♪', col: '#ff9be0', T: 0.7 })
+        h.tick = 0.6
+        for (let i = 0; i < 4; i++) { const [x, y] = helpPos(h, i); near(x, y, 64, e => { hurt(e, D, x, y, 180) }); fx({ k: 'ring', x, y, R: 64, T: 0.4, col: PJ[i].col }) }
       }
-    } else {   // 닿은 적을 밀쳐 내고 날아오는 것을 막는다
-      h.a += dt * 2.4
-      const [x, y] = helpPos(h, 0), D = (8 + G.t / 15) * S.might
-      near(x, y, 20, e => { const t = h.hit.get(e); if (t === undefined || G.t - t > 0.35) { h.hit.set(e, G.t); hurt(e, D, x, y, 260) } })
-      for (const b of G.eshots) if (!b.dead && (b.x - x) ** 2 + (b.y - y) ** 2 < 24 * 24) { b.dead = true; fx({ k: 'flash', x: b.x, y: b.y - 14, R: 18, col: '#c8f0a8', T: 0.25 }) }
+      if ((h.shot -= dt) <= 0) {   // 0.25초마다 한 명씩(한 명은 1초마다) — 2마리 꿰뚫는 음표
+        h.shot = 0.25; const i = h.n = (h.n + 1) % 4, [x, y] = helpPos(h, i), e = closest(1, x, y, null, 380)[0], [dx, dy] = e ? toward(e, x, y) : [Math.cos(h.a + i / 4 * TAU), Math.sin(h.a + i / 4 * TAU)]
+        G.shots.push({ k: 'ball', look: 'note', x, y, vx: dx * 430, vy: dy * 430, r: 11, dmg: D * 0.6, pierce: 2, kb: 90, life: 0.9, t: 0, hit: new Set() })
+      }
+    } else {   // 빠르게 돌며 닿은 적을 세게 밀쳐 내고 날아오는 것을 막는다
+      h.a += dt * 4.2
+      const [x, y] = helpPos(h, 0), D = (18 + G.t / 6) * S.might
+      near(x, y, 36, e => { const t = h.hit.get(e); if (t === undefined || G.t - t > 0.25) { h.hit.set(e, G.t); hurt(e, D, x, y, 320) } })
+      for (const b of G.eshots) if (!b.dead && (b.x - x) ** 2 + (b.y - y) ** 2 < 40 * 40) { b.dead = true; fx({ k: 'flash', x: b.x, y: b.y - 14, R: 18, col: '#c8f0a8', T: 0.25 }) }
     }
   }
   prune(G.help)
@@ -2264,7 +2271,8 @@ function world(c, ox, oy) {
   }
   // 날아가는 것
   for (const b of G.shots) {
-    if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, SPR.E.kanpai, 0, 0, 0.8); c.restore() }
+    if (b.k === 'ball' && b.look === 'note') put(c, SPR.note, b.x, b.y - 14 + Math.sin(b.t * 18) * 2, 0.75)
+    else if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, SPR.E.kanpai, 0, 0, 0.8); c.restore() }
     else if (b.k === 'ball') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx)); put(c, SPR.sasu[b.col] ||= sprite(34, 18, 16, 9, g => { g.translate(-13.4, 0); sasuShape(g, 18, b.col) }), 0, 0, 1.2); c.restore() }   // 사스마타 — 캐릭터 색 else if (b.k === 'arc') { const u = b.u, hh = b.H * 4 * u * (1 - u); put(c, SPR.shadow, b.x, b.y, 0.35); tear(c, b.x, b.y - hh - 10, 6) }
     else if (b.k === 'orb') put(c, SPR.note, b.x, b.y - 14, 0.8)
     else if (b.k === 'boom') { c.save(); c.translate(b.x, b.y - 14); c.rotate(Math.sin(b.a) * 0.6); put(c, SPR.pochette, 0, 0, b.r / 10); c.restore() }
@@ -2481,19 +2489,18 @@ function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스�
   mode = 'notes'; save.seen = PATCH_ID; persist()
   show(h('div', { class: 'panel guide pick' },
     h('p', { class: 'h' }, '패치노트'),
-    h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => s.syn ? buffCard(s) : h('li', {}, s)))])),
+    h('div', { class: 'scroll' }, PATCH.map(([d, list]) => [h('h3', {}, d), h('ul', { class: 'rules' }, list.map(s => typeof s === 'string' ? h('li', {}, s) : buffCard(s)))])),
     h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }
 /** 시너지 수치 변경 — 스킬마다 항목 · 전 → 후 (안 바뀐 것은 「그대로」, 새로 붙은 것은 NEW) */
-function buffCard({ syn, from, to }) {
-  const lab = k => UP[k](1).split(' ')[0], val = (k, v) => v == null ? '없음' : UP[k](v).replace(/^\S+ /, '')
-  return h('li', { class: 'buff' }, h('p', { class: 't' }, h('mark', {}, '버프'), `시너지 「${syn}」`),
-    Object.keys(to).map(id => h('div', { class: 'sk' }, h('b', {}, ic(id), ` ${WEAP[id].name}`),
-      h('div', { class: 'cmp' }, [...new Set([...Object.keys(from[id] || {}), ...Object.keys(to[id])])].map(k => {
-        const a = from[id]?.[k], b = to[id][k]
-        return a === b ? [h('span', {}, lab(k)), h('s', { class: 'same' }, val(k, a)), h('i'), h('em', { class: 'same' }, '그대로')]
-          : [h('span', {}, lab(k)), h('s', { class: a == null ? 'same' : '' }, val(k, a)), h('i', {}, '→'), h('em', { class: a == null ? 'new' : '' }, val(k, b))]
-      })))))
+/** 패치노트 버프 카드 — 항목마다 「전 → 후」. 시너지 { syn, from, to } 또는 친구들 { help, parts: [[아이콘, 이름, [[항목, 전, 후]]]] } */
+const cmpRow = (lab, a, b) => a === b ? [h('span', {}, lab), h('s', { class: 'same' }, a), h('i'), h('em', { class: 'same' }, '그대로')]
+  : [h('span', {}, lab), h('s', { class: a === '없음' ? 'same' : '' }, a), h('i', {}, '→'), h('em', { class: a === '없음' ? 'new' : '' }, b)]
+function buffCard(o) {
+  const card = (title, parts) => h('li', { class: 'buff' }, h('p', { class: 't' }, h('mark', {}, '버프'), title), parts.map(([pic, name, rows]) => h('div', { class: 'sk' }, h('b', {}, ic(pic), ` ${name}`), h('div', { class: 'cmp' }, rows.map(r => cmpRow(...r))))))
+  if (o.help) return card(o.help, o.parts)
+  const { syn, from, to } = o, lab = k => UP[k](1).split(' ')[0], val = (k, v) => v == null ? '없음' : UP[k](v).replace(/^\S+ /, '')
+  return card(`시너지 「${syn}」`, Object.keys(to).map(id => [id, WEAP[id].name, [...new Set([...Object.keys(from[id] || {}), ...Object.keys(to[id])])].map(k => [lab(k), val(k, from[id]?.[k]), val(k, to[id][k])])]))
 }
 function guide() {
   mode = 'guide'
@@ -2525,7 +2532,7 @@ function guide() {
     h('h3', {}, '줍는 것'),
     h('ul', { class: 'list' }, Object.entries(ITEMS).map(([id, p]) => li(ic(id), p.name, p.note))),
     h('h3', {}, '도와주는 친구들 (선택은 못 해요 — 아이템을 먹으면 잠깐 나타나요)'),
-    h('ul', { class: 'list' }, li(portrait('pj1'), '파자마 파티즈', '잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 곁을 돌며 공연 — 1초마다 음표 충격파로 둘레의 적을 밀쳐 내고, 응원으로 쿨타임 -25%', [ic('pajama'), ' 꿀맛 페스티벌 티켓']), li(portrait('leafpair'), '한잎이 · 두잎이', '늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 12초 동안 곁을 돌며 날아오는 것을 막고 닿은 적을 밀쳐 낸다', [ic('battery'), ' 건전지'])),
+    h('ul', { class: 'list' }, li(portrait('pj1'), '파자마 파티즈', '잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%', [ic('pajama'), ' 꿀맛 페스티벌 티켓']), li(portrait('leafpair'), '한잎이 · 두잎이', '늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 12초 동안 손을 잡고 빠르게 돌며(멀어졌다 가까워졌다) 날아오는 것을 막고 닿은 적을 세게 밀쳐 낸다', [ic('battery'), ' 건전지'])),
     h('h3', {}, '토벌 대상'),
     h('ul', { class: 'list' }, Object.entries(FOES).filter(([id]) => !(id in BOSS)).map(([id, f]) => li(portrait(id), f.name, f.note))),
     h('h3', {}, '보스'),

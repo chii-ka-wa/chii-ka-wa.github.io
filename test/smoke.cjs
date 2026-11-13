@@ -50,7 +50,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트에 NEW 없음')
     await nb.click(); await page.waitForTimeout(200)
     const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.scroll li').length, buff: [...document.querySelectorAll('.buff')].map(b => b.querySelectorAll('.cmp em').length) }))
-    if (pn.h !== '패치노트' || pn.n < 5 || pn.buff.join() !== '6,6') errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
+    if (pn.h !== '패치노트' || pn.n < 5 || pn.buff.join() !== '12,6,6') errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
     await page.screenshot({ path: OUT + '1-notes.png' })
     await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
     if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트을 봐도 NEW가 남음')
@@ -153,6 +153,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await sim(page, 120, { god: true, walk: true })
     const n = await page.evaluate(() => { const M = window.__mjg; for (const k of ['pajama', 'battery']) M.G.items.push({ x: M.pl.x, y: M.pl.y, k, t: 0 }); M.step(1 / 60); return M.G.help.length })
     await sim(page, 124, { god: true })
+    const notes = await page.evaluate(() => window.__mjg.G.shots.filter(b => b.look === 'note').length)   // 파자마 파티즈는 돌면서 음표를 쏜다
+    if (!notes) errors.push('[help] 파자마 파티즈 음표가 안 나옴')
     await page.evaluate(() => window.__mjg.step(1 / 60)); await page.screenshot({ path: OUT + 'help.png' })
     await sim(page, 140, { god: true })
     const after = await page.evaluate(() => window.__mjg.G.help.length)
