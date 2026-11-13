@@ -186,6 +186,18 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const hp = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); return { hp: M.pl.hp, want: Math.round(M.CHARS[0].hp * (1 + (M.CHARS[0].mod.hp || 0) + 0.04)) } })
     if (hp.hp !== hp.want) errors.push('[shop] 강화한 체력이 판에 안 들어감 ' + JSON.stringify(hp))
   })
+  await run('perf', { width: 1280, height: 800 }, async page => {   // 자동 화질 — 처음보다 많이 느려지면 픽셀을 줄이고, 30fps 로 묶인 기기는 괜히 안 내리고, 새 판은 되돌린다
+    const q = await page.evaluate(() => {
+      const M = window.__mjg, cv = document.getElementById('cv'), feed = (t, ms, n) => { M.G.t = t; for (let i = 0; i < n; i++) M.autoQ(ms) }
+      M.startGame(0); const w0 = cv.width
+      feed(10, 16.7, 200); feed(1300, 60, 300); const l1 = M.LQ, w1 = cv.width; feed(1306, 60, 300); const l2 = M.LQ, w2 = cv.width
+      M.startGame(0); const back = [M.LQ, cv.width]
+      feed(10, 33.4, 200); feed(1300, 40, 400); const cap30 = M.LQ
+      return { w0, l1, w1, l2, w2, back, cap30 }
+    })
+    console.log('perf', q)
+    if (q.l1 !== 1 || q.l2 !== 2 || !(q.w1 < q.w0 && q.w2 < q.w1) || q.back[0] !== 0 || q.back[1] !== q.w0 || q.cap30 !== 0) errors.push('[perf] 자동 화질 ' + JSON.stringify(q))
+  })
   await run('help', { width: 1280, height: 800 }, async page => {   // 지원 아이템 — 파자마 파티즈 · 한잎이 두잎이가 나왔다가 사라지는지
     await page.evaluate(() => window.__mjg.startGame(0))
     await sim(page, 120, { god: true, walk: true })

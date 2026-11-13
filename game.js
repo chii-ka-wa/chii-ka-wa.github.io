@@ -59,6 +59,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
+    '적이 아주 많아지는 20분 뒤에 느려지던 것 — 기기가 버거워하면 저절로 화면을 가볍게(해상도를 조금 낮추고 작은 적 그림자를 빼요, 게임 규칙은 그대로). 맞은 적은 하얀 그림 한 장만 그려 더 가볍게',
     '토벌 보상금 · 영구 강화 상점 — 판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(보통 ×1.25 · 어려움 ×1.5). 처음 화면 「상점」에서 체력 · 힘 · 회복 · 발걸음 · 경험치 · 줍기 · 행운 · 단단함을 조금씩 영구 강화(다 사도 같은 아이템 한 레벨 정도)',
     '한잎이 · 두잎이 지속 시간 12초 → 6초(막는 힘이 세져서)',
     '일시정지에서 화면 배율을 바꿀 수 있어요 — 75%(넓게 보기) ~ 140%(크게 보기). 그림은 배율에 맞춰 다시 그려서 확대해도 흐려지지 않아요(이 브라우저에 기억)',
@@ -1471,9 +1472,9 @@ function sprites() {
 // ---------------------------------------------------------------- 화면 · 입력
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ui = document.getElementById('ui'), pauseBtn = document.getElementById('pause')
 SND.button(document.getElementById('snd'))
-let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2
+let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2, LQ = 0   // LQ = 자동 화질 단계(0 · 1 · 2) — 느려지면 내려간다
 function size(drag) {   // drag === true — 배율 막대를 끄는 중: 배율만 바꾸고 그림은 놓을 때(change) 다시 그린다(다시 그리기는 0.3~0.6초)
-  const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height)))
+  const r = cv.getBoundingClientRect(), d0 = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height))), d = Math.max(Math.min(1, d0), d0 * [1, 0.8, 0.62][LQ])   // 자동 화질이 내려가면 픽셀을 줄인다(화면 1배보다는 안 낮춘다)
   cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d)); DPR = cv.width / Math.max(1, r.width)
   SC = Math.max(Math.min(cv.width, cv.height), Math.sqrt(cv.width * cv.height) / 1.15) / VIEW * save.zoom; VW = cv.width / SC; VH = cv.height / SC   // 짧은 쪽 또는 넓이 기준 중 큰 배율 — 세운 휴대폰에서도 캐릭터가 너무 작지 않게
   const k = clamp(Math.round(SC * 2) / 2, 1, 4)   // 그림을 화면 배율에 맞는 크기로 다시 그린다 — 확대해도 흐려지지 않게
@@ -1544,7 +1545,7 @@ function newGame(ch) {
   cam.x = cam.y = 0; shake = 0; calm()
   say(`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
-function startGame(i) { pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field', false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
+function startGame(i) { if (LQ) { LQ = 0; size() } Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field', false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -1612,7 +1613,7 @@ const visible = () => G.foes.filter(e => !e.dead && !e.rush && onScreen(e))
 const slow = (e, T, k) => { if (e.boss) return; if (e.slow <= 0 || k <= e.sk) { e.sk = k; e.slow = Math.max(e.slow, T) } }   // T 초 동안 속도 k 배(보스는 안 걸린다)
 const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, ...o }) }
 const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < 360) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
-const num = (x, y, v, kind) => { if (G.nums.length > 60) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
+const num = (x, y, v, kind) => { if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
 const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
 function splash(x, y, R, dmg, col, sea = 1) { near(x, y, R, e => { hurt(e, dmg, x, y, 60, sea) }); fx({ k: 'boom', x, y, R, col, T: 0.35 }) }
 
@@ -2328,7 +2329,7 @@ function world(c, ox, oy) {
   for (const it of G.items) { put(c, SPR.shadow, it.x, it.y, 0.5); c.globalAlpha = 0.35 + 0.2 * Math.sin(it.t * 5); c.fillStyle = '#fff'; oval(c, it.x, it.y - 12, 16, 16); c.fill(); c.globalAlpha = 1; put(c, SPR.E[it.k], it.x, it.y - 12 + Math.sin(it.t * 4) * 2) }
   // 그림자 → 몸(y 순, 화면 안만)
   const vis = e => Math.abs(e.x - cam.x) < VW / 2 + 90 && Math.abs(e.y - cam.y) < VH / 2 + 140
-  for (const e of G.foes) if (vis(e)) put(c, SPR.shadow, e.x, e.y, e.r / 16 * (e.z ? Math.max(0.4, 1 - e.z / 200) : 1))
+  for (const e of G.foes) if (vis(e) && (!LQ || e.boss)) put(c, SPR.shadow, e.x, e.y, e.r / 16 * (e.z ? Math.max(0.4, 1 - e.z / 200) : 1))
   put(c, SPR.shadow, pl.x, pl.y, 0.8)
   let me = false
   for (const e of G.foes) { if (!vis(e)) continue; if (!me && e.y > pl.y) { drawMe(c); me = true } drawFoe(c, e) }
@@ -2394,8 +2395,8 @@ function drawFoe(c, e) {
     c.globalAlpha = 0.45 + 0.1 * Math.sin(G.t * 5); c.fillStyle = '#fff3a0'; oval(c, e.x, cy, R, R * 0.9); c.fill()
     c.globalAlpha = 0.7; c.strokeStyle = '#e8d24a'; c.lineWidth = 1.4; c.beginPath(); for (let i = 0; i < 18; i++) { const a = i / 18 * TAU + G.t * 0.3; c.moveTo(e.x + Math.cos(a) * R * 0.86, cy + Math.sin(a) * R * 0.78); c.lineTo(e.x + Math.cos(a) * R * 0.98, cy + Math.sin(a) * R * 0.88) } c.stroke(); c.globalAlpha = 1
   }
-  put(c, (L ? v.L : v.R)[f], e.x, y, k)
-  if (e.flash > 0) { c.globalAlpha = e.boss ? 0.45 : 0.8; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 }   // 맞으면 하얗게(보스는 모양이 보이게 옅게)
+  if (e.flash > 0 && !e.boss) put(c, (L ? v.WL : v.WR)[f], e.x, y, k)   // 맞으면 하얗게 — 한 장만 그린다(겹쳐 그리면 적이 많을 때 무겁다)
+  else { put(c, (L ? v.L : v.R)[f], e.x, y, k); if (e.flash > 0) { c.globalAlpha = 0.45; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 } }   // 보스는 모양이 보이게 옅게 겹친다
   if (e.boss && e.kind === 'siren' && guarded()) { c.globalAlpha = 0.35 + 0.15 * Math.sin(G.t * 4); c.strokeStyle = '#7fd8ff'; c.lineWidth = 3; oval(c, e.x, e.y - e.r * 1.1, e.r * 1.5, e.r * 1.6); c.stroke(); c.globalAlpha = 1 }
   if (e.slow > 0 && !e.boss) { c.globalAlpha = 0.5; c.fillStyle = '#f5d36a'; oval(c, e.x, e.y, e.r, e.r * 0.4); c.fill(); c.globalAlpha = 1 }
   const SH = FOES[e.type].shot, d = Math.hypot(pl.x - e.x, pl.y - e.y)   // 쏘기 직전 경고 — 머리 위 빨간 ! (겨누는 것은 조준선도)
@@ -2722,7 +2723,17 @@ function shop() {
 
 // ---------------------------------------------------------------- 돌리기
 let last = 0, lastMode = '', tnow = 0
+/** 자동 화질 — 판 처음(5~90초)의 가장 빠른 프레임 시간을 기준으로, 나중에 그보다 1.6배(적어도 26ms) 넘게 느려지면 한 단계씩(4초 간격) 픽셀을 줄이고 작은 적 그림자를 뺀다.
+ *  그림만 바뀌고 게임은 그대로. 판마다 다시 0. 30fps 로 묶인 기기(절전)는 기준이 33ms 라 괜히 내려가지 않는다 */
+const AQ = { ema: 0, base: 1e9, at: 0 }
+function autoQ(raw) {
+  if (mode !== 'play' || !G || raw > 250) return   // 탭을 다녀오면 한 번 크게 튄다 — 빼고
+  AQ.ema = AQ.ema ? AQ.ema + (raw - AQ.ema) * 0.03 : raw
+  if (G.t > 5 && G.t < 90) AQ.base = Math.min(AQ.base, AQ.ema)
+  if (LQ < 2 && G.t - AQ.at > 4 && AQ.ema > Math.max(26, AQ.base * 1.6)) { LQ++; AQ.at = G.t; size(true) }   // 그림은 다시 그리지 않는다(멈칫하지 않게)
+}
 function frame(ts) {
+  if (last) autoQ(ts - last)
   let dt = Math.min(0.05, last ? (ts - last) / 1000 : 0.016)
   last = ts; tnow += dt
   if (mode === 'play' && G) { if (G.dying > 0) dt *= 0.3; step(dt) }
@@ -2735,4 +2746,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { render, autoQ, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
