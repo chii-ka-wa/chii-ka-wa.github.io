@@ -79,6 +79,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.keyboard.press('Escape'); await page.waitForTimeout(200)   // 일시정지 — 스킬을 누르면 자세히
     await page.locator('.build .chip').first().click(); await page.waitForTimeout(100)
     const det = await page.locator('.skill-detail').innerText(); if (!/피해/.test(det) || !/시너지/.test(det)) errors.push('[desktop] 일시정지 스킬 자세히: ' + det.slice(0, 60))
+    const zm = await page.evaluate(() => { const r = document.querySelector('.zoom input'), K0 = window.__mjg.K; r.value = 140; r.dispatchEvent(new Event('input')); r.dispatchEvent(new Event('change')); const o = { K0, K1: window.__mjg.K, z: JSON.parse(localStorage.getItem('mjg.v1')).zoom }; r.value = 100; r.dispatchEvent(new Event('input')); r.dispatchEvent(new Event('change')); return o })   // 화면 배율 — 확대하면 그림을 더 촘촘히 다시 그린다
+    if (!(zm.K1 > zm.K0) || zm.z !== 1.4) errors.push('[desktop] 화면 배율 ' + JSON.stringify(zm))
     const pill = await page.locator('.h .pill').innerText(); if (!/쉬움|보통|어려움/.test(pill)) errors.push('[desktop] 일시정지 옆 난이도: ' + pill)
     await page.screenshot({ path: OUT + '4-pause.png' }); await noEmoji(page, 'pause')
     await page.keyboard.press('Enter'); await page.waitForTimeout(100)   // 칩에 초점이 있어도 Enter = 계속하기

@@ -59,6 +59,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
+    '일시정지에서 화면 배율을 바꿀 수 있어요 — 75%(넓게 보기) ~ 140%(크게 보기). 그림은 배율에 맞춰 다시 그려서 확대해도 흐려지지 않아요(이 브라우저에 기억)',
     '쉬어 가는 창 · 일시정지에서 Enter · Space 를 누르면 계속하기, 잭팟에서는 셋 다 받기',
     '한잎이 · 두잎이 — 그냥 빙빙 돌지 않고 가장 가까운 날아오는 것 쪽으로 돌아 서서 막아요(없으면 가까운 적 쪽)',
     '맞으면 0.8초 동안 무적(전엔 0.4초) — 둘레의 적도 살짝 밀려나 빠져나갈 틈이 생겨요. 몰려 있을 때 두두두 연달아 맞지 않게',
@@ -216,6 +217,7 @@ function report(result) {
 
 // ---------------------------------------------------------------- 소리 — 파일 없이 웹 오디오로 직접 만든 배경음악 · 효과음 · 캐릭터 목소리(삐약 소리). 첫 클릭 · 키 · 터치에 켜진다
 //   크기는 배경음(save.bgm) · 효과음(save.sfx) 따로 0~1 — 소리 단추를 누르면 나오는 작은 창에서
+save.zoom = clamp(+save.zoom || 1, 0.75, 1.4)   // 화면 배율(일시정지에서) — 75%(넓게) ~ 140%(크게)
 if (save.bgm == null) { save.bgm = save.mute ? 0 : 0.7; save.sfx = save.mute ? 0 : 0.8 } delete save.mute
 const SND = (() => {
   let ac = null, out = null, mus = null, pump = null, sfx = null, who = '', kit = null, noise = null, theme = '', step = 0, at = 0, timer = 0, duck = 1
@@ -1359,6 +1361,7 @@ const ICO = {
     g.beginPath(); g.moveTo(0, -2); g.bezierCurveTo(3, 1, 5, 4, 4.5, 6.5); g.bezierCurveTo(4, 9.5, -4, 9.5, -4.5, 6.5); g.bezierCurveTo(-5, 4, -2, 2, 0, -2); g.fillStyle = '#ffd23f'; g.fill()
   },
   // 그 밖
+  zoom: g => { g.lineCap = 'round'; g.lineWidth = 3.4; g.strokeStyle = OUT; g.beginPath(); g.moveTo(4, 4); g.lineTo(10.5, 10.5); g.stroke(); el(g, -2, -2, 7.6); ink(g, '#cfeeff', 1.7); g.lineWidth = 1.8; g.beginPath(); g.moveTo(-5.6, -2); g.lineTo(1.6, -2); g.moveTo(-2, -5.6); g.lineTo(-2, 1.6); g.stroke() },   // 돋보기
   snd: g => { speaker(g); g.lineCap = 'round'; g.lineWidth = 2; g.strokeStyle = OUT; for (const r of [4.5, 8.5]) { g.beginPath(); g.arc(1, 0, r, -0.85, 0.85); g.stroke() } },
   mute: g => { speaker(g); g.lineCap = 'round'; g.lineWidth = 2.2; g.strokeStyle = '#e8473b'; g.beginPath(); g.moveTo(4, -4); g.lineTo(11, 4); g.moveTo(11, -4); g.lineTo(4, 4); g.stroke() },
   bgm: g => {
@@ -1450,12 +1453,12 @@ function sprites() {
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ui = document.getElementById('ui'), pauseBtn = document.getElementById('pause')
 SND.button(document.getElementById('snd'))
 let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2
-function size() {
+function size(drag) {   // drag === true — 배율 막대를 끄는 중: 배율만 바꾸고 그림은 놓을 때(change) 다시 그린다(다시 그리기는 0.3~0.6초)
   const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height)))
   cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d)); DPR = cv.width / Math.max(1, r.width)
-  SC = Math.max(Math.min(cv.width, cv.height), Math.sqrt(cv.width * cv.height) / 1.15) / VIEW; VW = cv.width / SC; VH = cv.height / SC   // 짧은 쪽 또는 넓이 기준 중 큰 배율 — 세운 휴대폰에서도 캐릭터가 너무 작지 않게
-  const k = clamp(Math.round(SC * 2) / 2, 1, 3)
-  if (k !== K || !SPR) { K = k; sprites() }
+  SC = Math.max(Math.min(cv.width, cv.height), Math.sqrt(cv.width * cv.height) / 1.15) / VIEW * save.zoom; VW = cv.width / SC; VH = cv.height / SC   // 짧은 쪽 또는 넓이 기준 중 큰 배율 — 세운 휴대폰에서도 캐릭터가 너무 작지 않게
+  const k = clamp(Math.round(SC * 2) / 2, 1, 4)   // 그림을 화면 배율에 맞는 크기로 다시 그린다 — 확대해도 흐려지지 않게
+  if ((k !== K || !SPR) && drag !== true) { K = k; sprites() }
   still = 2
 }
 new ResizeObserver(size).observe(cv)
@@ -2632,7 +2635,14 @@ function pause() {
   mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
   const det = h('div', { class: 'skill-detail' }, h('p', { class: 'hint' }, '스킬 · 아이템을 누르면 자세히 볼 수 있어요'))
   const pick = (kind, id, el) => { for (const c of ui.querySelectorAll('.build .chip')) c.classList.toggle('on', c === el); det.replaceChildren(...skillInfo(kind, id)) }
-  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지', h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main', 'Enter'))))
+  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, '일시정지', h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), zoomRow(), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn('그만두기', () => finish(false, true)), btn('계속하기', resume, 'main', 'Enter'))))
+}
+/** 화면 배율 — 움직이면 바로 바뀐다(뒤 화면에서 보며). 그림은 size() 에서 배율에 맞게 다시 그려 깨지지 않는다 */
+function zoomRow() {
+  const v = h('b', {}, `${Math.round(save.zoom * 100)}%`), r = h('input', { type: 'range', min: 75, max: 140, step: 5, value: Math.round(save.zoom * 100), 'aria-label': '화면 배율' })
+  r.oninput = () => { save.zoom = r.value / 100; v.textContent = `${r.value}%`; size(true) }
+  r.onchange = () => { persist(); size() }
+  return h('label', { class: 'zoom' }, h('span', {}, ic('zoom'), ' 화면 배율'), r, v)
 }
 const DMG_NAME = { pajama: '파자마 파티즈', battery: '한잎이 · 두잎이', firework: '폭죽' }
 /** 이번 판 스킬(· 친구 · 폭죽)별 준 피해 — 많은 순, 막대 · 몫 */
@@ -2682,4 +2692,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
