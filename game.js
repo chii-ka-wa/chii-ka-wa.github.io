@@ -62,6 +62,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-15', [
+    '세이렌을 쓰러뜨리면 세이렌과 (나와 있던) 검은 별똥별이 갑자기 사라지지 않고 둥실 떠오르며 사라져요',
     '첫 보스 데카츠요를 덜 무섭게(무섭다는 의견) — 뾰족한 이빨 줄 · 길게 늘어진 혀 · 세 손가락 팔 대신 반짝이는 큰 눈 · 발그레 볼 · 작은 송곳니가 보이는 벌린 웃음 · 끝이 동그란 팔 · 짧은 다리 · 끝이 둥근 뿔. 기술은 그대로예요',
     '그림 손질 — 세이렌을 주인공들처럼 큰 머리와 몸으로 나누고(팔이 붙는 목에서 들어가요) 아랫몸은 꼬리 쪽으로 갸름하게, 인어도 몸 가운데부터 아래로 점점 갸름하게',
     '난이도가 받는 피해도 바꿔요 — 쉬움 0.6배 · 보통 0.8배 · 어려움 그대로(전에는 적 체력만 달라서 어느 난이도든 비슷한 때 쓰러졌어요)',
@@ -2095,13 +2096,13 @@ function kill(e, quiet = false) {
   else if (!e.boss && G.t >= 180 && rnd() < 0.0004 * S.luck * G.D.drop) item(e.x, e.y, rnd() < 0.5 ? 'pajama' : 'battery')
   if (!e.boss) return
   const B = BOSS[e.kind]
+  shake = e.mid ? 6 : 10; fx({ k: 'ring', x: e.x, y: e.y, R: e.mid ? 120 : 180, T: 0.6, col: '#ffd23f' }); fx({ k: 'flash', x: e.x, y: e.y - 40, R: e.mid ? 110 : 160, col: '#ffd23f', T: 0.6 })   // 먼저 — 세이렌이 떠오르며 사라지는 그림이 빛 위에 보이게
   if (e.kind === 'mermaid') say(guarded() ? '인어 격파!' : '세이렌의 보호막이 사라졌다!', 2, '#7fd8ff')
   else if (e.kind === 'siren') {   // 클리어 — 남은 적은 모두 도망친다
-    G.bosses++; G.won = 2.8; G.endKind = 'siren'; G.dark = null; say('세이렌 격파! 토벌 성공!', 3, '#ffd23f')
+    G.bosses++; G.won = 2.8; G.endKind = 'siren'; const v = e.angry ? SPR.sirenAngry : SPR[e.type]; fx({ k: 'bye', s: (e.fx < 0 ? v.L : v.R)[0], x: e.x, y: e.y, T: 1.6 }); if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; say('세이렌 격파! 토벌 성공!', 3, '#ffd23f')
     for (const f of G.foes) if (!f.dead) kill(f, true)
   } else if (e.mid) { say(`${B.name} 격파!`, 1.6, '#ffb35e'); G.rest = { name: `중간보스 ${B.name}`, at: G.t + 1.2 } }
   else { G.bosses++; item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
-  shake = e.mid ? 6 : 10; fx({ k: 'ring', x: e.x, y: e.y, R: e.mid ? 120 : 180, T: 0.6, col: '#ffd23f' }); fx({ k: 'flash', x: e.x, y: e.y - 40, R: e.mid ? 110 : 160, col: '#ffd23f', T: 0.6 })
 }
 /** 둘레 R 안 작은 적(보스 · 돌격대 빼고)을 밀쳐 낸다 — 세기 kb(밀리는 거리 ≈ kb / 9) */
 function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return; const [dx, dy] = toward(e); e.kx += dx * kb; e.ky += dy * kb }) }
@@ -2640,6 +2641,7 @@ function effect(c, f, ox, oy) {
       c.fillStyle = f.col === '#fff' ? OUT : f.col; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(f.s, x, y - 2); c.textBaseline = 'alphabetic'
       break
     }
+    case 'bye': c.globalAlpha = 1 - u; put(c, f.s, f.x, f.y - 6 - u * 90); break   // 세이렌이 쓰러지면 세이렌 · 검은 별똥별이 떠오르며 사라진다
     case 'puff': c.globalAlpha = (1 - u) * 0.6; c.fillStyle = '#fff'; oval(c, f.x, f.y, f.R * (0.6 + u * 0.6), f.R * (0.6 + u * 0.6)); c.fill(); break
     case 'pillar': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = '#9fe8ff'; c.fillRect(pl.x - 18 * (1 - u * 0.5), pl.y - 400, 36 * (1 - u * 0.5), 400); c.globalCompositeOperation = 'source-over'; break
     case 'sprout': {   // 풀뽑기 — 뽑힌 풀이 튄다

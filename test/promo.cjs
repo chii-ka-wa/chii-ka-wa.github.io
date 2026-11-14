@@ -79,6 +79,7 @@ async function music(b, name, id, dur) {
     const hover = () => {   // 보스 장면 — 세로 화면에 보스가 잘리지 않게 보스를 캐릭터 조금 위로 천천히 끌어 둔다(세이렌은 원래 멀찍이 떨어져 있으려 해서)
       const e = W.__follow && M.G.foes.find(f => f.kind === W.__follow && !f.dead); if (!e) return
       e.x += (M.pl.x + Math.cos(M.G.t * 0.7) * 60 - e.x) * 0.1; e.y += (M.pl.y - 100 - e.y) * 0.1
+      const D = M.G.dark, a = Math.PI / 2 + Math.sin(M.G.t * 0.9) * 1.9; if (D) { D.x += (M.pl.x + Math.cos(a) * 170 - D.x) * 0.15; D.y += (M.pl.y + Math.sin(a) * 140 - D.y) * 0.15 }   // 검은 별똥별도 화면 안에서 나를 둘러 막 돌아다니게 — 닿지 않을 만큼 떨어져, 위(세이렌 자리)는 빼고 옆 · 아래로 오간다
     }
     let top = 0, hold = 0
     W.__seg = (calm = 0, follow = null) => { top = 0; hold = 0; W.__shown = follow ? 1 : 0; W.__calm = calm; W.__follow = follow; M.pl.inv = 0; if (calm) for (const e of M.G.foes) if (!e.boss && Math.random() > calm) e.dead = true }   // calm — 보스가 잘 보이게 일반 적을 덜어 내고 더 나오지 않게
@@ -90,17 +91,20 @@ async function music(b, name, id, dur) {
       if (W.__calm) { M.G.spawnT = 9; M.G.nextSwarm = M.G.nextEvt = M.G.t + 99 }
       steer(); M.step(1 / 30); hover(); M.render(); return M.mode
     }
-    W.__ff = T => { while (M.G.t < T) { M.pl.inv = 1e9; if (M.mode === 'box') M.pick0(); else if (M.mode === 'pause') M.resume(); else if (M.mode === 'play') { steer(); M.step(1 / 30) } else break } M.pl.inv = 0; M.render() }
+    W.__ff = (T, keep) => { while (M.G.t < T) { M.pl.inv = 1e9; const s = keep && M.G.final?.siren; if (s && s.hp < s.max * 0.3) s.hp = s.max * 0.3; if (M.mode === 'box') M.pick0(); else if (M.mode === 'pause') M.resume(); else if (M.mode === 'play') { steer(); M.step(1 / 30) } else break } M.pl.inv = 0; M.render() }
     W.__near = kind => { const e = M.G.foes.find(f => f.kind === kind && !f.dead); if (e) { e.x = M.pl.x + 40; e.y = M.pl.y - 200 } return !!e }
   })
   let fi = 0
   const shot = () => p.screenshot({ path: path.join(FR, `f${String(fi++).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92 })
-  const still = name => p.evaluate(() => {   // 이미지용 — 피해 숫자 · 적 탄 · 효과 · 알림 글을 잠깐 치우고 그린 캔버스(다음 프레임은 그대로)
-    const M = window.__mjg, G = M.G, keep = [G.nums, G.eshots, G.fx, G.banner]; G.nums = []; G.eshots = []; G.fx = []; G.banner = null; M.pl.inv = 0; M.render()
-    const u = document.getElementById('cv').toDataURL('image/png'); [G.nums, G.eshots, G.fx, G.banner] = keep; M.render(); return u
-  }).then(u => fs.writeFileSync(path.join(OUT, name), Buffer.from(u.split(',')[1], 'base64')))
-  const play = async (n, cap, sub, at, on, calm = 0, follow = null) => { let best = 0; await p.evaluate(([a, s, c, f]) => { window.__cap(a, s); window.__seg(c, f) }, [cap, sub, calm, follow]); for (let i = 0; i < n; i++) { const m = await p.evaluate(() => window.__frame()); if (m === 'over') break; if (on) await on(i); if (follow && i === 54) await p.evaluate(() => window.__cap('')); await shot()
+  const still = (name, all) => p.evaluate(all => {   // 이미지용 — 피해 숫자 · 적 탄 · 효과 · 알림 글을 잠깐 치우고 그린 캔버스(다음 프레임은 그대로). all 이면 효과 · 알림 글은 남긴다(격파 장면)
+    const M = window.__mjg, G = M.G, keep = [G.nums, G.eshots, G.fx, G.banner, G.haz]; G.nums = []; G.haz = []
+    if (all) G.eshots = G.eshots.filter(b => b.k === 'shard'); else { G.eshots = []; G.fx = []; G.banner = null }   // 격파 장면 — 경고 원 · 다른 탄은 치우고 검은 별똥별 조각만
+    M.pl.inv = 0; M.render()
+    const u = document.getElementById('cv').toDataURL('image/png'); [G.nums, G.eshots, G.fx, G.banner, G.haz] = keep; M.render(); return u
+  }, all).then(u => fs.writeFileSync(path.join(OUT, name), Buffer.from(u.split(',')[1], 'base64')))
+  const play = async (n, cap, sub, at, on, calm = 0, follow = null) => { let best = 0, won = 0; await p.evaluate(([a, s, c, f]) => { window.__cap(a, s); window.__seg(c, f) }, [cap, sub, calm, follow]); for (let i = 0; i < n; i++) { const m = await p.evaluate(() => window.__frame()); if (m === 'over') break; if (on) await on(i); if (follow && i === 54) await p.evaluate(() => window.__cap('')); await shot()
     if (at[1] === 'crowd') { const k = await p.evaluate(() => { const M = window.__mjg, v = M.G.foes.filter(e => !e.dead && Math.abs(e.x - M.pl.x) < 260 && Math.abs(e.y - M.pl.y) < 420).length; return M.mode === 'play' ? v : 0 }); if (i > 20 && k > best) { best = k; await still(at[0]) } }   // 화면에 적이 가장 많을 때
+    else if (at[1] === 'won') { if (!won && await p.evaluate(() => { const w = window.__mjg.G.won; return w > 0 && w < 2.7 })) { won = 1; await still(at[0], true) } }   // 세이렌이 쓰러진 직후
     else if (i === at[1]) await still(at[0]) } }
   const card = async (kind, n) => { for (let f = 0; f < n; f++) { await p.evaluate(([k, f]) => window.__card(k, f), [kind, f]); await shot() } await p.evaluate(() => window.__card(null)) }
 
@@ -112,7 +116,9 @@ async function music(b, name, id, dur) {
   await play(165, '20분 — 커다란 토벌!', '보스 「아노코」 등장', ['shot-c.png', 80], null, 0.45, 'anoko')                                                        // 20분 — 아노코
   await p.evaluate(() => { window.__ff(window.__mjg.FINAL_T + 1.5); window.__near('siren') })
   const split = fi / FPS
-  await play(240, '25분 — 최종보스 「세이렌」', '인어 셋이 지키고 있어요…', ['shot-d.png', 40], async i => { if (i === 150) await p.evaluate(() => { const s = window.__mjg.G.final?.siren; if (s) s.hp = Math.min(s.hp, 1) }); }, 0.3, 'siren')   // 25분 — 세이렌 · 토벌 성공
+  await play(90, '25분 — 최종보스 「세이렌」', '인어 셋이 지키고 있어요…', [], null, 0.3, 'siren')                                     // 25분 — 세이렌 등장
+  await p.evaluate(() => window.__ff(window.__mjg.DARK_T - 1.5, true))
+  await play(240, '29분 — 검은 별똥별까지!', '쓰러뜨릴 수 없어요… 그 전에 세이렌을!', ['shot-d.png', 'won'], i => p.evaluate(i => { const s = window.__mjg.G.final?.siren; if (s) s.hp = i < 140 ? Math.max(s.hp, s.max * 0.3) : Math.min(s.hp, 1) }, i), 0.3, 'siren')   // 29분 — 검은 별똥별이 돌아다니는 사이 세이렌 격파 · 토벌 성공
   await card('end', 105)                                                                                                         // 끝 — 주소
   const total = fi / FPS
   console.log('frames', fi, 'seconds', total.toFixed(1), 'siren at', split.toFixed(1))
