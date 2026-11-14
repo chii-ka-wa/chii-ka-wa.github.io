@@ -62,8 +62,8 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
-    '아노코 새 그림 — 원작처럼 아래가 넓은 동글한 몸, 낮게 모은 얼굴(부드러운 소용돌이 눈 · 반짝임 · 빗금 볼터치), 바늘 같던 털은 볼 · 정수리의 몽실한 털 뭉치로, 가슴 앞에 모은 작은 두 손, 통통한 공룡 꼬리. 걸을 때 뒤뚱뒤뚱',
-    '인어 새 그림 — 세이렌과 같은 결로 몸 명암 · 비늘 · 휘어 올라가는 꼬리와 결 있는 지느러미 · 반짝이는 눈 · 볼터치',
+    '아노코 새 그림 — 원작대로 동그란 옅은 회색 눈 · 아주 짧은 눈썹 · 축 처진 귀 · 이마 가운데 주황 뿔 · 손발의 주황 발톱 넷 · 가슴의 복슬한 털 뭉치 · 하얀 윗몸과 갈색 아랫몸 · 뱀 같은 초록 꼬리. 덩치는 크지만 날씬하게',
+    '인어 새 그림 — 세이렌과 같은 결로 몸 명암 · 비늘 · 짧게 휘어 올라가는 꼬리와 결 있는 지느러미 · 반짝이는 눈 · 볼터치',
     '카니의 시작 스킬이 치이카와와 같던 것 — 카니 전용 「헌책 날리기」(가까운 적 쪽으로 책장이 부채꼴을 그리며 차례로 날아가요, 몰려 있는 적에게 좋아요)',
     '새 스킬 「헌책 더미」 — 지나온 자리에 헌책을 쌓아 두면 적이 닿을 때 와르르 무너져요(쫓아오는 적에게 좋아요). 헌책 날리기와 짝 — 시너지 「카니의 헌책방」(날리기 책장 +1 · 관통 +1 / 더미 +1 · 범위 +20%)',
     '하치와레 꼬리를 작고 짧게',
@@ -183,7 +183,7 @@ const BOSS = {
   bigChimera: { name: '거대 키메라', line: '헤헤… 흑…', note: '웃으면서 우는 거대한 키메라 — 뛰어올라 내 자리에 내려찍는다. 붉은 원에서 벗어나기' },
   rps: { name: '가위바위보', line: '가위바위보로 무얼 만들까~♪', note: '「바위!」 쇠공 팔로 내 자리를 내려찍고(회색 원) · 「가위!」 바퀴 발로 돌진 · 「보!」 종이를 사방으로 뿌린다' },
   chef: { name: '요리사 괴물', line: '잘 먹겠습니다람쥐!', note: '후추를 흩뿌리고(작은 원 여럿) · 토르티야로 돌돌 말고(큰 노란 원 — 밖으로 피하기) · 돌진한다' },
-  anoko: { name: '아노코', line: '…!!', note: '「커다란 토벌」의 대상 — 돌진하고 · 용 같은 꼬리로 둘레를 휩쓸고(청록 원) · 꼬깔콘 같은 발톱을 던진다' },
+  anoko: { name: '아노코', line: '…!!', note: '「커다란 토벌」의 대상 — 돌진하고 · 뱀 같은 꼬리로 둘레를 휩쓸고(청록 원) · 꼬깔콘 같은 주황 발톱을 던진다' },
   mermaid: { name: '인어', line: '라~♪', note: '세이렌의 코러스 — 곁을 돌다가 날카로운 이빨로 달려들어 문다. 살아 있는 동안 세이렌은 받는 피해 -50%' },
   siren: { name: '세이렌', line: '내 노래를 들어 봐…', note: '노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다', st: 'charm', stCd: 14 },
 }
@@ -1101,49 +1101,51 @@ function dekatsuyo(g, p = {}) {
   }, p)
   g.restore()
 }
-// 아노코 — 「커다란 토벌」의 대상. 서서 「파파 파야이야」 춤추는 모습 — 복슬한 하얀 몸 · 작은 둥근 귀 · 이마의 작은 뿔 · 큰 소용돌이 눈 · 가슴 앞에 모은 두 손 · 크림색 아랫배 · 발톱 달린 작은 발 · 초록 용 꼬리
-// 원작처럼 귀엽게 — 아래가 넓은 동글한 찹쌀떡 몸, 얼굴은 낮게 모으고(큰 눈 · 빗금 볼터치 · ω 입), 털은 바늘 대신 볼 · 정수리의 몽실한 털 뭉치 몇 개, 꼬리는 통통한 공룡 꼬리
-function cone(g, x, y, rot, k = 1) { g.save(); g.translate(x, y); g.rotate(rot); g.scale(k, k); g.beginPath(); g.moveTo(0, -1); g.quadraticCurveTo(2.4, -0.5, 3, 0); g.quadraticCurveTo(2.4, 0.5, 0, 1); g.closePath(); g.fillStyle = '#f2b27a'; g.fill(); g.lineWidth = 0.4; g.strokeStyle = OUT; g.stroke(); g.restore() }
+// 아노코 — 「커다란 토벌」의 대상(원래는 공장에서 일하던 작은 아이). 위키 설명 참고 — 크고 복슬한 몸 · 가슴에 특히 복슬한 털 뭉치 · 윗몸은 하양, 아랫몸은 갈색 ·
+// 축 처진 귀 · 이마 가운데 주황 뿔(손발의 발톱 넷과 같은 색) · 동그란 옅은 회색 눈 · 아주 짧고 작은 눈썹 · 뱀 같은 초록 꼬리. 덩치는 크지만 뚱뚱하지 않게 — 키가 크고 옆이 날씬한 몸
+const AN = '#f29a4a'   // 아노코 뿔 · 발톱 주황
+function cone(g, x, y, rot, k = 1) { g.save(); g.translate(x, y); g.rotate(rot); g.scale(k, k); g.beginPath(); g.moveTo(0, -1); g.quadraticCurveTo(2.4, -0.5, 3, 0); g.quadraticCurveTo(2.4, 0.5, 0, 1); g.closePath(); g.fillStyle = AN; g.fill(); g.lineWidth = 0.4; g.strokeStyle = OUT; g.stroke(); g.restore() }
 function anoko(g, p = {}) {
-  const H = 27, y = f => at(H, f), f = p.foot || 0, cream = '#f4e6d4', white = '#fffdfa'
-  const fur = g.createRadialGradient(-4, y(0.3), 2, 0, y(0.5), 19); fur.addColorStop(0, '#ffffff'); fur.addColorStop(0.7, white); fur.addColorStop(1, '#efe7de')
-  g.rotate(f * 0.05)   // 걸을 때 좌우로 뒤뚱 — 「파파 파야이야」 춤처럼
+  const H = 31, y = f => at(H, f), f = p.foot || 0, brown = '#b4865f', white = '#fffdfa'
+  const fur = g.createRadialGradient(-3, y(0.25), 2, 0, y(0.45), 18); fur.addColorStop(0, '#ffffff'); fur.addColorStop(0.7, white); fur.addColorStop(1, '#ece5dc')
+  g.rotate(f * 0.04)   // 걸을 때 살짝 좌우로 — 「파파 파야이야」 춤처럼
   mochi(g, {
-    fur, limb: cream, W: 30, H, mid: 0.56, wide: 0.7, arms: 'none',
-    back: g => {   // 통통한 초록 공룡 꼬리 — 오른쪽 아래에서 위로 휘고, 등에 둥근 돌기 · 배 쪽은 연한 줄. 걸음마다 살랑
-      g.save(); g.translate(10.4, y(0.84)); g.rotate(f * 0.08); g.scale(0.82, 0.82)
-      const T = new Path2D(); T.moveTo(-2, -4.6); T.bezierCurveTo(4, -5.4, 8.6, -7.6, 10.6, -12); T.quadraticCurveTo(12.4, -8, 9.6, -3.4); T.bezierCurveTo(7, 0.6, 2, 2.2, -2, 2.4); T.closePath()
-      for (const [x, yy, r] of [[2.6, -5.6, 1.5], [5.8, -7, 1.35], [8.4, -9.4, 1.15]]) blob(g, x, yy, r, r, '#a6cf8e', LW)   // 등 돌기
-      g.lineJoin = 'round'; g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(T); g.fillStyle = '#86b874'; g.fill(T)
-      g.strokeStyle = '#d8ecc6'; g.lineWidth = 1.1; g.lineCap = 'round'; g.beginPath(); g.moveTo(-1, 0.6); g.bezierCurveTo(3.4, 0, 7, -2, 9, -5.4); g.stroke()   // 배 쪽 연한 줄
-      g.restore()
+    fur, limb: brown, W: 23, H, mid: 0.4, arms: 'none',
+    back: g => {   // 뱀 같은 초록 꼬리 — 등 뒤 오른쪽 아래에서 가늘어지며 S 자로, 걸음마다 끝이 흔들린다
+      const w = f * 1.6; g.lineCap = 'round'
+      const path = () => { g.beginPath(); g.moveTo(6, y(0.86)); g.bezierCurveTo(13, y(0.9), 15.5, y(0.74), 14.5 + w * 0.4, y(0.62)); g.bezierCurveTo(13.6 + w * 0.6, y(0.52), 16 + w, y(0.44), 18.4 + w, y(0.47)) }
+      for (const [c, lw] of [[OUT, 3.2 + LW * 2], ['#7fae6c', 3.2]]) { g.strokeStyle = c; g.lineWidth = lw; path(); g.stroke() }
+      g.strokeStyle = '#a9d095'; g.lineWidth = 0.9; path(); g.stroke()   // 등 쪽 밝은 줄
+      blob(g, 18.6 + w, y(0.47), 1.1, 0.9, '#7fae6c', LW * 0.8)   // 둥근 꼬리 끝
     },
-    cap: g => { g.fillStyle = cream; g.beginPath(); g.ellipse(0, y(0.92), 9.6, 5.8, 0, 0, TAU); g.fill(); g.strokeStyle = 'rgba(160,120,90,.45)'; g.lineWidth = 0.5; g.beginPath(); g.ellipse(0, y(0.92), 9.6, 5.8, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke() },   // 크림색 동그란 아랫배
+    cap: g => {   // 아랫몸 갈색 — 복슬한 경계
+      const edge = () => { g.moveTo(-13, y(0.6)); for (let x = -13; x < 13; x += 2.6) g.quadraticCurveTo(x + 1.3, y(0.66), x + 2.6, y(0.6)) }
+      g.fillStyle = brown; g.beginPath(); edge(); g.lineTo(13, 1); g.lineTo(-13, 1); g.fill()
+      g.strokeStyle = 'rgba(61,48,43,.55)'; g.lineWidth = 0.5; g.beginPath(); edge(); g.stroke()
+    },
     ears: g => {
-      for (const s of [-1, 1]) { topEar(g, s * 8.8, y(0.08), 2.9, white, s * 0.75); g.fillStyle = '#f7c5cc'; g.beginPath(); g.ellipse(s * 8.9, y(0.05), 1.3, 1.1, s * 0.75, 0, TAU); g.fill() }   // 둥근 귀 · 안쪽 분홍
-      for (const s of [-1, 1]) spike(g, [[s * 13.6, y(0.36)], [s * 15.8, y(0.38)], [s * 15.2, y(0.44)], [s * 16.2, y(0.48)], [s * 13.8, y(0.55)]], white)   // 볼 옆 몽실한 털 뭉치
-      spike(g, [[-2.6, y(0.03)], [-2.2, y(-0.06)], [-0.6, y(-0.05)], [0.4, y(-0.12)], [1.4, y(-0.04)], [2.6, y(-0.04)], [2.8, y(0.04)]], white)   // 정수리 털
-      g.beginPath(); g.moveTo(-1.4, y(0.15)); g.quadraticCurveTo(-1, y(0.07), 0, y(0.065)); g.quadraticCurveTo(1, y(0.07), 1.4, y(0.15)); g.closePath(); g.fillStyle = '#f8e3c4'; g.fill(); g.lineWidth = 0.55; g.strokeStyle = '#b98a5e'; g.stroke()   // 이마의 작은 뿔
-      g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(-0.4, y(0.105), 0.4, 0.28, 0, 0, TAU); g.fill()
+      for (const s of [-1, 1]) { g.save(); g.translate(s * 10.6, y(0.26)); g.rotate(-s * 0.32); blob(g, 0, 0, 1.8, 4, white, LW); g.restore() }   // 축 처진 귀 — 머리 옆으로 늘어진다
+      g.beginPath(); g.moveTo(-1.5, y(0.09)); g.quadraticCurveTo(-0.7, y(0.0), 0, y(-0.06)); g.quadraticCurveTo(0.7, y(0.0), 1.5, y(0.09)); g.closePath(); g.fillStyle = AN; g.fill(); g.lineWidth = 0.55; g.strokeStyle = OUT; g.stroke()   // 이마 가운데 주황 뿔
+      g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.ellipse(-0.45, y(0.05), 0.28, 0.6, 0.2, 0, TAU); g.fill()
     },
     face: (g, p) => {
-      for (const s of [-1, 1]) {   // 큰 소용돌이 눈 — 진한 갈색 소용돌이 · 작은 반짝임
-        const ex = s * 4.6, ey = y(0.42)
-        blob(g, ex, ey, 2.9, 2.9, '#fff', 0.7)
-        if (p.hurt) dotEyes(g, ey, ex, 1.4, p)
-        else {
-          g.strokeStyle = '#6a5a52'; g.lineWidth = 0.5; g.lineCap = 'round'; g.beginPath(); for (let t = 0; t < TAU * 1.85; t += 0.2) { const r = 0.15 + t * 0.2; g.lineTo(ex + s * Math.cos(t) * r, ey + Math.sin(t) * r) } g.stroke()
-          g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - s * 1.2, ey - 1.3, 0.75, 0, TAU); g.fill(); g.beginPath(); g.arc(ex + s * 1.3, ey + 1.2, 0.35, 0, TAU); g.fill()
-        }
+      if (p.hurt) dotEyes(g, y(0.3), 3.9, 1.5, p)
+      else {
+        for (const s of [-1, 1]) blob(g, s * 3.9, y(0.3), 1.75, 1.85, '#d9d5cf', 0.6)   // 동그란 옅은 회색 눈
+        g.strokeStyle = OUT; g.lineWidth = 0.55; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.3, y(0.215)); g.lineTo(s * 4.3, y(0.21)); g.stroke() }   // 아주 짧고 작은 눈썹
       }
-      hatch(g, y(0.52), 9.4, 0.9); catMouth(g, y(0.52), p.hurt ? 1.1 : 0.55)
+      hatch(g, y(0.37), 7.6, 0.8); catMouth(g, y(0.37), p.hurt ? 1 : 0)
     },
     front: g => {
-      for (const s of [-1, 1]) {   // 가슴 앞에 모은 작은 두 손(손가락 자국)
-        g.save(); g.translate(s * 2.9, y(0.72)); g.rotate(-s * 0.35); blob(g, 0, 0, 2.1, 2.5, '#fff', LW)
-        g.strokeStyle = OUT; g.lineWidth = 0.4; g.beginPath(); for (const x of [-0.7, 0.7]) { g.moveTo(x, -2.4); g.lineTo(x, -1.6) } g.stroke(); g.restore()
+      const puffs = [[-5.6, 0.6, 2.1], [-2.8, 0.63, 2.3], [0, 0.64, 2.4], [2.8, 0.63, 2.3], [5.6, 0.6, 2.1], [-4, 0.53, 2.1], [-1.3, 0.55, 2.3], [1.3, 0.55, 2.3], [4, 0.53, 2.1], [0, 0.47, 2.2]].map(([x, f, r]) => ell(x, y(f), r, r * 0.9))
+      g.strokeStyle = 'rgba(61,48,43,.38)'; g.lineWidth = 0.9; for (const P of puffs) g.stroke(P); g.fillStyle = '#fff'; for (const P of puffs) g.fill(P)   // 가슴의 특히 복슬한 털 뭉치 — 몽글몽글 겹친 털(바깥 테두리만)
+      g.strokeStyle = 'rgba(61,48,43,.22)'; g.lineWidth = 0.4; g.beginPath(); for (const [x, f] of [[-3.6, 0.58], [0, 0.6], [3.6, 0.58], [-1.6, 0.51], [1.8, 0.51]]) { g.moveTo(x - 0.8, y(f)); g.quadraticCurveTo(x, y(f) + 0.7, x + 0.8, y(f)) } g.stroke()   // 털결
+      for (const s of [-1, 1]) {   // 옆으로 내린 손 — 주황 발톱 넷
+        const hx = s * 11.6, hy = y(0.6) + (s * f) * 0.4
+        for (let k = 0; k < 4; k++) cone(g, hx + s * 0.6 + (k - 1.5) * 0.85, hy + 2, Math.PI / 2 + (k - 1.5) * 0.2, 0.55)
+        blob(g, hx, hy, 2, 2.6, '#fff', LW)
       }
-      for (const s of [-1, 1]) { const lift = Math.max(0, s * f) * 1.4; for (let k = -1; k <= 1; k++) cone(g, s * (3.3 + lift * 0.35) + k * 1.1, -0.9 - lift * 1.4, Math.PI / 2 + k * 0.3, 0.75) }   // 작은 발톱
+      for (const s of [-1, 1]) { const lift = Math.max(0, s * f) * 1.4; for (let k = 0; k < 4; k++) cone(g, s * (3.4 + lift * 0.35) + (k - 1.5) * 0.9, -0.8 - lift * 1.4, Math.PI / 2 + (k - 1.5) * 0.22, 0.6) }   // 발 — 주황 발톱 넷
     },
   }, p)
 }
@@ -1252,7 +1254,7 @@ function siren(g, angry = false, p = {}) {
 const MER = [{ red: '#d86868' }, { red: '#e07a8e' }, { red: '#d9785a' }]
 function mermaid(g, o, p = {}) {
   const f = p.foot || 0, red = o.red
-  g.save(); g.translate(6, -3.2); g.rotate(f * 0.08)   // 꼬리 — 오른쪽 아래에서 휘어 올라가 두 갈래 지느러미
+  g.save(); g.translate(5.6, -3.4); g.rotate(f * 0.08); g.scale(0.66, 0.66)   // 꼬리 — 오른쪽 아래에서 짧게 휘어 올라가 두 갈래 지느러미
   const T = new Path2D(); T.moveTo(-1.6, -2.6); T.bezierCurveTo(1.6, -2.6, 3.4, -3.6, 4.4, -5.6); T.lineTo(5.6, -4.6); T.bezierCurveTo(4.4, -1.4, 2, 0.4, -1.6, 0.6); T.closePath()
   const F = new Path2D(); F.moveTo(4.6, -5.2); F.bezierCurveTo(4.4, -8.4, 5.6, -10.6, 7.6, -11.6); F.quadraticCurveTo(7, -8.8, 7.8, -7.2); F.quadraticCurveTo(9.2, -7, 11, -6.2); F.bezierCurveTo(9, -4, 7, -3.8, 5.6, -4.6); F.closePath()
   g.lineJoin = 'round'; g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(F); g.stroke(T)
@@ -1295,7 +1297,7 @@ const ART = {
   dekatsuyo: [100, 90, (g, p) => { big(g, 2.6); dekatsuyo(g, p) }],
   goblinKing: [100, 84, (g, p) => { big(g, 2.6); goblin(g, p, { col: '#9cc874', crown: true, cape: true }) }],
   bigChimera: [96, 98, (g, p) => { big(g, 3.2); chimera(g, p, { col: '#c9b8e0', legs: true, horns: true }) }],
-  anoko: [112, 90, (g, p) => { big(g, 2.4); anoko(g, p) }],
+  anoko: [112, 96, (g, p) => { big(g, 2.4); anoko(g, p) }],
   darkstar: [90, 58, (g, p) => { big(g, 1.6); darkStar(g, p) }],
   mermaid: [52, 38, (g, p) => { big(g, 1.4); mermaid(g, MER[0], p) }],
   mermaid1: [52, 38, (g, p) => { big(g, 1.4); mermaid(g, MER[1], p) }],
