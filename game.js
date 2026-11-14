@@ -62,13 +62,9 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
-    '아노코 새 그림 — 원작대로 동그란 옅은 회색 눈 · 아주 짧은 눈썹 · 축 처진 귀 · 이마 가운데 주황 뿔 · 손발의 주황 발톱 넷 · 가슴의 복슬한 털 뭉치 · 하얀 윗몸과 갈색 아랫몸 · 뱀 같은 초록 꼬리. 덩치는 크지만 날씬하게',
-    '인어 새 그림 — 세이렌과 같은 결로 몸 명암 · 비늘 · 짧게 휘어 올라가는 꼬리와 결 있는 지느러미 · 반짝이는 눈 · 볼터치',
+    '그림 손질 — 최종보스 세이렌(은은한 명암 · 진주 허리띠 · 결 있는 큰 지느러미 · 머리 윤기 · 화나면 얼굴에 그늘과 붉게 빛나는 눈, 등 뒤 빛과 맴도는 음표), 아노코(원작처럼 큰 눈 · 볼 옆 삐죽한 털 · 주황 뿔과 발톱 · 올리브색 용 꼬리, 덩치는 크지만 날씬하게), 인어(꼬리가 몸에서 자연스럽게 이어지게), 치이카와 · 하치와레(무기 반대쪽에 작은 꼬리)',
     '카니의 시작 스킬이 치이카와와 같던 것 — 카니 전용 「헌책 날리기」(가까운 적 쪽으로 책장이 부채꼴을 그리며 차례로 날아가요, 몰려 있는 적에게 좋아요)',
     '새 스킬 「헌책 더미」 — 지나온 자리에 헌책을 쌓아 두면 적이 닿을 때 와르르 무너져요(쫓아오는 적에게 좋아요). 헌책 날리기와 짝 — 시너지 「카니의 헌책방」(날리기 책장 +1 · 관통 +1 / 더미 +1 · 범위 +20%)',
-    '하치와레 꼬리를 작고 짧게',
-    '최종보스 세이렌 그림을 새로 — 은은한 명암 · 진주 허리띠 · 휘어 올라가는 꼬리와 결이 있는 큰 지느러미 · 머리 윤기 · 반짝이는 눈. 화나면 얼굴에 그늘이 지고 눈이 붉게 빛나요. 등 뒤에 은은한 빛과 맴도는 음표',
-    '치이카와에게 아주 작은 꼬리, 하치와레의 파란 고양이 꼬리를 기타 반대쪽으로',
     '20분 뒤 적 수 한도 320 → 240마리 — 더 가벼워졌어요. 줄어든 몫만큼 남은 적의 체력 · 경험치가 늘어 어려움은 그대로예요',
     '하치와레 스킬 이름 표기 — 「어떻게든 돼라!」',
     '업적 12가지 — 토벌 대원 · 고블린 퇴치 · 파자마 파티즈 팬클럽 · 토벌 달인 · 부자 토벌대 · 복권 당첨 · 커다란 토벌 · 모두 함께 · 세이렌 토벌 · 끝까지 도망 · 진짜 토벌 · 스치지도 않았다. 동 · 은 · 금메달(쉬운 것은 많이, 어려운 것은 적게), 금메달 하나마다 토벌 보상금 +1%',
@@ -183,7 +179,7 @@ const BOSS = {
   bigChimera: { name: '거대 키메라', line: '헤헤… 흑…', note: '웃으면서 우는 거대한 키메라 — 뛰어올라 내 자리에 내려찍는다. 붉은 원에서 벗어나기' },
   rps: { name: '가위바위보', line: '가위바위보로 무얼 만들까~♪', note: '「바위!」 쇠공 팔로 내 자리를 내려찍고(회색 원) · 「가위!」 바퀴 발로 돌진 · 「보!」 종이를 사방으로 뿌린다' },
   chef: { name: '요리사 괴물', line: '잘 먹겠습니다람쥐!', note: '후추를 흩뿌리고(작은 원 여럿) · 토르티야로 돌돌 말고(큰 노란 원 — 밖으로 피하기) · 돌진한다' },
-  anoko: { name: '아노코', line: '…!!', note: '「커다란 토벌」의 대상 — 돌진하고 · 뱀 같은 꼬리로 둘레를 휩쓸고(청록 원) · 꼬깔콘 같은 주황 발톱을 던진다' },
+  anoko: { name: '아노코', line: '…!!', note: '「커다란 토벌」의 대상 — 돌진하고 · 용 같은 꼬리로 둘레를 휩쓸고(청록 원) · 꼬깔콘 같은 주황 발톱을 던진다' },
   mermaid: { name: '인어', line: '라~♪', note: '세이렌의 코러스 — 곁을 돌다가 날카로운 이빨로 달려들어 문다. 살아 있는 동안 세이렌은 받는 피해 -50%' },
   siren: { name: '세이렌', line: '내 노래를 들어 봐…', note: '노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다', st: 'charm', stCd: 14 },
 }
@@ -1101,8 +1097,9 @@ function dekatsuyo(g, p = {}) {
   }, p)
   g.restore()
 }
-// 아노코 — 「커다란 토벌」의 대상(원래는 공장에서 일하던 작은 아이). 위키 설명 참고 — 크고 복슬한 몸 · 가슴에 특히 복슬한 털 뭉치 · 윗몸은 하양, 아랫몸은 갈색 ·
-// 축 처진 귀 · 이마 가운데 주황 뿔(손발의 발톱 넷과 같은 색) · 동그란 옅은 회색 눈 · 아주 짧고 작은 눈썹 · 뱀 같은 초록 꼬리. 덩치는 크지만 뚱뚱하지 않게 — 키가 크고 옆이 날씬한 몸
+// 아노코 — 「커다란 토벌」의 대상(원래는 공장에서 일하던 작은 아이). 원작 · 팬아트 참고 — 크고 복슬한 하얀 몸(볼 옆 삐죽한 털 · 가슴 털 뭉치) · 아랫몸 갈색 · 머리 위 둥근 귀 ·
+// 이마 가운데 주황 뿔(손발의 발톱 넷과 같은 색) · 큰 눈 — 하얀 눈에 옅은 회색 큰 눈동자가 코 쪽 아래로 치우치고 그 안에 「の」 같은 말림 한 줄 · 혀를 살짝 내민 ω 입 ·
+// 올리브색 용 꼬리(아랫면은 마디진 흰 비늘). 덩치는 크지만 뚱뚱하지 않게 — 키가 크고 옆이 날씬한 몸
 const AN = '#f29a4a'   // 아노코 뿔 · 발톱 주황
 function cone(g, x, y, rot, k = 1) { g.save(); g.translate(x, y); g.rotate(rot); g.scale(k, k); g.beginPath(); g.moveTo(0, -1); g.quadraticCurveTo(2.4, -0.5, 3, 0); g.quadraticCurveTo(2.4, 0.5, 0, 1); g.closePath(); g.fillStyle = AN; g.fill(); g.lineWidth = 0.4; g.strokeStyle = OUT; g.stroke(); g.restore() }
 function anoko(g, p = {}) {
@@ -1111,12 +1108,14 @@ function anoko(g, p = {}) {
   g.rotate(f * 0.04)   // 걸을 때 살짝 좌우로 — 「파파 파야이야」 춤처럼
   mochi(g, {
     fur, limb: brown, W: 23, H, mid: 0.4, arms: 'none',
-    back: g => {   // 뱀 같은 초록 꼬리 — 등 뒤 오른쪽 아래에서 가늘어지며 S 자로, 걸음마다 끝이 흔들린다
-      const w = f * 1.6; g.lineCap = 'round'
-      const path = () => { g.beginPath(); g.moveTo(6, y(0.86)); g.bezierCurveTo(13, y(0.9), 15.5, y(0.74), 14.5 + w * 0.4, y(0.62)); g.bezierCurveTo(13.6 + w * 0.6, y(0.52), 16 + w, y(0.44), 18.4 + w, y(0.47)) }
-      for (const [c, lw] of [[OUT, 3.2 + LW * 2], ['#7fae6c', 3.2]]) { g.strokeStyle = c; g.lineWidth = lw; path(); g.stroke() }
-      g.strokeStyle = '#a9d095'; g.lineWidth = 0.9; path(); g.stroke()   // 등 쪽 밝은 줄
-      blob(g, 18.6 + w, y(0.47), 1.1, 0.9, '#7fae6c', LW * 0.8)   // 둥근 꼬리 끝
+    back: g => {   // 올리브색 용 꼬리 — 오른쪽 아래에서 위로 휘며 가늘어지고, 아랫면(안쪽)은 마디진 흰 비늘. 걸음마다 끝이 흔들린다
+      g.save(); g.translate(8, y(0.86)); g.rotate(f * 0.07)
+      const T = new Path2D(); T.moveTo(-3, -5.4); T.bezierCurveTo(4, -6.4, 8.6, -9.4, 10.6, -16.6); T.quadraticCurveTo(12.6, -9.6, 9.4, -3.6); T.bezierCurveTo(6.6, 0.6, 1, 2, -3, 2.2); T.closePath()
+      const U = new Path2D(); U.moveTo(-3, -5.4); U.bezierCurveTo(4, -6.4, 8.6, -9.4, 10.6, -16.6); U.bezierCurveTo(10.4, -11, 8, -6.2, 3, -3.6); U.quadraticCurveTo(0, -2.4, -3, -2.2); U.closePath()   // 안쪽(몸 쪽) 흰 비늘 띠
+      g.lineJoin = 'round'; g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(T); g.fillStyle = '#7d9466'; g.fill(T); g.fillStyle = '#f6f2ea'; g.fill(U)
+      g.strokeStyle = 'rgba(61,48,43,.6)'; g.lineWidth = 0.45; g.beginPath(); for (const [x0, y0, x1, y1] of [[0.4, -5.8, 0.4, -2.8], [3.4, -6.4, 3.4, -3.6], [6, -7.6, 5.6, -4.8], [8, -9.6, 7.4, -7], [9.4, -12.4, 8.8, -10]]) { g.moveTo(x0, y0); g.lineTo(x1, y1) } g.stroke()   // 비늘 마디
+      g.strokeStyle = OUT; g.lineWidth = 0.5; g.stroke(U)
+      g.restore()
     },
     cap: g => {   // 아랫몸 갈색 — 복슬한 경계
       const edge = () => { g.moveTo(-13, y(0.6)); for (let x = -13; x < 13; x += 2.6) g.quadraticCurveTo(x + 1.3, y(0.66), x + 2.6, y(0.6)) }
@@ -1124,20 +1123,26 @@ function anoko(g, p = {}) {
       g.strokeStyle = 'rgba(61,48,43,.55)'; g.lineWidth = 0.5; g.beginPath(); edge(); g.stroke()
     },
     ears: g => {
-      for (const s of [-1, 1]) { g.save(); g.translate(s * 10.6, y(0.26)); g.rotate(-s * 0.32); blob(g, 0, 0, 1.8, 4, white, LW); g.restore() }   // 축 처진 귀 — 머리 옆으로 늘어진다
+      for (const s of [-1, 1]) topEar(g, s * 7.4, y(0.05), 2.7, white, s * 0.7)   // 머리 위 둥근 귀
+      for (const s of [-1, 1]) {   // 볼 옆 삐죽한 털 — 뾰족한 털 끝 셋
+        const pts = [[10.9, 0.2], [13.4, 0.25], [12.1, 0.29], [14.2, 0.34], [12.5, 0.38], [13.8, 0.44], [11.4, 0.5]].map(([x, f]) => [s * x, y(f)])
+        g.beginPath(); pts.forEach(q => g.lineTo(...q)); g.closePath(); g.fillStyle = white; g.fill(); g.beginPath(); pts.forEach(q => g.lineTo(...q)); g.lineWidth = LW; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke()
+      }
       g.beginPath(); g.moveTo(-1.5, y(0.09)); g.quadraticCurveTo(-0.7, y(0.0), 0, y(-0.06)); g.quadraticCurveTo(0.7, y(0.0), 1.5, y(0.09)); g.closePath(); g.fillStyle = AN; g.fill(); g.lineWidth = 0.55; g.strokeStyle = OUT; g.stroke()   // 이마 가운데 주황 뿔
       g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.ellipse(-0.45, y(0.05), 0.28, 0.6, 0.2, 0, TAU); g.fill()
     },
     face: (g, p) => {
-      if (p.hurt) dotEyes(g, y(0.3), 3.9, 1.5, p)
-      else {
-        for (const s of [-1, 1]) blob(g, s * 3.9, y(0.3), 1.75, 1.85, '#d9d5cf', 0.6)   // 동그란 옅은 회색 눈
-        g.strokeStyle = OUT; g.lineWidth = 0.55; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3.3, y(0.215)); g.lineTo(s * 4.3, y(0.21)); g.stroke() }   // 아주 짧고 작은 눈썹
+      if (p.hurt) dotEyes(g, y(0.31), 4.2, 1.5, p)
+      else for (const s of [-1, 1]) {   // 큰 눈 — 하얀 눈 · 코 쪽 아래로 치우친 옅은 회색 큰 눈동자 · 그 안에 「の」 같은 말림 한 줄
+        const ex = s * 4.4, ey = y(0.31), ix = ex - s * 0.75, iy = ey + 0.6
+        blob(g, ex, ey, 2.9, 2.9, '#fff', 0.7)
+        g.save(); g.beginPath(); g.ellipse(ex, ey, 2.9, 2.9, 0, 0, TAU); g.clip(); blob(g, ix, iy, 2.05, 2.05, '#e3dbd1', 0.5); g.restore()
+        const cx = ix - s * 0.55, cy = iy + 0.45; g.strokeStyle = 'rgba(61,48,43,.8)'; g.lineWidth = 0.42; g.lineCap = 'round'; g.beginPath(); for (let t = 0; t <= TAU * 0.95; t += 0.2) { const r = 0.12 + t * 0.1; g.lineTo(cx - s * Math.sin(t) * r, cy - Math.cos(t) * r) } g.stroke()   // 눈동자 코 쪽 아래의 작은 말림
       }
-      hatch(g, y(0.37), 7.6, 0.8); catMouth(g, y(0.37), p.hurt ? 1 : 0)
+      hatch(g, y(0.4), 8.4, 0.85); catMouth(g, y(0.4), p.hurt ? 1 : 0.75)
     },
     front: g => {
-      const puffs = [[-5.6, 0.6, 2.1], [-2.8, 0.63, 2.3], [0, 0.64, 2.4], [2.8, 0.63, 2.3], [5.6, 0.6, 2.1], [-4, 0.53, 2.1], [-1.3, 0.55, 2.3], [1.3, 0.55, 2.3], [4, 0.53, 2.1], [0, 0.47, 2.2]].map(([x, f, r]) => ell(x, y(f), r, r * 0.9))
+      const puffs = [[-5.6, 0.6, 2.1], [-2.8, 0.63, 2.3], [0, 0.64, 2.4], [2.8, 0.63, 2.3], [5.6, 0.6, 2.1], [-4, 0.53, 2.1], [-1.3, 0.55, 2.3], [1.3, 0.55, 2.3], [4, 0.53, 2.1], [0, 0.515, 2]].map(([x, f, r]) => ell(x, y(f), r, r * 0.9))
       g.strokeStyle = 'rgba(61,48,43,.38)'; g.lineWidth = 0.9; for (const P of puffs) g.stroke(P); g.fillStyle = '#fff'; for (const P of puffs) g.fill(P)   // 가슴의 특히 복슬한 털 뭉치 — 몽글몽글 겹친 털(바깥 테두리만)
       g.strokeStyle = 'rgba(61,48,43,.22)'; g.lineWidth = 0.4; g.beginPath(); for (const [x, f] of [[-3.6, 0.58], [0, 0.6], [3.6, 0.58], [-1.6, 0.51], [1.8, 0.51]]) { g.moveTo(x - 0.8, y(f)); g.quadraticCurveTo(x, y(f) + 0.7, x + 0.8, y(f)) } g.stroke()   // 털결
       for (const s of [-1, 1]) {   // 옆으로 내린 손 — 주황 발톱 넷
@@ -1250,37 +1255,20 @@ function siren(g, angry = false, p = {}) {
   if (!angry) for (const [x, y, r] of [[-14.6, -34.6, 1.5], [15.4, -29.6, 1.1]]) { starP(g, x, y, r, r * 0.32, 4, 0); g.fillStyle = '#fff3b0'; g.fill(); g.strokeStyle = 'rgba(200,150,40,.7)'; g.lineWidth = 0.3; g.stroke() }   // 반짝
 }
 // 인어 — 세이렌의 코러스. 하얀 동그란 몸 · 머리 위 빨간 볏 · 짧은 눈썹 · 놀란 「오」 입 · 양옆 작은 흰 지느러미 · 붉은 비늘 아랫몸 · 꼬리지느러미
-// 세이렌과 같은 결로 — 몸 명암, 비늘마다 밝은 윗줄, 휘어 올라가는 꼬리와 결 있는 지느러미, 반짝이는 눈 · 볼터치
 const MER = [{ red: '#d86868' }, { red: '#e07a8e' }, { red: '#d9785a' }]
 function mermaid(g, o, p = {}) {
   const f = p.foot || 0, red = o.red
-  g.save(); g.translate(5.6, -3.4); g.rotate(f * 0.08); g.scale(0.66, 0.66)   // 꼬리 — 오른쪽 아래에서 짧게 휘어 올라가 두 갈래 지느러미
-  const T = new Path2D(); T.moveTo(-1.6, -2.6); T.bezierCurveTo(1.6, -2.6, 3.4, -3.6, 4.4, -5.6); T.lineTo(5.6, -4.6); T.bezierCurveTo(4.4, -1.4, 2, 0.4, -1.6, 0.6); T.closePath()
-  const F = new Path2D(); F.moveTo(4.6, -5.2); F.bezierCurveTo(4.4, -8.4, 5.6, -10.6, 7.6, -11.6); F.quadraticCurveTo(7, -8.8, 7.8, -7.2); F.quadraticCurveTo(9.2, -7, 11, -6.2); F.bezierCurveTo(9, -4, 7, -3.8, 5.6, -4.6); F.closePath()
-  g.lineJoin = 'round'; g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(F); g.stroke(T)
-  const fg = g.createRadialGradient(5, -5, 0.5, 5, -5, 7); fg.addColorStop(0, red); fg.addColorStop(1, '#ffd9d9'); g.fillStyle = fg; g.fill(F); g.fillStyle = red; g.fill(T)
-  g.strokeStyle = 'rgba(120,40,40,.4)'; g.lineWidth = 0.35; g.beginPath(); for (const [x, y] of [[6.2, -10], [7, -7.8], [8.8, -6.6], [7.8, -5.4]]) { g.moveTo(5, -5); g.lineTo(x, y) } g.stroke()
-  g.restore()
-  for (const s of [-1, 1]) {   // 양옆 작은 흰 지느러미 — 결 두 줄
-    g.save(); g.translate(s * 8.3, -9.6); g.rotate(s * 0.25); blob(g, 0, 0, 1.9, 2.5, '#fff', LW)
-    g.strokeStyle = 'rgba(61,48,43,.55)'; g.lineWidth = 0.35; g.beginPath(); g.moveTo(-s * 0.6, -0.8); g.lineTo(s * 1, -1.1); g.moveTo(-s * 0.6, 0.5); g.lineTo(s * 1, 0.7); g.stroke(); g.restore()
-  }
+  g.beginPath(); g.moveTo(3, -5.2); g.quadraticCurveTo(6.4, -3.6, 8.2, -3.5); g.quadraticCurveTo(9.4, -4.2, 10.6, -5.6 + f); g.quadraticCurveTo(10.4, -2.6, 11.4, -0.2 + f * 0.5); g.quadraticCurveTo(9.4, -1.2, 8.2, -2.3); g.quadraticCurveTo(5.4, -2, 2.4, -1.4); g.closePath(); g.fillStyle = red; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()   // 꼬리 — 몸 속에서 가늘게 이어져 나와 지느러미로 벌어진다(이음새가 뜨지 않게)
+  for (const s of [-1, 1]) { blob(g, s * 8.4, -9.4, 1.9, 2.4, '#fff', LW); g.strokeStyle = OUT; g.lineWidth = 0.4; g.beginPath(); g.moveTo(s * 8, -10.2); g.lineTo(s * 9.2, -10.4); g.moveTo(s * 8, -8.8); g.lineTo(s * 9.2, -8.6); g.stroke() }   // 양옆 지느러미
   const B = new Path2D(); B.ellipse(0, -9.6, 8.2, 8.8, 0, 0, TAU)
-  g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(B)
-  const bg = g.createRadialGradient(-2.4, -13.4, 0.5, 0, -9.6, 9.4); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.65, '#fbf8f5'); bg.addColorStop(1, '#e8dfd8'); g.fillStyle = bg; g.fill(B)
-  g.save(); g.clip(B)
-  const wave = x => -6.4 + 0.8 * (1 - (x / 8.2) ** 2)
-  g.fillStyle = '#f2b0b0'; g.beginPath(); g.moveTo(-9, wave(-9) - 1.2); for (let x = -9; x <= 9; x++) g.lineTo(x, wave(x) - 1.2); g.lineTo(9, 2); g.lineTo(-9, 2); g.fill()   // 분홍 띠
-  const rg = g.createLinearGradient(0, -6.5, 0, 0); rg.addColorStop(0, red); rg.addColorStop(1, '#9c4444'); g.fillStyle = rg
-  g.beginPath(); g.moveTo(-9, wave(-9)); for (let x = -9; x <= 9; x++) g.lineTo(x, wave(x)); g.lineTo(9, 2); g.lineTo(-9, 2); g.fill()
-  for (let r = 2; r >= 0; r--) { const yy = -4.6 + r * 2, ox = r % 2 ? 1.4 : 0; for (let x = -9 + ox; x < 9; x += 2.8) { g.strokeStyle = 'rgba(110,30,30,.5)'; g.lineWidth = 0.4; g.beginPath(); g.arc(x, yy, 1.4, 0, Math.PI); g.stroke(); g.strokeStyle = 'rgba(255,220,220,.55)'; g.lineWidth = 0.3; g.beginPath(); g.arc(x, yy + 0.15, 0.85, Math.PI * 0.25, Math.PI * 0.65); g.stroke() } }
+  g.fillStyle = '#fbfaf8'; g.fill(B); g.save(); g.clip(B)
+  g.fillStyle = '#efa1a1'; g.fillRect(-9, -7.8, 18, 1.4); g.fillStyle = red; g.fillRect(-9, -6.4, 18, 7)
+  g.strokeStyle = 'rgba(70,20,20,.6)'; g.lineWidth = 0.5; for (const [yy, ox] of [[-4.6, 0], [-2, 1.4]]) { g.beginPath(); for (let x = -8 + ox; x < 8; x += 2.8) { g.moveTo(x, yy); g.arc(x + 1.4, yy, 1.4, Math.PI, 0, true) } g.stroke() }
   g.restore(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke(B)
-  const cr = new Path2D(); cr.moveTo(-2.4, -17.6); cr.quadraticCurveTo(-2.6, -20, -1.6, -20.8); cr.quadraticCurveTo(-1.2, -19.4, -0.6, -19.1); cr.quadraticCurveTo(-0.5, -21.2, 0.2, -21.8); cr.quadraticCurveTo(0.8, -20.2, 0.9, -19.2); cr.quadraticCurveTo(1.6, -19.8, 2.2, -20.6); cr.quadraticCurveTo(2.8, -19.4, 2.4, -17.6); cr.quadraticCurveTo(0, -16.5, -2.4, -17.6)   // 빨간 볏 — 끝이 둥근 세 갈래
-  g.fillStyle = red; g.fill(cr); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke(cr); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(-1.6, -18.2); g.quadraticCurveTo(-1.6, -19.4, -1.2, -19.8); g.stroke()
-  g.strokeStyle = OUT; g.lineWidth = 0.45; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 1.5, -15.5); g.lineTo(s * 3, -15.1); g.stroke() }   // 짧은 눈썹
-  for (const s of [-1, 1]) { g.fillStyle = '#2b211d'; g.beginPath(); g.ellipse(s * 2.3, -13.5, 0.62, 0.78, 0, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(s * 2.3 - 0.2, -13.8, 0.24, 0, TAU); g.fill() }   // 반짝이는 점 눈
-  g.fillStyle = 'rgba(255,140,160,.5)'; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(s * 4.6, -11.6, 1.3, 0.7, 0, 0, TAU); g.fill() }   // 볼터치
-  g.fillStyle = '#2b211d'; g.beginPath(); g.ellipse(0, -10.9, 1.3, 1.85, 0, 0, TAU); g.fill(); g.fillStyle = '#e66a7a'; g.beginPath(); g.ellipse(0, -10, 0.8, 0.6, 0, 0, TAU); g.fill()   // 놀란 「오」 입
+  g.beginPath(); g.moveTo(-2.2, -17.8); g.lineTo(-1.6, -20.6); g.lineTo(-0.6, -18.9); g.lineTo(0, -21.2); g.lineTo(0.6, -18.9); g.lineTo(1.6, -20.6); g.lineTo(2.2, -17.8); g.quadraticCurveTo(0, -16.6, -2.2, -17.8); g.fillStyle = red; g.fill(); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke()   // 빨간 볏
+  g.strokeStyle = OUT; g.lineWidth = 0.45; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 1.4, -15.4); g.lineTo(s * 2.8, -15); g.stroke() }   // 짧은 눈썹
+  g.fillStyle = '#2b211d'; for (const s of [-1, 1]) { g.beginPath(); g.arc(s * 2.2, -13.6, 0.55, 0, TAU); g.fill() }
+  g.beginPath(); g.ellipse(0, -10.8, 1.3, 1.9, 0, 0, TAU); g.fill(); g.fillStyle = '#e66a7a'; g.beginPath(); g.ellipse(0, -9.8, 0.8, 0.6, 0, 0, TAU); g.fill()   // 놀란 「오」 입
 }
 // [가로, 세로, 그리기(g, 자세)] — 발밑이 아래에서 3 위. 크게 키운 정예 · 보스는 big(선이 덜 두꺼워지게)
 const ART = {
@@ -1299,9 +1287,9 @@ const ART = {
   bigChimera: [96, 98, (g, p) => { big(g, 3.2); chimera(g, p, { col: '#c9b8e0', legs: true, horns: true }) }],
   anoko: [112, 96, (g, p) => { big(g, 2.4); anoko(g, p) }],
   darkstar: [90, 58, (g, p) => { big(g, 1.6); darkStar(g, p) }],
-  mermaid: [52, 38, (g, p) => { big(g, 1.4); mermaid(g, MER[0], p) }],
-  mermaid1: [52, 38, (g, p) => { big(g, 1.4); mermaid(g, MER[1], p) }],
-  mermaid2: [52, 38, (g, p) => { big(g, 1.4); mermaid(g, MER[2], p) }],
+  mermaid: [40, 36, (g, p) => { big(g, 1.4); mermaid(g, MER[0], p) }],
+  mermaid1: [40, 36, (g, p) => { big(g, 1.4); mermaid(g, MER[1], p) }],
+  mermaid2: [40, 36, (g, p) => { big(g, 1.4); mermaid(g, MER[2], p) }],
   siren: [164, 104, (g, p) => { big(g, 2.4); siren(g, false, p) }],
   sirenAngry: [164, 104, (g, p) => { big(g, 2.4); siren(g, true, p) }],
 }
