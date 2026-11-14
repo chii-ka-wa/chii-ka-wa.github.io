@@ -61,6 +61,10 @@ const SYN = [
 const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
+  ['2026-11-15', [
+    '난이도가 받는 피해도 바꿔요 — 쉬움 0.6배 · 보통 0.8배 · 어려움 그대로(전에는 적 체력만 달라서 어느 난이도든 비슷한 때 쓰러졌어요)',
+    '거대 키메라 · 중간보스 키메라의 내려찍기 — 붉은 원이 차는 시간 1 → 1.2초(중간보스 1.15 → 1.3초), 피할 틈이 더 생겼어요',
+  ]],
   ['2026-11-14', [
     '그림 손질 — 최종보스 세이렌(상체가 높은 길쭉한 몸 · 은은한 명암 · 진주 허리띠 · 인어처럼 짧은 꼬리 · 손가락 넷이 나뉜 손 · 머리 윤기 · 화나면 얼굴에 그늘과 붉게 빛나는 눈, 등 뒤 빛과 맴도는 음표), 아노코(원작처럼 반짝이는 큰 눈 · 볼 옆 삐죽한 털 · 주황 뿔과 발톱 · 올리브색 용 꼬리, 덩치는 크지만 날씬하게), 인어(원작처럼 이마 위 빨간 무늬와 작은 더듬이 · 눈썹 없는 점 눈 · 팔 대신 작은 흰 지느러미, 꼬리가 몸에서 자연스럽게 이어지게), 치이카와 · 하치와레(무기 반대쪽에 작은 꼬리)',
     '카니의 시작 스킬이 치이카와와 같던 것 — 카니 전용 「헌책 날리기」(가까운 적 쪽으로 책장이 부채꼴을 그리며 차례로 날아가요, 몰려 있는 적에게 좋아요)',
@@ -228,12 +232,12 @@ const STATUS = {
 const ST_T = 8   // 상태이상 지속(초)
 // 난이도 — 어려움이 원래 토벌(배수 1). 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 멀리서 쏘는 일반 몬스터가 안 나온다(보스는 쏜다)
 const DIFF = {
-  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false, coin: 1 },
-  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false, coin: 1.25 },
-  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true, coin: 1.5 },   // coin = 토벌 보상금 배수
+  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false, coin: 1, dmg: 0.6 },
+  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false, coin: 1.25, dmg: 0.8 },
+  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true, coin: 1.5, dmg: 1 },   // coin = 토벌 보상금 배수 · dmg = 받는 피해 배수
 }
 { const E = DIFF.easy, pc = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`   // 설명은 쉬움 기준 — 배수를 바꾸면 글도 따라 바뀐다
-  for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)} · 보상금 ${pc(d.coin / E.coin - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
+  for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)} · 받는 피해 ${pc(d.dmg / E.dmg - 1)} · 보상금 ${pc(d.coin / E.coin - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
 const bestKey = (id, d) => d === 'hard' ? id : `${id}.${d}`   // 어려움 기록은 예전 기록 그대로
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
@@ -2039,7 +2043,7 @@ const ACT = {
 }
 /** 거대 키메라 — 내 자리(움직이면 조금 앞)에 뛰어내린다. 바닥의 붉은 원이 다 차면 쿵 */
 function leap(e) {
-  const x = pl.x + (pl.moving ? pl.face[0] * 50 : 0), y = pl.y + (pl.moving ? pl.face[1] * 50 : 0), T = e.mid ? 1.15 : 1
+  const x = pl.x + (pl.moving ? pl.face[0] * 50 : 0), y = pl.y + (pl.moving ? pl.face[1] * 50 : 0), T = e.mid ? 1.3 : 1.2
   e.leap = { x0: e.x, y0: e.y, x1: x, y1: y, t: 0, T }
   G.haz.push({ k: 'land', x, y, R: e.mid ? 85 : 110, t: 0, T, dmg: pct(e.mid ? 0.18 : 0.26), col: '#ff9f43' })
 }
@@ -2094,7 +2098,7 @@ function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return;
 function ouch(d, src) {
   if (pl.inv > 0 || G.dying || G.won) return
   G.hit0 ??= G.t   // 처음 맞은 때(업적 「스치지도 않았다」)
-  d = Math.max(1, Math.round(d - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
+  d = Math.max(1, Math.round(d * G.D.dmg - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
   shove(80, 380)   // 맞으면 0.8초 무적 + 둘레를 밀쳐 빠져나갈 틈
   num(pl.x, pl.y - 48, d, 'hurt')
   if (pl.hp <= 0) { pl.hp = 0; G.dying = 1.2; G.killer = killerName(src); say('와아…', 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }
