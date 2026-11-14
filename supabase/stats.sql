@@ -22,8 +22,8 @@ from runs where result = 'dead' group by 1 order by 쓰러짐 desc;
 select regexp_replace(w, '\d+$', '') as 스킬, count(*) as 판, round(avg(regexp_replace(w, '^\D+', '')::int), 1) as 평균_레벨
 from runs, unnest(string_to_array(weapons, ' ')) as w where w <> '' group by 1 order by 판 desc;
 
--- 6. 날마다 판 수 · 휴대폰 비율
-select created_at::date as 날짜, count(*) as 판, round(100.0 * count(*) filter (where touch) / count(*), 1) as 휴대폰_비율
+-- 6. 날마다 판 수 · 휴대폰 비율(한국 날짜 기준)
+select (created_at at time zone 'Asia/Seoul')::date as 날짜, count(*) as 판, round(100.0 * count(*) filter (where touch) / count(*), 1) as 휴대폰_비율
 from runs group by 1 order by 1 desc;
 
 -- 7. 강화한 판 · 안 한 판(상점에서 산 칸 수 — 다 사면 36). 상점이 생긴 2026-11-14 판부터

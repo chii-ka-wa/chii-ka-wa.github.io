@@ -24,3 +24,5 @@ create policy "game inserts only" on public.runs for insert to anon with check (
 revoke select, update, delete on public.runs from anon, authenticated;
 grant insert on public.runs to anon;
 create index if not exists runs_created_at on public.runs (created_at);
+-- 시각을 한국 시간으로 보기: created_at 은 그 순간을 그대로 저장하지만 Supabase 는 UTC(한국 −9시간)로 보여 준다 — 이 줄을 Run 하면 대시보드 · SQL 결과가 한국 시간(+09)으로 나온다(저장된 값은 그대로)
+alter database postgres set timezone to 'Asia/Seoul';
