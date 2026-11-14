@@ -226,6 +226,17 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (n !== 2 || after !== 0) errors.push(`[help] 도와주는 친구들: 먹은 뒤 ${n}, 끝난 뒤 ${after}`)
   })
 
+  await run('kani', { width: 1280, height: 800 }, async page => {   // 카니 — 시작 스킬 헌책 날리기, 짝 헌책 더미와 시너지 「카니의 헌책방」, 둘 다 실제로 피해를 주는지
+    const k = await page.evaluate(() => {
+      const M = window.__mjg; M.startGame(M.CHARS.findIndex(c => c.id === 'kani')); const b = M.G.weapons[0], n0 = b.st.n
+      M.addWeapon('pile'); return { id: b.id, n0, n1: b.st.n, pile: M.G.weapons[1].st.n }
+    })
+    await sim(page, 60, { god: true, walk: true })
+    const d = await page.evaluate(() => ({ book: Math.round(window.__mjg.G.dmg.book || 0), pile: Math.round(window.__mjg.G.dmg.pile || 0) }))
+    console.log('kani', k, d)
+    if (k.id !== 'book' || k.n1 !== k.n0 + 1 || k.pile !== 2 || !d.book || !d.pile) errors.push('[kani] 헌책 날리기 · 헌책 더미 ' + JSON.stringify({ k, d }))
+  })
+
   await run('dark', { width: 1280, height: 800 }, async page => {   // 29분 검은 별똥별 — 나오고 · 스킬에 안 맞고 · 30분에 생존 클리어
     await page.evaluate(() => { const M = window.__mjg; M.startGame(1); M.G.t = M.DARK_T - 5 })
     await sim(page, M_DARK + 3, { god: true, walk: true })

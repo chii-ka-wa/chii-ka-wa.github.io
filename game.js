@@ -29,7 +29,8 @@ const CHARS = [
 
 // 스킬 — cd 쿨타임(초) · dmg 피해 · n 개수 · area 크기 배수 · spd 속도 배수 · dur 지속(초) · pierce 꿰뚫는 수. ups[i] = 레벨 i+2 가 될 때 더하는 것(최고 Lv 8)
 const WEAP = {
-  book: { name: '헌책 날리기', note: '헌책을 펼치면 책장이 가까운 적 쪽으로 부채꼴을 그리며 차례로 날아간다 — 몰려 있는 적에게 좋다', how: '앞쪽 부채꼴로 책장 날리기', cd: 1.3, dmg: 8, n: 3, pierce: 1, ups: [{ n: 1 }, { dmg: 3 }, { pierce: 1 }, { n: 1 }, { cd: -0.3 }, { dmg: 5 }, { n: 1, pierce: 1 }] },   // 카니 시작 스킬 — 시너지 짝 없음
+  book: { name: '헌책 날리기', note: '헌책을 펼치면 책장이 가까운 적 쪽으로 부채꼴을 그리며 차례로 날아간다 — 몰려 있는 적에게 좋다', how: '앞쪽 부채꼴로 책장 날리기', cd: 1.3, dmg: 8, n: 3, pierce: 1, ups: [{ n: 1 }, { dmg: 3 }, { pierce: 1 }, { n: 1 }, { cd: -0.3 }, { dmg: 5 }, { n: 1, pierce: 1 }] },   // 카니 시작 스킬
+  pile: { name: '헌책 더미', note: '지나온 자리에 헌책을 쌓아 둔다 — 적이 닿으면 기우뚱하다 와르르 무너져 둘레에 피해. 쫓아오는 적에게 좋다', how: '지나온 자리에 무너지는 덫', cd: 2.2, dmg: 24, dur: 8, ups: [{ dmg: 8 }, { n: 1 }, { area: 0.2 }, { cd: -0.4 }, { dmg: 10 }, { n: 1 }, { area: 0.2, dmg: 12 }] },
   sasu: { name: '사스마타 찌르기', note: '가장 가까운 적에게 사스마타를 찔러 넣는다 — 꿰뚫는다', how: '가까운 적을 꿰뚫어 찌르기', cd: 1.1, dmg: 11, pierce: 2, ups: [{ n: 1 }, { dmg: 5 }, { cd: -0.2 }, { n: 1 }, { dmg: 6 }, { pierce: 2 }, { dmg: 10 }] },
   stick: { name: '토벌봉', note: '봉을 휘두르면 양 끝에서 폭발이 일어난다(두 번째는 위아래로)', how: '양옆을 휘둘러 끝이 폭발', cd: 1.5, dmg: 13, ups: [{ dmg: 5 }, { area: 0.15 }, { cd: -0.25 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { dmg: 10 }] },
   yaha: { name: '야하!', note: '높이 뛰어올라 내려찍으면 둘레에 충격파 — 밀쳐 낸다', how: '뛰어올라 내 둘레 충격파', cd: 3.2, dmg: 26, ups: [{ area: 0.15 }, { dmg: 10 }, { cd: -0.5 }, { area: 0.15 }, { dmg: 12 }, { n: 1 }, { dmg: 18, area: 0.15 }] },
@@ -55,12 +56,15 @@ const SYN = [
   ['섬 맛집 투어', { ramen: { n: 1, dur: 1 }, curry: { area: 0.2 } }],
   ['하치와레의 꿈', { guitar: { n: 1, dmg: 4, dur: 1 }, pochette: { n: 1, dmg: 5, area: 0.2 } }],   // 11-13 버프
   ['안주 내놔!', { momo: { n: 1 }, kanpai: { bounce: 2, dmg: 3 } }],
+  ['카니의 헌책방', { book: { n: 1, pierce: 1 }, pile: { n: 1, area: 0.2 } }],
 ]
 const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
     '카니의 시작 스킬이 치이카와와 같던 것 — 카니 전용 「헌책 날리기」(가까운 적 쪽으로 책장이 부채꼴을 그리며 차례로 날아가요, 몰려 있는 적에게 좋아요)',
+    '새 스킬 「헌책 더미」 — 지나온 자리에 헌책을 쌓아 두면 적이 닿을 때 와르르 무너져요(쫓아오는 적에게 좋아요). 헌책 날리기와 짝 — 시너지 「카니의 헌책방」(날리기 책장 +1 · 관통 +1 / 더미 +1 · 범위 +20%)',
+    '하치와레 꼬리를 반쯤 짧게',
     '최종보스 세이렌 그림을 새로 — 은은한 명암 · 진주 허리띠 · 휘어 올라가는 꼬리와 결이 있는 큰 지느러미 · 머리 윤기 · 반짝이는 눈. 화나면 얼굴에 그늘이 지고 눈이 붉게 빛나요. 등 뒤에 은은한 빛과 맴도는 음표',
     '치이카와에게 아주 작은 꼬리, 하치와레의 파란 고양이 꼬리를 기타 반대쪽으로',
     '20분 뒤 적 수 한도 320 → 240마리 — 더 가벼워졌어요. 줄어든 몫만큼 남은 적의 체력 · 경험치가 늘어 어려움은 그대로예요',
@@ -114,7 +118,7 @@ const PATCH = [
   ]],
 ]
 const PATCH_ID = `${PATCH[0][0]}#${PATCH[0][1].length}`
-const mateOf = id => { const s = synOf(id); return s && Object.keys(s[1]).find(k => k !== id) }   // 짝 없는 스킬(헌책 날리기)은 undefined
+const mateOf = id => Object.keys(synOf(id)[1]).find(k => k !== id)
 const synText = ([, u]) => Object.entries(u).map(([id, up]) => `${WEAP[id].name} ${Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')}`).join(' / ')
 
 // 아이템(지니면 계속 듣는 것) — 레벨마다 note 만큼
@@ -983,7 +987,7 @@ function hachiware(g, p) {
     fur: '#fff', W: 26, H, mid: 0.42, thin: true, neck: 0.7, jw: 0.84,
     back: (g, p) => {   // 파란 고양이 꼬리 — 기타 반대쪽(왼쪽)으로 뻗어 끝이 위로 휘고, 걸을 때 살랑
       const sw = (p.foot || 0) * 0.8; g.lineCap = 'round'
-      for (const [c, lw] of [[OUT, 2.2 + LW * 2], [blue, 2.2]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-8, -3.2); g.quadraticCurveTo(-17.4, -3, -16.4 + sw, -11.6); g.stroke() }
+      for (const [c, lw] of [[OUT, 2.2 + LW * 2], [blue, 2.2]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-8, -3.2); g.quadraticCurveTo(-14.6, -3, -14.4 + sw * 0.6, -7.2); g.stroke() }
     },
     cap: g => {   // 파란 무늬 — 3을 눕혀 놓은 것처럼 둥근 두 자락이 아래로 볼록, 가운데는 위로 뾰족한 홈
       const edge = () => { g.moveTo(-14, y(0.2)); g.bezierCurveTo(-11.4, y(0.22), -9, y(0.25), -6.2, y(0.25)); g.bezierCurveTo(-3.4, y(0.25), -1.4, y(0.21), -0.45, y(0.15)); g.quadraticCurveTo(0, y(0.115), 0.45, y(0.15)); g.bezierCurveTo(1.4, y(0.21), 3.4, y(0.25), 6.2, y(0.25)); g.bezierCurveTo(9, y(0.25), 11.4, y(0.22), 14, y(0.2)) }
@@ -1310,6 +1314,7 @@ const party = g => {   // 폭죽 콘 · 색종이
 }
 const ICO = {
   // 스킬
+  pile: g => { for (const [y, w, x, col] of [[3.6, 21, 0, '#b07a4a'], [-2.2, 18, 1.4, '#8fd14f'], [-7.8, 15, -1, '#e07a6a']]) { rr(g, x - w / 2, y, w, 5.6, 1.2); ink(g, col, 1.3); g.fillStyle = '#fffaf0'; g.fillRect(x + w / 2 - 4, y + 1.3, 2.8, 3) } },   // 헌책 더미
   book: g => {   // 펼친 초록 헌책(카니)
     g.beginPath(); g.moveTo(0, -6); g.quadraticCurveTo(-6, -9, -11.5, -7); g.lineTo(-11.5, 8); g.quadraticCurveTo(-6, 6, 0, 9); g.quadraticCurveTo(6, 6, 11.5, 8); g.lineTo(11.5, -7); g.quadraticCurveTo(6, -9, 0, -6); g.closePath(); ink(g, '#8fd14f', 1.5)
     g.beginPath(); g.moveTo(0, -4.4); g.quadraticCurveTo(-5, -7.4, -9.8, -5.6); g.lineTo(-9.8, 6.2); g.quadraticCurveTo(-5, 4.6, 0, 7.2); g.quadraticCurveTo(5, 4.6, 9.8, 6.2); g.lineTo(9.8, -5.6); g.quadraticCurveTo(5, -7.4, 0, -4.4); g.closePath(); ink(g, '#fffaf0', 1)
@@ -1561,6 +1566,7 @@ function sprites() {
   SPR.pj = PJ.map((o, i) => [{ arm: 1, bob: -1.2 }, { arm: -1 }].map(p => artSprite('pj' + i, K, p)))   // 파자마 파티즈 — 춤 두 장
   const lp = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('leafpair', K, p)); SPR.leaf = { R: lp, L: lp.map(flip) }
   SPR.pochette = sprite(24, 24, 12, 12, pochetteArt)
+  SPR.pile = sprite(26, 26, 13, 22, g => { for (const [y, w, x, col] of [[-5, 20, 0, '#b07a4a'], [-10, 17, 1.2, '#8fd14f'], [-14.6, 15, -0.8, '#e07a6a']]) { rr(g, x - w / 2, y, w, 4.6, 1); ink(g, col, 1.1); g.fillStyle = '#fffaf0'; g.fillRect(x + w / 2 - 3.4, y + 1, 2.4, 2.6) } })   // 헌책 더미 — 갈색 · 초록 · 빨간 책 셋, 옆에 책장 단면
   SPR.page = sprite(20, 18, 10, 9, g => { rr(g, -7.5, -6, 15, 12, 1.2); ink(g, '#fffaf0', 1.1); g.fillStyle = '#8fd14f'; g.fillRect(-7, -5.5, 2, 11); g.strokeStyle = 'rgba(61,48,43,.45)'; g.lineWidth = 0.9; g.beginPath(); for (const y of [-2.8, 0, 2.8]) { g.moveTo(-3.6, y); g.lineTo(5, y) } g.stroke() })   // 헌책 날리기 책장 — 초록 책등 자국
   for (const id of [...Object.keys(WEAP), ...Object.keys(PASS), ...Object.keys(ITEMS)]) SPR.E[id] = icoSpr(id)
   SPR.note = icoSpr('bgm')
@@ -1674,7 +1680,7 @@ function wstat(w) {
   const d = WEAP[w.id], st = { cd: d.cd, dmg: d.dmg, n: d.n || 1, area: 1, spd: 1, dur: d.dur || 0, pierce: d.pierce || 0, bounce: d.bounce || 0 }
   for (const up of d.ups.slice(0, w.lv - 1)) for (const k in up) st[k] += up[k]
   const s = synOf(w.id)
-  if (s && G.weapons.some(x => x.id === mateOf(w.id))) for (const k in s[1][w.id]) st[k] += s[1][w.id][k]
+  if (G.weapons.some(x => x.id === mateOf(w.id))) for (const k in s[1][w.id]) st[k] += s[1][w.id][k]
   return st
 }
 function addWeapon(id) {
@@ -1721,6 +1727,10 @@ function splash(x, y, R, dmg, col, sea = 1) { near(x, y, R, e => { hurt(e, dmg, 
 // ---- 스킬 — 한 발씩(여러 개면 0.12초 간격으로)
 const SASU = { chiikawa: '#ff9ab8', hachiware: '#7fa6dc', kani: '#a9b1bc' }   // 사스마타 색 — 치이카와 분홍 · 하치와레 파랑 · 카니 회색
 const SHOT = {
+  pile(w, st, i, A, D) {   // 발 뒤에 헌책 더미. 안 무너진 것이 12개를 넘으면 가장 오래된 것을 치운다
+    const old = G.shots.filter(b => b.k === 'pile' && !b.fall), o = (i - (w.n - 1) / 2) * 26; if (old.length >= 12) old[0].dead = true   // 여러 개면 지나온 길을 가로질러 나란히
+    G.shots.push({ src: SRC, k: 'pile', x: pl.x - pl.face[0] * 14 - pl.face[1] * o, y: pl.y + 4 + pl.face[0] * o * 0.8, R: 52 * A, dmg: D, t: 0, life: st.dur * S.dur, fall: 0 })
+  },
   book(w, st, i, A, D) {   // 첫 장을 날릴 때 가까운 적 쪽을 정하고, 장마다 부채꼴로 조금씩 돌려 차례로
     if (i === 0) { const e = closest(1)[0]; w.aim = e ? Math.atan2(e.y - pl.y, e.x - pl.x) : Math.atan2(pl.face[1], pl.face[0]) }
     const a = w.aim + (i - (w.n - 1) / 2) * 0.26, v = 460 * st.spd * S.speed
@@ -2245,6 +2255,10 @@ function shots(dt) {
       case 'drop':   // 풀뽑기 — 표시가 다 차면 뽑힌다
         if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#8fd16a'); fx({ k: 'sprout', x: b.x, y: b.y, R: b.R, T: 0.5 }); shake = Math.max(shake, 3); b.dead = true }
         break
+      case 'pile':   // 헌책 더미 — 적이 닿으면 기우뚱, 0.25초 뒤 와르르(둘레 피해)
+        if (!b.fall) { if (b.t > b.life) { b.dead = true; break } near(b.x, b.y, 14, () => { b.fall = b.t; return true }) }
+        else if (b.t - b.fall >= 0.25) { splash(b.x, b.y, b.R, b.dmg, '#8fd14f'); fx({ k: 'text', x: b.x, y: b.y - 34, s: '와르르!', col: '#c9f08a', T: 0.6 }); shake = Math.max(shake, 2); b.dead = true }
+        break
       case 'pot':   // 카레 냄비 — 1초 뒤 매운 폭발(인어 · 세이렌에게 1.5배)
         if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#e8b02a', 1.5); fx({ k: 'text', x: b.x, y: b.y - 34, s: '맵다!', col: '#ffcf4a', T: 0.6 }); shake = Math.max(shake, 3); b.dead = true }
         break
@@ -2430,7 +2444,12 @@ function world(c, ox, oy) {
   }
   for (const e of G.foes) if (e.boss && e.st === 'wind') { const L = e.spd * 4 * 0.75, a = Math.atan2(e.dy, e.dx); c.save(); c.translate(e.x, e.y); c.rotate(a); c.fillStyle = 'rgba(255,60,60,.3)'; c.fillRect(0, -e.r, L, e.r * 2); c.restore() }
   for (const b of G.shots) {
-    if (b.k === 'drop') { const u = b.t / b.T; c.strokeStyle = '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = 'rgba(110,190,80,.35)'; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill() }
+    if (b.k === 'pile') {   // 무너질 범위는 옅은 초록 점선, 기울면서 쓰러진다 · 사라질 때 흐려진다
+      c.globalAlpha = Math.min(1, (b.life - b.t) / 0.5 + (b.fall ? 1 : 0))
+      c.strokeStyle = 'rgba(110,170,60,.25)'; c.lineWidth = 1.5; c.setLineDash([3, 5]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([])
+      c.save(); c.translate(b.x, b.y); if (b.fall) c.rotate(Math.min(1, (b.t - b.fall) / 0.25) * 0.8); put(c, SPR.pile, 0, 0); c.restore(); c.globalAlpha = 1
+    }
+    else if (b.k === 'drop') { const u = b.t / b.T; c.strokeStyle = '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = 'rgba(110,190,80,.35)'; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill() }
     else if (b.k === 'pot') { const u = b.t / b.T; c.strokeStyle = 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
   }
   // 보석 · 줍는 것
@@ -2727,7 +2746,7 @@ function guide() {
     h('h3', {}, '캐릭터'),
     h('ul', { class: 'list' }, CHARS.map(ch => li(portrait(ch.id), `${ch.name} — ${ch.trait}`, ch.note, ['시작 스킬: ', ic(ch.w), ` ${WEAP[ch.w].name}`]))),
     h('h3', {}, '스킬 (최고 Lv 8)'),
-    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(ic(id), w.name, w.note, mateOf(id) ? `짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」` : '짝 없음 — 시너지 없이 혼자 싸운다'))),
+    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(ic(id), w.name, w.note, `짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」`))),
     h('h3', {}, '시너지'),
     h('ul', { class: 'list' }, SYN.map(s => li(ic('syn'), s[0], synText(s)))),
     h('h3', {}, '아이템 (최고 Lv 5)'),
@@ -2765,7 +2784,7 @@ function skillInfo(kind, id) {
   return [
     h('p', { class: 't' }, ic(id), ` ${d.name}`, h('small', {}, ` Lv${w.lv}/${max}`)), h('p', {}, `${d.how} — ${d.note}`), kv(rows),
     h('p', { class: 'next' }, w.lv < max ? `다음 Lv${w.lv + 1} — ${Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ')}` : '최대 레벨이에요'),
-    !sy ? h('p', { class: 'syn' }, '시너지 짝이 없는 스킬이에요') : h('p', { class: `syn${on ? ' on' : ''}` }, on ? [ic('syn'), ` 시너지 「${sy[0]}」 켜짐 — ${synText(sy)}`] : [`시너지 「${sy[0]}」 — `, ic(mate), ` ${WEAP[mate].name}을(를) 얻으면 ${synText(sy)}`]),
+    h('p', { class: `syn${on ? ' on' : ''}` }, on ? [ic('syn'), ` 시너지 「${sy[0]}」 켜짐 — ${synText(sy)}`] : [`시너지 「${sy[0]}」 — `, ic(mate), ` ${WEAP[mate].name}을(를) 얻으면 ${synText(sy)}`]),
   ]
 }
 function pause() {
@@ -2889,4 +2908,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { render, autoQ, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { render, autoQ, addWeapon, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
