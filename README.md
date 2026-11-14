@@ -57,6 +57,7 @@
 
 - `index.html` 머리말: 제목 · 설명 · 키워드 · canonical · robots, 공유 미리보기(Open Graph · X 카드), 아이콘, 검색 엔진용 구조화 데이터(JSON-LD `VideoGame`), 자바스크립트가 꺼진 곳을 위한 `<noscript>` 소개
 - `og.png`(1200×630 공유 썸네일) · `icon-512.png` · `apple-touch-icon.png`(180) · `favicon.png`(64) — 게임 속 직접 그린 캐릭터로 `test/og.cjs` 가 만든다(그림을 고치면 다시 실행) 다시 만들면 index.html 의 `og.png?v=` · `favicon.png?v=` · `apple-touch-icon.png?v=` 숫자를 올린다(카카오톡 · X · 브라우저가 옛 그림을 붙잡고 있지 않게).
+- SNS 홍보: `test/promo.cjs` 가 `promo/`(git 에 안 올림)에 이미지 3장(정사각 1080 · 세로 1080×1920 · 가로 1600×900)과 숏츠 영상 `shorts.mp4`(세로 1080×1920 · 30fps · 약 27초 — 제목 → 10분 → 20분 아노코 → 25분 세이렌 토벌 성공 → 주소, 게임 배경음을 OfflineAudioContext 로 그려 넣고 -16 LUFS)를 만든다. 게임을 한 프레임씩 직접 돌려 찍어 기기 속도와 상관없이 매끄럽다. 로컬 서버(8765) + `NODE_PATH=<playwright> FFMPEG=<libx264 ffmpeg> node test/promo.cjs`(FFMPEG 가 없으면 이미지만)
 - `robots.txt`(사이트맵 위치) · `sitemap.xml`(내용을 바꾸면 `lastmod` 날짜를 고친다) · `site.webmanifest`(홈 화면에 추가할 때 이름 · 아이콘)
 
 검색 등록(소유 확인 코드는 각 사이트에서 받아 `index.html` 머리말에 한 줄 넣는다)
