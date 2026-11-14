@@ -9,7 +9,7 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v
 const fmt = s => `${String(s / 60 | 0).padStart(2, '0')}:${String(s % 60 | 0).padStart(2, '0')}`
 const pickOf = a => a[rnd() * a.length | 0]
 const VIEW = 500          // 화면의 짧은 쪽에 보이는 월드 크기(캐릭터가 작아 보이지 않게) — 휴대폰을 세워도 눕혀도 둘레가 이만큼은 보인다
-const MAX_FOES = 320      // 한 화면 적 수 한도 — 휴대폰 그리기 비용
+const MAX_FOES = 240      // 한 화면 적 수 한도 — 휴대폰 그리기 비용(예전 320, 넘친 몫은 crowd 로 피 · 경험치에)
 const FINAL_T = 25 * 60   // 최종보스 세이렌이 나오는 때
 const DARK_T = 29 * 60, END_T = 30 * 60   // 세이렌을 못 쓰러뜨리면 29분에 검은 별똥별(쓰러뜨릴 수 없다) — 30분까지 도망치면 생존 클리어
 
@@ -18,7 +18,7 @@ const DARK_T = 29 * 60, END_T = 30 * 60   // 세이렌을 못 쓰러뜨리면 29
 // 캐릭터 — w 시작 스킬, mod 고유 특성
 const CHARS = [
   { id: 'chiikawa', name: '치이카와', w: 'sasu', hp: 100, trait: '울보 근성', note: '체력이 절반 아래면 공격력 +30% · 경험치 +10%', mod: { clutch: 0.3, growth: 0.1 } },
-  { id: 'hachiware', name: '하치와레', w: 'guitar', hp: 110, trait: '어떻게든 되라!', note: '행운 +20% · 잭팟 확률 2배 · 리롤 · 스킵 · 제외 +1', mod: { luck: 0.2, jackpot: 1, boxes: 1 } },
+  { id: 'hachiware', name: '하치와레', w: 'guitar', hp: 110, trait: '어떻게든 돼라!', note: '행운 +20% · 잭팟 확률 2배 · 리롤 · 스킵 · 제외 +1', mod: { luck: 0.2, jackpot: 1, boxes: 1 } },
   { id: 'usagi', name: '우사기', w: 'stick', hp: 100, trait: '야하!', note: '이동 속도 +20% · 공격력 +10%', mod: { move: 0.2, might: 0.1 } },
   { id: 'momonga', name: '모몽가', w: 'momo', hp: 90, trait: '내 거야!', note: '보스 · 정예에게 주는 피해 +30% · 이동 속도 +15%', mod: { bossX: 0.3, move: 0.15 } },
   { id: 'kurimanju', name: '쿠리만쥬', w: 'kanpai', hp: 130, trait: '캬아~', note: '받는 피해 -2 · 초당 체력 0.5 회복 · 경험치 줍는 거리 +30%', mod: { armor: 2, regen: 0.5, magnet: 0.3 } },
@@ -36,7 +36,7 @@ const WEAP = {
   weed: { name: '풀뽑기', note: '풀뽑기 검정 5급의 솜씨 — 적 발밑의 풀을 뽑아 터뜨린다', how: '적 발밑이 터짐', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
   tears: { name: '와아… (울음)', note: '눈물이 높이 튀어 멀리 떨어진 자리를 적신다', how: '멀리 있는 적에게 물폭탄', cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
   guitar: { name: '하치와레의 기타', note: '음표가 몸 둘레를 돌며 적을 쳐 낸다', how: '음표가 내 둘레를 돎', cd: 2.2, dmg: 9, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 3 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 4, dur: 1 }] },
-  nantoka: { name: '어떻게든 되라!', note: '화면 안 적에게 별이 번개처럼 꽂힌다', how: '화면 안 적에게 번개', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
+  nantoka: { name: '어떻게든 돼라!', note: '화면 안 적에게 별이 번개처럼 꽂힌다', how: '화면 안 적에게 번개', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
   ramen: { name: '라멘 국물', note: '근처 바닥에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다', how: '바닥 장판 · 느리게', cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
   curry: { name: '극매운 카레', note: '적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배', how: '적이 몰린 곳에 큰 폭발', cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
   pochette: { name: '포셰트 부메랑', note: '던지면 되돌아오는 포셰트 — 오가며 계속 맞힌다', how: '갔다 돌아오는 부메랑', cd: 1.8, dmg: 10, ups: [{ dmg: 4 }, { n: 1 }, { area: 0.25 }, { dmg: 5 }, { n: 1 }, { spd: 0.3 }, { n: 1 }] },
@@ -59,6 +59,8 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-14', [
+    '20분 뒤 적 수 한도 320 → 240마리 — 더 가벼워졌어요. 줄어든 몫만큼 남은 적의 체력 · 경험치가 늘어 어려움은 그대로예요',
+    '하치와레 스킬 이름 표기 — 「어떻게든 돼라!」',
     '업적 12가지 — 토벌 대원 · 고블린 퇴치 · 파자마 파티즈 팬클럽 · 토벌 달인 · 부자 토벌대 · 복권 당첨 · 커다란 토벌 · 모두 함께 · 세이렌 토벌 · 끝까지 도망 · 진짜 토벌 · 스치지도 않았다. 동 · 은 · 금메달(쉬운 것은 많이, 어려운 것은 적게), 금메달 하나마다 토벌 보상금 +1%',
     '적이 아주 많아지는 20분 뒤에 느려지던 것 — 기기가 버거워하면 저절로 화면을 가볍게(해상도를 조금 낮추고 작은 적 그림자를 빼요, 게임 규칙은 그대로). 맞은 적은 하얀 그림 한 장만 그려 더 가볍게',
     '토벌 보상금 · 영구 강화 상점 — 판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(보통 ×1.25 · 어려움 ×1.5). 처음 화면 「상점」에서 체력 · 힘 · 회복 · 발걸음 · 경험치 · 줍기 · 행운 · 단단함을 조금씩 영구 강화(다 사도 같은 아이템 한 레벨 정도)',
@@ -1741,9 +1743,9 @@ const HPK = [1, 1.4, 1.8, 2.3, 4.3, 13, 26]   // 보통 적 피 배수 — 0 · 
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
-  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm)) * G.D.hp
+  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm)) * G.D.hp * (big ? 1 : G.crowd || 1)
   const e = {
-    type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * (1 + m * 0.055), xp: F.xp,
+    type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * (1 + m * 0.055), xp: F.xp * (big ? 1 : G.crowd || 1),
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
     elite: type === 'golden', boss: big, kind: big ? type : null, heavy: ['dekatsu', 'golden', 'beetle', 'parttimer'].includes(type),
   }
@@ -1781,7 +1783,8 @@ function ring(e, ahead = false) {
   e.x = pl.x + c * t; e.y = pl.y + s * t
 }
 function spawner(dt) {
-  const m = G.t / 60, want = Math.min(MAX_FOES, (22 + m * 10 + m * m * 0.45) * (G.final ? 0.5 : 1))
+  const m = G.t / 60, raw = (22 + m * 10 + m * m * 0.45) * (G.final ? 0.5 : 1), want = Math.min(MAX_FOES, raw)
+  G.crowd = clamp(raw / MAX_FOES, 1, 320 / MAX_FOES)   // 예전 한도 320 만큼의 피 · 경험치를 남은 적이 나눠 든다
   if ((G.spawnT -= dt) <= 0) {
     G.spawnT = Math.max(0.09, 0.55 - m * 0.02)
     const n = Math.min(want - G.foes.length, 1 + (m / 1.8 | 0))
@@ -2460,7 +2463,7 @@ function effect(c, f, ox, oy) {
     case 'flash': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = f.col; oval(c, f.x, f.y, f.R, f.R); c.fill(); c.globalCompositeOperation = 'source-over'; break
     case 'white': c.globalAlpha = (1 - u) * 0.8; c.fillStyle = '#fff'; c.fillRect(ox, oy, VW, VH); break
     case 'text': c.globalAlpha = 1 - Math.max(0, u - 0.6) / 0.4; txt(c, f.s, f.x, f.y - u * 18, 17, f.col); break
-    case 'bolt': {   // 어떻게든 되라! — 노란 별 번개
+    case 'bolt': {   // 어떻게든 돼라! — 노란 별 번개
       c.globalAlpha = 1 - u; c.lineJoin = 'round'
       for (const [col, lw] of [['#ffb400', 7], ['#fff7b0', 3]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); f.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke() }
       star(c, f.x, f.y - 14, 12 * (1 + u * 0.5), '#ffe066'); break
