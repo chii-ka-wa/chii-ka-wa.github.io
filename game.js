@@ -62,6 +62,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-15', [
+    '그림 손질 — 세이렌을 주인공들처럼 큰 머리와 몸으로 나누고(팔이 붙는 목에서 들어가요) 아랫몸은 꼬리 쪽으로 갸름하게, 인어도 몸 가운데부터 아래로 점점 갸름하게',
     '난이도가 받는 피해도 바꿔요 — 쉬움 0.6배 · 보통 0.8배 · 어려움 그대로(전에는 적 체력만 달라서 어느 난이도든 비슷한 때 쓰러졌어요)',
     '거대 키메라 · 중간보스 키메라의 내려찍기 — 붉은 원이 차는 시간 1 → 1.2초(중간보스 1.15 → 1.3초), 피할 틈이 더 생겼어요',
   ]],
@@ -1205,7 +1206,10 @@ function siren(g, angry = false, p = {}) {
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 0.8; g.beginPath(); g.ellipse(s * 7.8, -35.6, 3.4, 2.8, 0, Math.PI * (s > 0 ? 1.15 : 1.25), Math.PI * (s > 0 ? 1.6 : 1.7)); g.stroke()
     heart(g, s * 8.9, -37, 1.75, '#e0606c'); g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(s * 8.9 - 0.6, -37.6, 0.4, 0, TAU); g.fill()
   }
-  const B = new Path2D(); B.ellipse(0, CY, RX, RY, 0, 0, TAU)
+  // 주인공처럼 머리와 몸이 나뉜다 — 볼 높이가 가장 넓은 큰 머리, 팔이 붙는 목에서 들어가고, 아랫몸은 꼬리 쪽으로 점점 좁아진다(주인공 몸 아래쪽만 더 갸름하게)
+  const S = mochiSegs(RX * 2, RY * 2, 0.46, 0, true, 0.74, 0.66, 0.76), { jx, yj } = headJoin(RX * 2, RY * 2, 0.66, 0.76), be = RX * 0.26, my = yj + (-1 - yj) * 0.4
+  S.splice(4, 3, [jx, yj, jx * 0.96, my, be * 1.4, -1, be, -1], [be, -1, be * 0.35, -0.7, -be * 0.35, -0.7, -be, -1], [-be, -1, -be * 1.7, -1, -jx * 1.02, my, -jx, yj])
+  const B = segPath(S)
   g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(B)
   const bg = g.createRadialGradient(-4, -25, 1, 0, CY, 18); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.62, '#fbf8f5'); bg.addColorStop(1, '#e6ddd6')
   g.fillStyle = bg; g.fill(B)
@@ -1231,12 +1235,14 @@ function siren(g, angry = false, p = {}) {
     g.strokeStyle = 'rgba(40,10,50,.4)'; g.lineWidth = 0.55; g.beginPath(); for (const x of [-7.6, -5, 5, 7.6]) { g.moveTo(x, -26.4); g.lineTo(x, -24) } g.stroke()
   }
   g.restore()
-  // 진주 허리띠
+  // 진주 허리띠 — 몸을 따라 감기게(가장자리 진주는 몸 테두리에 묻힌다)
+  g.save(); g.clip(B)
   for (let x = -12.6; x <= 12.7; x += 1.8) {
     const y = wave(x) - 0.2, r = 0.82
     const pg = g.createRadialGradient(x - 0.3, y - 0.3, 0.1, x, y, r); pg.addColorStop(0, '#fff'); pg.addColorStop(1, '#efd9d4')
     g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = pg; g.fill(); g.strokeStyle = 'rgba(61,48,43,.6)'; g.lineWidth = 0.35; g.stroke()
   }
+  g.restore()
   g.lineWidth = LW; g.strokeStyle = OUT; g.stroke(B)
   for (const s of [-1, 1]) { g.fillStyle = angry ? 'rgba(200,60,80,.25)' : 'rgba(255,140,160,.45)'; g.beginPath(); g.ellipse(s * 8.8, -15.6, 2.4, 1.3, 0, 0, TAU); g.fill() }   // 볼 발그레
   hatch(g, -15.6, 8.8, 0.75)
@@ -1262,7 +1268,9 @@ const MER = [{ red: '#d86868' }, { red: '#e07a8e' }, { red: '#d9785a' }]
 function mermaid(g, o, p = {}) {
   const f = p.foot || 0, red = o.red
   g.beginPath(); g.moveTo(3, -5.2); g.quadraticCurveTo(6.4, -3.6, 8.2, -3.5); g.quadraticCurveTo(9.4, -4.2, 10.6, -5.6 + f); g.quadraticCurveTo(10.4, -2.6, 11.4, -0.2 + f * 0.5); g.quadraticCurveTo(9.4, -1.2, 8.2, -2.3); g.quadraticCurveTo(5.4, -2, 2.4, -1.4); g.closePath(); g.fillStyle = red; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()   // 꼬리 — 몸 속에서 가늘게 이어져 나와 지느러미로 벌어진다(이음새가 뜨지 않게)
-  const B = new Path2D(); B.ellipse(0, -9.6, 8.2, 8.8, 0, 0, TAU)
+  const S = mochiSegs(16.4, 17.4, 0.5, 0, true, 0.54), hw = 8.2, m = -9.7, be = hw * 0.22, cy = m + (-1 - m) * 0.35   // 가운데(m)가 가장 넓고 아래로 점점 좁아지는 몸
+  S.splice(1, 3, [hw, m, hw, cy, hw * 0.5, -1, be, -1], [be, -1, be * 0.35, -0.7, -be * 0.35, -0.7, -be, -1], [-be, -1, -hw * 0.5, -1, -hw, cy, -hw, m])
+  const B = segPath(S)
   g.fillStyle = '#fbfaf8'; g.fill(B); g.save(); g.clip(B)
   g.fillStyle = '#efa1a1'; g.fillRect(-9, -7.8, 18, 1.4); g.fillStyle = red; g.fillRect(-9, -6.4, 18, 7)
   g.strokeStyle = 'rgba(70,20,20,.6)'; g.lineWidth = 0.5; for (const [yy, ox] of [[-4.6, 0], [-2, 1.4]]) { g.beginPath(); for (let x = -8 + ox; x < 8; x += 2.8) { g.moveTo(x, yy); g.arc(x + 1.4, yy, 1.4, Math.PI, 0, true) } g.stroke() }
