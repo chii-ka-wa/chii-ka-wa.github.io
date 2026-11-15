@@ -182,7 +182,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const res = await page.evaluate(() => ({ txt: document.querySelector('#ui .coin')?.textContent, coin: JSON.parse(localStorage.getItem('mjg.v1')).coin }))
     if (!/토벌 보상금 \+\d+/.test(res.txt) || !(res.coin >= 40)) errors.push('[shop] 보상금 ' + JSON.stringify(res))
     await page.locator('#ui .row button', { hasText: '상점' }).click(); await page.waitForTimeout(400)
-    await page.locator('.shop .buy').first().click()
+    await page.locator('.shop li:not(.stone) .buy').first().click()   // 맨 위 부활석 말고 첫 강화(체력)
     const after = await page.evaluate(() => { const sv = JSON.parse(localStorage.getItem('mjg.v1')); return { coin: sv.coin, manju: sv.up.manju } })
     if (after.manju !== 1 || after.coin !== res.coin - 40) errors.push('[shop] 사기 ' + JSON.stringify({ res, after }))
     await page.screenshot({ path: OUT + 'shop.png' }); await noEmoji(page, 'shop')
@@ -238,6 +238,19 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const d = await page.evaluate(() => ({ book: Math.round(window.__mjg.G.dmg.book || 0), pile: Math.round(window.__mjg.G.dmg.pile || 0) }))
     console.log('kani', k, d)
     if (k.id !== 'book' || k.n1 !== k.n0 + 1 || k.pile !== 2 || !d.book || !d.pile) errors.push('[kani] 헌책 날리기 · 헌책 더미 ' + JSON.stringify({ k, d }))
+  })
+
+  await run('revive', { width: 390, height: 844 }, async page => {   // 부활석 — 쓰러지면 묻고, 누르면 체력 가득 · 화면 안 일반 몬스터 토벌 · 하나 줄어든다. 어려움은 한 판에 한 번(남아도 결과 화면)
+    await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'hard', stone: 3, noStats: true }))); await page.reload(); await page.waitForTimeout(500)
+    const h0 = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); const h = M.pl.hp; for (let i = 0; i < 400; i++) { M.G.queue.length = 0; M.pl.inv = 9; M.step(1 / 30) } return h })
+    const die = () => page.evaluate(() => { const M = window.__mjg; M.pl.hp = 0; M.G.dying = 0.01; M.step(1 / 30); return M.mode })
+    const m1 = await die(), foes0 = await page.evaluate(() => window.__mjg.G.foes.filter(e => !e.dead && !e.boss).length)
+    await page.screenshot({ path: OUT + 'revive.png' }); await noEmoji(page, 'revive')
+    await page.locator('#ui .revive .btn.main').click()
+    const r = await page.evaluate(h0 => { const M = window.__mjg, G = M.G; return { mode: M.mode, full: M.pl.hp === h0, inv: M.pl.inv >= 1.2, stone: JSON.parse(localStorage.getItem('mjg.v1')).stone, revives: G.revives, foes: G.foes.filter(e => !e.dead && !e.boss).length } }, h0)
+    const m2 = await die()
+    console.log('revive', m1, foes0, r, m2)
+    if (m1 !== 'revive' || r.mode !== 'play' || !r.full || !r.inv || r.stone !== 2 || r.revives !== 1 || !(r.foes < foes0) || m2 !== 'over') errors.push('[revive] 부활석 ' + JSON.stringify({ m1, foes0, r, m2 }))
   })
 
   await run('awaken', { width: 1280, height: 800 }, async page => {   // 각성 — Lv 8 이 있어야 보스가 각성의 별을 떨어뜨리고, 각성 상자(카드 하나 · 리롤 꺼짐)에서 고르면 세지고, 기타 음표가 적 탄을 반쯤 막는다

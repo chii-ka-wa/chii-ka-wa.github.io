@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '상점에 부활석(1,000) — 쓰러지면 「부활할까요?」 창이 떠서 하나 써서 다시 일어나요. 체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 1.2초 무적 · 화면 안 일반 몬스터를 모두 토벌(보스 빼고). 한 판에 쉬움 3 · 보통 2 · 어려움 1번까지',
     '20~25분 난이도 완화 · 25분부터 더 어렵게 — 보통 적 피가 20분 → 24분에 2.6배로 뛰던 것을 1.7배로(24분 기준 예전의 2/3), 대신 세이렌이 나오는 25분부터 가파르게 올라 27분 뒤로는 예전보다 단단해요(30분 1.3배). 닿으면 아픈 정도도 20~25분은 천천히, 25분부터 빠르게. 20분 뒤 고블린 폭탄 · 돌격대 간격 15~19초 → 20~26초, 20~25분 보스 넷 → 셋(요리사 괴물 21:30 → 22:00 · 중간보스 거대 키메라 23:00 → 23:30 · 24분 중간보스 데카츠요는 빠져요)',
     '아노코 · 세이렌 · 인어의 꼬리가 앞(가는 쪽)에 붙어 있던 것 — 다른 친구들처럼 등 쪽(가는 쪽 반대)으로',
   ]],
@@ -270,9 +271,9 @@ const STATUS = {
 const ST_T = 8   // 상태이상 지속(초)
 // 난이도 — 어려움이 원래 토벌(배수 1). 쉬움 · 보통은 적 체력 ↓ · 경험치 ↑ · 줍는 것 ↑ · 멀리서 쏘는 일반 몬스터가 안 나온다(보스는 쏜다)
 const DIFF = {
-  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false, coin: 1, dmg: 0.6 },
-  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false, coin: 1.25, dmg: 0.8 },
-  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true, coin: 1.5, dmg: 1 },   // coin = 토벌 보상금 배수 · dmg = 받는 피해 배수
+  easy: { name: '쉬움', hp: 0.6, xp: 1.5, drop: 2, shot: false, coin: 1, dmg: 0.6, revive: 3 },
+  normal: { name: '보통', hp: 0.8, xp: 1.25, drop: 1.5, shot: false, coin: 1.25, dmg: 0.8, revive: 2 },
+  hard: { name: '어려움', hp: 1, xp: 1, drop: 1, shot: true, coin: 1.5, dmg: 1, revive: 1 },   // coin = 토벌 보상금 배수 · dmg = 받는 피해 배수 · revive = 한 판에 부활석을 쓸 수 있는 횟수
 }
 { const E = DIFF.easy, pc = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`   // 설명은 쉬움 기준 — 배수를 바꾸면 글도 따라 바뀐다
   for (const d of Object.values(DIFF)) d.note = (d === E ? '기준 난이도 — 처음이라면 여기서' : `쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)} · 받는 피해 ${pc(d.dmg / E.dmg - 1)} · 보상금 ${pc(d.coin / E.coin - 1)}`) + (d.shot ? ' · 멀리서 쏘는 몬스터도 나온다' : ' · 멀리서 쏘는 몬스터 없음') }
@@ -283,7 +284,8 @@ const LS = 'mjg.v1'
 const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = { t 가장 오래 버틴 초, kills, lvl, clears }
 try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 if (!DIFF[save.diff]) save.diff = 'normal'
-save.up ||= {}; save.coin = Math.max(0, save.coin | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금
+save.up ||= {}; save.coin = Math.max(0, save.coin | 0); save.stone = Math.max(0, save.stone | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금 · 가진 부활석
+const STONE = 1000   // 부활석 값(상점) — 쓰러졌을 때 하나 써서 다시 일어난다(판마다 DIFF.revive 번까지)
 save.ach ||= { clear: save.clears || 0 }   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
@@ -1554,6 +1556,12 @@ const ICO = {
     for (let k = 0; k < 8; k++) { const a = k * TAU / 8 + 0.2; g.beginPath(); g.moveTo(Math.cos(a) * 10, Math.sin(a) * 10 + 0.5); g.lineTo(Math.cos(a) * 13, Math.sin(a) * 13 + 0.5); g.stroke() }
     starP(g, 0, 0.5, 10, 4.4); ink(g, '#ffd23f', 1.5); starP(g, 0, 0.5, 4.6, 2); g.fillStyle = '#fff6c2'; g.fill()
   },
+  stone: g => {   // 부활석 — 하늘색 보석 · 가운데 분홍 하트
+    g.beginPath(); g.moveTo(0, -11.5); g.lineTo(9.4, -3.6); g.lineTo(6, 10.5); g.lineTo(-6, 10.5); g.lineTo(-9.4, -3.6); g.closePath(); ink(g, '#9fe3ff', 1.5)
+    g.strokeStyle = 'rgba(61,48,43,.3)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-9.4, -3.6); g.lineTo(9.4, -3.6); g.moveTo(0, -11.5); g.lineTo(-3.4, -3.6); g.lineTo(-2.4, 10.5); g.moveTo(0, -11.5); g.lineTo(3.4, -3.6); g.lineTo(2.4, 10.5); g.stroke()
+    g.beginPath(); g.moveTo(0, 6.6); g.bezierCurveTo(-5.6, 2.6, -4, -2.4, 0, 0.2); g.bezierCurveTo(4, -2.4, 5.6, 2.6, 0, 6.6); ink(g, '#ff7aa8', 1)
+    g.fillStyle = 'rgba(255,255,255,.8)'; el(g, -4.6, -5.6, 1.2, 2, 0.6); g.fill()
+  },
   parry: g => { starP(g, 0, 0, 12, 6, 8, 0); ink(g, '#ffd23f', 1.4); el(g, 0, 0, 4.2); ink(g, '#9aa3ad', 1.3); g.lineCap = 'round'; g.lineWidth = 1.3; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-1.6, -3); g.lineTo(0.6, -0.4); g.lineTo(-0.6, 1.2); g.lineTo(1.4, 3.2); g.stroke() },   // 막았다 — 금빛 불꽃 속 금 간 탄
   cheer: party,
   // 난이도
@@ -1690,8 +1698,8 @@ addEventListener('keydown', e => {
   if ((k || e.code === 'Space') && mode === 'play') e.preventDefault()
   if (SND.open?.()) { if (e.code === 'Escape') SND.close(); return }   // 소리 창이 떠 있으면 Esc 로 닫기만
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
-  if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat && (mode === 'pause' || (mode === 'box' && BOX?.jack)) && !(tabbed && e.target.closest?.('#ui button'))) {   // 쉬는 창 · 일시정지 → 계속하기, 잭팟 → 셋 다 받기(Tab 으로 고른 단추는 그 단추)
-    e.preventDefault(); return mode === 'pause' ? resume() : BOX.act('take')
+  if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat && (mode === 'pause' || mode === 'revive' || (mode === 'box' && BOX?.jack)) && !(tabbed && e.target.closest?.('#ui button'))) {   // 쉬는 창 · 일시정지 → 계속하기, 부활할까요 → 부활하기, 잭팟 → 셋 다 받기(Tab 으로 고른 단추는 그 단추)
+    e.preventDefault(); return mode === 'pause' ? resume() : mode === 'revive' ? revive() : BOX.act('take')
   }
   if (mode === 'box') boxKey(e)
   if (mode === 'chars' && !e.repeat) {
@@ -1736,7 +1744,7 @@ function newGame(ch) {
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
-    aw: new Set(), arr: b, parried: 0,   // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
+    aw: new Set(), arr: b, parried: 0, revives: 0,   // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
   }
   S = null; addWeapon(ch.w); stats(); pl.hp = S.maxHp
   cam.x = cam.y = 0; shake = 0; calm()
@@ -2272,7 +2280,7 @@ function gainXp(v) {
 function step(dt) {
   G.t += dt
   const dead = G.dying > 0
-  if (dead && (G.dying -= dt / 0.3) <= 0) return finish(false)   // 쓰러지는 동안은 느린 화면(dt 는 0.3배로 들어온다)
+  if (dead && (G.dying -= dt / 0.3) <= 0) return save.stone > 0 && G.revives < G.D.revive ? askRevive() : finish(false)   // 쓰러지는 동안은 느린 화면(dt 는 0.3배로 들어온다)
   if (G.won && (G.won -= dt) <= 0) return finish(true)
   if (G.t >= END_T && !dead && !G.won) { G.endKind = 'time'; return finish(true) }   // 30분 — 검은 별똥별에게서 끝까지 도망쳤다
   // 나
@@ -2505,9 +2513,29 @@ function openBox() {
 function next() {
   BOX = null
   if (G.queue.length) return openBox()
-  ui.hidden = true; mode = 'play'; pauseBtn.hidden = false
-  fx({ k: 'pillar', T: 0.7 }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 170, T: 0.5, col: '#7ff3ff' })   // 레벨 업 빛기둥 — 둘레를 비우고 1.2초 무적(고르자마자 몰려 맞지 않게)
+  ui.hidden = true; mode = 'play'; pauseBtn.hidden = false; breather()
+}
+/** 레벨 업 빛기둥 — 둘레를 비우고 1.2초 무적(고르자마자 몰려 맞지 않게). 부활할 때도 */
+function breather() {
+  fx({ k: 'pillar', T: 0.7 }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 170, T: 0.5, col: '#7ff3ff' })
   regrid(); shove(170, 700); near(pl.x, pl.y, 170, e => { slow(e, 1, 0.4) }); pl.inv = Math.max(pl.inv, 1.2)
+}
+/** 쓰러졌을 때 — 부활석이 있고 이번 판 횟수가 남았으면 물어본다 */
+function askRevive() {
+  mode = 'revive'; calm(); pauseBtn.hidden = true; SND.duck(true)
+  show(h('div', { class: 'panel revive' }, h('p', { class: 'h' }, ic('stone'), ' 부활할까요?'),
+    h('p', { class: 'sub' }, `부활석 ${save.stone}개 — 이번 판 ${G.revives} / ${G.D.revive}번 썼어요(${G.D.name})`),
+    h('p', { class: 'hint' }, '부활하면 체력이 가득 차고, 화면 안의 몬스터를 모두 쓰러뜨려요(보스 빼고)'),
+    h('div', { class: 'row' }, btn('그만두기', () => finish(false)), btn([ic('stone'), ' 부활하기'], revive, 'main', 'Enter'))))
+}
+function revive() {
+  if (mode !== 'revive' || !save.stone) return
+  save.stone--; G.revives++; persist()
+  G.dying = 0; G.killer = null; pl.hp = S.maxHp; G.eshots.length = 0
+  mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; SND.duck(false); SND.level(); SND.voice(G.ch.id, 'happy')
+  for (const e of G.foes) if (!e.dead && !e.boss && !e.rush && onScreen(e, 40)) kill(e)   // 폭탄 — 화면 안 일반 몬스터 토벌
+  fx({ k: 'white', T: 0.4 }); shake = 8; breather()
+  say(`부활! — 부활석 ${save.stone}개 남았어요`, 2.2, '#9fe3ff')
 }
 function boxKey(e) {
   if (!BOX || e.repeat) return
@@ -2862,6 +2890,7 @@ function guide() {
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
       h('li', {}, '업적 — 처음 화면 「업적」. 판이 끝날 때 쌓여서 동 · 은 · 금메달을 따요. 금메달 하나마다 토벌 보상금 +1%.'),
       h('li', {}, '판이 끝나면 토벌 보상금(버틴 시간 · 처치 · 보스 · 클리어, 어려울수록 더) — 처음 화면 「상점」에서 체력 · 힘 같은 영구 강화를 조금씩 살 수 있어요. 다 사도 같은 아이템 한 레벨 정도예요.'),
+      h('li', {}, `부활석 — 상점에서 ${STONE.toLocaleString()}에 사 두면, 쓰러졌을 때 하나 써서 다시 일어날 수 있어요(체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 잠깐 무적 · 화면 안 일반 몬스터 토벌). 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지.`),
       h('li', {}, '난이도 — ', Object.entries(DIFF).map(([k, d], i) => [i ? ' / ' : '', ic(k), ` ${d.name}: ${d.note}`]), '. 기록은 난이도마다 따로.'),
       h('li', {}, '10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.'),
       h('li', {}, `${FINAL_T / 60}분에 세이렌과 인어 셋이 나와요. 세이렌을 쓰러뜨리면 토벌 성공!`),
@@ -2996,15 +3025,17 @@ function shop() {
   const have = h('p', { class: 'coin' }), list = h('ul', { class: 'list shop' })
   const draw = () => {
     have.replaceChildren(ic('coin'), ` 모은 토벌 보상금 ${save.coin.toLocaleString()}`)
-    list.replaceChildren(...Object.entries(SHOP).map(([id, u]) => {
+    const stone = h('li', { class: 'stone' }, ic('stone'), h('div', {}, h('b', {}, '부활석', h('small', {}, `${save.stone}개`)), h('span', {}, `쓰러지면 하나 써서 다시 일어나요 — 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지`)),
+      h('button', { type: 'button', class: 'btn buy', disabled: save.coin < STONE, onclick: () => { if (save.coin < STONE) return; save.coin -= STONE; save.stone++; persist(); draw() } }, [ic('coin'), ` ${STONE.toLocaleString()}`]))
+    list.replaceChildren(stone, ...Object.entries(SHOP).map(([id, u]) => {
       const lv = save.up[id] || 0, full = lv >= u.max, cost = u.cost * (lv + 1)
       return h('li', {}, ic(id), h('div', {}, h('b', {}, u.name, h('small', { 'aria-label': `${lv} / ${u.max}칸` }, '●'.repeat(lv) + '○'.repeat(u.max - lv))), h('span', {}, `${u.lab} ${u.val(u.per * lv)}`, full ? ' (끝)' : ` → ${u.val(u.per * (lv + 1))}`)),
         h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? '다 샀어요' : [ic('coin'), ` ${cost}`]))
     }))
   }
   draw()
-  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, '영구 강화 상점'), have,
-    h('div', { class: 'scroll' }, h('p', { class: 'shop-note' }, '판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요'), list), h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
+  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, '상점'), have,
+    h('div', { class: 'scroll' }, h('p', { class: 'shop-note' }, '판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요. 부활석은 쓰면 없어져요'), list), h('div', { class: 'row' }, btn('← 처음으로', title, 'main'))))
 }
 
 // ---------------------------------------------------------------- 돌리기
