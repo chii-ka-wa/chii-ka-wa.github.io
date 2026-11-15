@@ -28,7 +28,7 @@ async function music(b, name, id, dur) {
 
 ;(async () => {
   const b = await chromium.launch()
-  if (process.env.FFMPEG) { await music(b, 'field', 'chiikawa', 24); await music(b, 'siren', '', 16) }
+  if (process.env.FFMPEG) { await music(b, 'field', 'chiikawa', 28); await music(b, 'siren', '', 16) }
   const p = await b.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFactor: 2 })
   p.on('pageerror', e => console.log('pageerror', e.message))
   await p.addInitScript(() => { window.requestAnimationFrame = () => 0; localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'normal', bgm: 0, sfx: 0, noStats: true, zoom: 0.85 })) })   // 게임 루프를 멈추고 직접 한 프레임씩 · 조금 넓게 보기
@@ -75,15 +75,17 @@ async function music(b, name, id, dur) {
     }
     // 게임 한 프레임 — 둥글게 걸어 다니고(방향키), 체력이 줄면 채워 주고, 레벨 업 상자 · 쉬는 창은 잠깐 보여 준 뒤 넘긴다
     const held = {}, keys = (dx, dy) => { const want = { KeyW: dy < -0.38, KeyS: dy > 0.38, KeyA: dx < -0.38, KeyD: dx > 0.38 }; for (const c in want) if (!!held[c] !== want[c]) { dispatchEvent(new KeyboardEvent(want[c] ? 'keydown' : 'keyup', { code: c })); held[c] = want[c] } }
-    const steer = () => { const a = M.G.t * 0.45; keys(Math.cos(a), Math.sin(a)) }   // 크게 원을 그리며 걷는다
+    const steer = () => { if (W.__still) return keys(0, 0); const a = M.G.t * 0.45; keys(Math.cos(a), Math.sin(a)) }   // 크게 원을 그리며 걷는다(__still 이면 멈춰 선다)
     const hover = () => {   // 보스 장면 — 세로 화면에 보스가 잘리지 않게 보스를 캐릭터 조금 위로 천천히 끌어 둔다(세이렌은 원래 멀찍이 떨어져 있으려 해서)
       const e = W.__follow && M.G.foes.find(f => f.kind === W.__follow && !f.dead); if (!e) return
       e.x += (M.pl.x + Math.cos(M.G.t * 0.7) * 60 - e.x) * 0.1; e.y += (M.pl.y - 100 - e.y) * 0.1
       const D = M.G.dark, a = Math.PI / 2 + Math.sin(M.G.t * 0.9) * 1.9; if (D) { D.x += (M.pl.x + Math.cos(a) * 170 - D.x) * 0.15; D.y += (M.pl.y + Math.sin(a) * 140 - D.y) * 0.15 }   // 검은 별똥별도 화면 안에서 나를 둘러 막 돌아다니게 — 닿지 않을 만큼 떨어져, 위(세이렌 자리)는 빼고 옆 · 아래로 오간다
     }
     let top = 0, hold = 0
-    W.__seg = (calm = 0, follow = null) => { top = 0; hold = 0; W.__shown = follow ? 1 : 0; W.__calm = calm; W.__follow = follow; M.pl.inv = 0; if (calm) for (const e of M.G.foes) if (!e.boss && Math.random() > calm) e.dead = true }   // calm — 보스가 잘 보이게 일반 적을 덜어 내고 더 나오지 않게
+    W.__seg = (calm = 0, follow = null) => { top = 0; hold = 0; W.__still = 0; W.__shown = follow ? 1 : 0; W.__calm = calm; W.__follow = follow; M.pl.inv = 0; if (calm) for (const e of M.G.foes) if (!e.boss && Math.random() > calm) e.dead = true }   // calm — 보스가 잘 보이게 일반 적을 덜어 내고 더 나오지 않게
     W.__frame = () => {
+      const aw = M.mode === 'box' && document.querySelector('#ui .box.awaken'); document.getElementById('pcap').style.opacity = aw ? 0 : 1   // 각성 상자 — 1.5초 보여 주고 W.__pick 카드를 눌러 고른다(자막은 상자를 가리지 않게 잠깐 숨김)
+      if (aw) { if (++hold > 45) { ([...aw.querySelectorAll('.card')].find(c => c.textContent.includes(W.__pick)) || aw.querySelector('.card')).click(); hold = 0 } return M.mode }
       if (M.mode === 'box') { if (W.__shown || ++hold > 28) { M.pick0(); hold = 0; W.__shown = 1 } return M.mode }
       if (M.mode === 'pause') { if (++hold > 36) { M.resume(); hold = 0 } return M.mode }
       if (M.mode !== 'play') return M.mode
@@ -111,7 +113,21 @@ async function music(b, name, id, dur) {
   await p.evaluate(() => { window.__mjg.startGame(0); window.__card('title', 0) })
   await card('title', 75)                                                                                                       // 0 ~ 2.5초 — 제목
   await p.evaluate(() => window.__ff(600))
-  await play(240, '몰려오는 몬스터를 스킬로 싹!', '레벨 업마다 스킬 · 아이템을 골라 키워요', ['shot-b.png', 'crowd'])            // 10분 — 스킬 난무 · 레벨 업 상자
+  await play(180, '몰려오는 몬스터를 스킬로 싹!', '레벨 업마다 스킬 · 아이템을 골라 키워요', ['shot-b.png', 'crowd'])            // 10분 — 스킬 난무 · 레벨 업 상자
+  await p.evaluate(() => { window.__pick = '사스마타' })
+  await play(150, '보스를 쓰러뜨리면 「각성의 별」!', 'Lv 8 스킬 하나가 각성해요', [], i => p.evaluate(i => {   // 10분 — 고블린 대장을 쓰러뜨리면 각성의 별 → 각성 상자에서 사스마타 각성
+    const M = window.__mjg, G = M.G, W = window
+    if (i === 0) { const w = G.weapons.find(x => x.id === 'sasu'); G.aw.delete('sasu'); w.lv = 8; w.st = M.wstat(w); const e = W.__king = G.foes.find(f => f.kind === 'goblinKing' && !f.mid && !f.dead) || M.summon('goblinKing'); for (const f of G.foes) if (f.boss && f !== e) f.dead = true; e.x = M.pl.x + 40; e.y = M.pl.y - 180; e.hp = Math.min(e.hp, e.max * 0.3) }   // 이 장면의 보스 하나만(남은 중간보스는 조용히 치운다)
+    const e = W.__king; if (!e.dead && i >= 20) e.hp = Math.min(e.hp, 1)
+    G.rest = null; G.items = G.items.filter(it => it.k === 'awaken')   // 쉬는 창 · 보물상자는 건너뛰고 각성의 별만
+    const it = G.items[0]; if (it && i > 50) { it.x += (M.pl.x - it.x) * 0.35; it.y += (M.pl.y - it.y) * 0.35 }   // 걸어가는 나에게 날아와 먹힌다
+  }, i), 0, 'goblinKing')
+  await play(120, '각성하면 날아오는 것도 막아요!', '사스마타가 탄을 쳐 내요 — 스킬마다 다른 막기', [], i => p.evaluate(i => {   // 멀리서 쏘는 적에게 둘러싸여도 각성한 사스마타가 탄을 쳐 낸다
+    const M = window.__mjg, G = M.G, W = window
+    if (i === 0) { W.__still = 1; W.__shown = 1; for (const f of G.foes) if (!f.boss) f.dead = true; W.__ring = [...'sososo'].map((k, j) => { const a = j / 6 * Math.PI * 2 + 0.3, e = M.spawn(k === 's' ? 'spiker' : 'octo', M.pl.x + Math.cos(a) * 210, M.pl.y + Math.sin(a) * 190); e.hp = e.max = 1e6; e.cd = 0.15 + j * 0.2; return [e, a] }) }
+    for (const [e, a] of W.__ring) { e.x = M.pl.x + Math.cos(a) * 210; e.y = M.pl.y + Math.sin(a) * 190 }   // 제자리에서 쏘기만
+  }, i), 1)
+  console.log('awakened', await p.evaluate(() => { for (const [e] of window.__ring) e.dead = true; window.__mjg.G.eshots.length = 0; return [...window.__mjg.G.aw].join(',') }))   // 쏘던 적은 치운다
   await p.evaluate(() => { window.__ff(1203); window.__near('anoko') })
   await play(165, '20분 — 커다란 토벌!', '보스 「아노코」 등장', ['shot-c.png', 80], null, 0.45, 'anoko')                                                        // 20분 — 아노코
   await p.evaluate(() => { window.__ff(window.__mjg.FINAL_T + 1.5); window.__near('siren') })

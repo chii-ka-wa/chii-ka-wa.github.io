@@ -198,7 +198,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.locator('#ui .row button', { hasText: '처음으로' }).click(); await page.waitForTimeout(300)
     await page.locator('#ui .row button', { hasText: '업적' }).click(); await page.waitForTimeout(400)
     const list = await page.evaluate(() => ({ rows: document.querySelectorAll('.ach li').length, head: document.querySelector('#ui .coin')?.textContent, bad: [...document.querySelectorAll('img.medal')].filter(i => !i.naturalWidth).length }))
-    if (list.rows !== 12 || !/금메달 2 \/ 12 — 토벌 보상금 \+2%/.test(list.head) || list.bad) errors.push('[ach] 업적 화면 ' + JSON.stringify(list))
+    if (list.rows !== 15 || !/금메달 2 \/ 15 — 토벌 보상금 \+2%/.test(list.head) || list.bad) errors.push('[ach] 업적 화면 ' + JSON.stringify(list))
     await page.screenshot({ path: OUT + 'ach.png' }); await noEmoji(page, 'ach')
   })
   await run('perf', { width: 1280, height: 800 }, async page => {   // 자동 화질 — 처음보다 많이 느려지면 픽셀을 줄이고, 30fps 로 묶인 기기는 괜히 안 내리고, 새 판은 되돌린다
@@ -256,10 +256,10 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
         w.t = 0; w.on = 0; step(1); const o = G.shots.find(s => s.k === 'orb'); if (!o) continue
         const b = { k: 'spike', x: o.x, y: o.y, vx: 0, vy: 0, t: 0, life: 9, dmg: 1, r: 5 }; G.eshots = [b]; step(1); hit += b.dead ? 1 : 0; G.eshots = []
       }
-      out.block = hit / 200; return out
+      out.block = hit / 200; out.parried = G.parried; return out
     })
     console.log('awaken', r)
-    if (r.before || !r.after || r.cards !== 1 || !r.rr || !r.aw || !(r.block >= 0.3 && r.block <= 0.7)) errors.push('[awaken] 각성 ' + JSON.stringify(r))
+    if (r.before || !r.after || r.cards !== 1 || !r.rr || !r.aw || !(r.block >= 0.3 && r.block <= 0.7) || r.parried !== Math.round(r.block * 200)) errors.push('[awaken] 각성 ' + JSON.stringify(r))
   })
 
   await run('dark', { width: 1280, height: 800 }, async page => {   // 29분 검은 별똥별 — 나오고 · 스킬에 안 맞고 · 30분에 생존 클리어

@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-15', [
+    '각성 업적 셋 — 각성한 토벌대(각성시킨 스킬) · 각성 도감(각성해 본 스킬 종류, 16종 모두면 금메달) · 다 막아 냈다(각성 스킬로 막은 날아오는 것)',
     '각성 스킬 대규모 업데이트 — Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 「각성의 별」이 떨어져요. 먹으면 Lv 8 스킬 하나를 골라 각성(스킬마다 한 레벨 몫쯤 세지고, 날아오는 것을 확률로 막아요 — 사스마타는 쳐 내고 · 기타 음표는 막고 · 헌책 더미는 벽이 되고 · 카레 폭발은 태우고 …). 각성 상자는 스킵 · 제외가 없고, 고를 스킬이 넷 이상이면 리롤(레벨 업 상자와 따로 두 번). 스킬마다 각성 효과는 도감 · 일시정지에서',
     '덜 쓰이던 스킬 강화(Lv 8 기준) — 사스마타 찌르기 피해 32 → 48 · 관통 4 → 8 · 개수 3 → 4 · 쿨타임 0.9 → 0.8초 · 더 굵게 / 건배! 피해 24 → 40 · 튕김 8 → 10 · 개수 2 → 3 · 쿨타임 1.3 → 1.1초 · 더 빠르고 멀리 튕겨요 / 헌책 날리기 피해 16 → 38 · 관통 3 → 7 · 쿨타임 1 → 0.9초 · 책장이 더 크고 멀리 / 내놔! 맞힌 적 둘레도 30% 피해로 할퀴어요',
     '한 마리씩 노리는 스킬은 가까운 적부터 — 어떻게든 돼라!(화면 안 아무 적 → 가까운 적), 풀뽑기(가까운 10마리 중 아무나 → 가까운 적), 내놔!(보스 · 정예 다음은 피 많은 적 → 가까운 적)',
@@ -242,6 +243,9 @@ const ACH = {
   goblin: { name: '고블린 퇴치', note: '쓰러뜨린 고블린(돌격대 · 황금 고블린 포함)', ico: 'a_goblin', tiers: [2000, 20000, 100000] },
   pajama: { name: '파자마 파티즈 팬클럽', note: '꿀맛 페스티벌 공연을 본 횟수', ico: 'pajama', tiers: [10, 50, 200] },
   lv8: { name: '토벌 달인', note: '판이 끝날 때 Lv 8 이던 스킬(판마다 더한다)', ico: 'license', tiers: [10, 60, 250] },
+  aw: { name: '각성한 토벌대', note: '각성시킨 스킬(판마다 더한다)', ico: 'awaken', tiers: [5, 30, 100] },
+  awdex: { name: '각성 도감', note: `각성해 본 스킬(종류 — 모두 ${Object.keys(WEAP).length})`, ico: 'book', tiers: [3, 8, Object.keys(WEAP).length] },
+  parry: { name: '다 막아 냈다', note: '각성 스킬로 막은 날아오는 것', ico: 'parry', tiers: [50, 500, 3000] },
   coin: { name: '부자 토벌대', note: '번 토벌 보상금', ico: 'coin', tiers: [1000, 10000, 50000] },
   jackpot: { name: '복권 당첨', note: '터진 잭팟', ico: 'clover', tiers: [5, 25, 100] },
   boss: { name: '커다란 토벌', note: '쓰러뜨린 보스(세이렌 포함 · 중간보스 빼고)', ico: 'a_dekatsuyo', tiers: [10, 50, 150] },
@@ -252,7 +256,7 @@ const ACH = {
   nohit: { name: '스치지도 않았다', note: '처음 5분을 한 번도 안 맞고 버틴 판', ico: 'armor', tiers: [1, 3, 10] },
 }
 const TIER = ['', '동메달', '은메달', '금메달']
-const achVal = id => id === 'runs' ? save.runs : id === 'friends' ? new Set(Object.entries(save.best).filter(([, b]) => b.clears).map(([k]) => k.split('.')[0])).size : save.ach[id] || 0
+const achVal = id => id === 'runs' ? save.runs : id === 'awdex' ? (save.awSeen || []).length : id === 'friends' ? new Set(Object.entries(save.best).filter(([, b]) => b.clears).map(([k]) => k.split('.')[0])).size : save.ach[id] || 0
 const tierOf = id => ACH[id].tiers.filter(n => achVal(id) >= n).length
 const golds = () => Object.keys(ACH).filter(id => tierOf(id) === 3).length
 const STATUS = {
@@ -1544,6 +1548,7 @@ const ICO = {
     for (let k = 0; k < 8; k++) { const a = k * TAU / 8 + 0.2; g.beginPath(); g.moveTo(Math.cos(a) * 10, Math.sin(a) * 10 + 0.5); g.lineTo(Math.cos(a) * 13, Math.sin(a) * 13 + 0.5); g.stroke() }
     starP(g, 0, 0.5, 10, 4.4); ink(g, '#ffd23f', 1.5); starP(g, 0, 0.5, 4.6, 2); g.fillStyle = '#fff6c2'; g.fill()
   },
+  parry: g => { starP(g, 0, 0, 12, 6, 8, 0); ink(g, '#ffd23f', 1.4); el(g, 0, 0, 4.2); ink(g, '#9aa3ad', 1.3); g.lineCap = 'round'; g.lineWidth = 1.3; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-1.6, -3); g.lineTo(0.6, -0.4); g.lineTo(-0.6, 1.2); g.lineTo(1.4, 3.2); g.stroke() },   // 막았다 — 금빛 불꽃 속 금 간 탄
   cheer: party,
   // 난이도
   easy: sprout, normal: bigStar,
@@ -1725,7 +1730,7 @@ function newGame(ch) {
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
-    aw: new Set(), arr: b,   // 각성한 스킬 · 각성 상자 리롤(따로 센다)
+    aw: new Set(), arr: b, parried: 0,   // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
   }
   S = null; addWeapon(ch.w); stats(); pl.hp = S.maxHp
   cam.x = cam.y = 0; shake = 0; calm()
@@ -1806,7 +1811,7 @@ const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
 function parry(b) {
   if (b.dead || !G.aw.has(SRC) || (b.tried ||= new Set()).has(SRC)) return false
   b.tried.add(SRC); if (rnd() >= AW[SRC].p) return false
-  b.dead = true; fx({ k: 'ring', x: b.x, y: b.y, R: 18, T: 0.3, col: '#ffd23f' })
+  b.dead = true; G.parried++; fx({ k: 'ring', x: b.x, y: b.y, R: 18, T: 0.3, col: '#ffd23f' })
   if (G.fx.length < 150 && rnd() < 0.35) fx({ k: 'text', x: b.x, y: b.y - 22, s: '막았다!', col: '#ffd23f', T: 0.6 })
   return true
 }
@@ -2959,7 +2964,7 @@ function bounty(win) {
 /** 판이 끝나면 업적 누적을 더하고, 새로 딴 메달 [id, 단계] 를 돌려준다 */
 function achieve(win, coin) {
   const A = save.ach, before = Object.fromEntries(Object.keys(ACH).map(id => [id, tierOf(id)])), add = (k, n) => { A[k] = (A[k] || 0) + n }
-  add('goblin', G.gob); add('pajama', G.pj); add('lv8', G.weapons.filter(w => w.lv >= 8).length); add('coin', coin); add('jackpot', G.jackpots); add('boss', G.bosses)
+  add('goblin', G.gob); add('pajama', G.pj); add('lv8', G.weapons.filter(w => w.lv >= 8).length); add('aw', G.aw.size); add('parry', G.parried); save.awSeen = [...new Set([...(save.awSeen || []), ...G.aw])]; add('coin', coin); add('jackpot', G.jackpots); add('boss', G.bosses)
   if (win) { add(G.endKind === 'time' ? 'survive' : 'clear', 1); if (G.diff === 'hard') add('hard', 1) }
   if (G.t >= 300 && (G.hit0 ?? G.t) >= 300) add('nohit', 1)
   return Object.keys(ACH).filter(id => tierOf(id) > before[id]).map(id => [id, tierOf(id)])
@@ -3020,4 +3025,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { render, autoQ, addWeapon, WEAP, PLAN, wstat, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
