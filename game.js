@@ -81,6 +81,9 @@ const AW = {
 const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
+  ['2026-11-16', [
+    '아노코의 꼬리가 앞(가는 쪽)에 붙어 있던 것 — 다른 친구들처럼 등 쪽(가는 쪽 반대)으로',
+  ]],
   ['2026-11-15', [
     '각성 업적 셋 — 각성한 토벌대(각성시킨 스킬) · 각성 도감(각성해 본 스킬 종류, 16종 모두면 금메달) · 다 막아 냈다(각성 스킬로 막은 날아오는 것)',
     '각성 스킬 대규모 업데이트 — Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 「각성의 별」이 떨어져요. 먹으면 Lv 8 스킬 하나를 골라 각성(스킬마다 한 레벨 몫쯤 세지고, 날아오는 것을 확률로 막아요 — 사스마타는 쳐 내고 · 기타 음표는 막고 · 헌책 더미는 벽이 되고 · 카레 폭발은 태우고 …). 각성 상자는 스킵 · 제외가 없고, 고를 스킬이 넷 이상이면 리롤(레벨 업 상자와 따로 두 번). 스킬마다 각성 효과는 도감 · 일시정지에서',
@@ -1148,8 +1151,8 @@ function anoko(g, p = {}) {
   g.rotate(f * 0.04)   // 걸을 때 살짝 좌우로 — 「파파 파야이야」 춤처럼
   mochi(g, {
     fur, limb: brown, W: 23, H, mid: 0.4, arms: 'none',
-    back: g => {   // 올리브색 용 꼬리 — 오른쪽 아래에서 위로 휘며 가늘어지고, 아랫면(안쪽)은 마디진 흰 비늘. 걸음마다 끝이 흔들린다
-      g.save(); g.translate(8, y(0.86)); g.rotate(f * 0.07)
+    back: g => {   // 올리브색 용 꼬리 — 등 쪽(보는 쪽 반대 · 왼쪽) 아래에서 위로 휘며 가늘어지고, 아랫면(안쪽)은 마디진 흰 비늘. 걸음마다 끝이 흔들린다(오른쪽 그림을 거울로)
+      g.save(); g.translate(-8, y(0.86)); g.scale(-1, 1); g.rotate(f * 0.07)
       const T = new Path2D(); T.moveTo(-3, -5.4); T.bezierCurveTo(4, -6.4, 8.6, -9.4, 10.6, -16.6); T.quadraticCurveTo(12.6, -9.6, 9.4, -3.6); T.bezierCurveTo(6.6, 0.6, 1, 2, -3, 2.2); T.closePath()
       const U = new Path2D(); U.moveTo(-3, -5.4); U.bezierCurveTo(4, -6.4, 8.6, -9.4, 10.6, -16.6); U.bezierCurveTo(10.4, -11, 8, -6.2, 3, -3.6); U.quadraticCurveTo(0, -2.4, -3, -2.2); U.closePath()   // 안쪽(몸 쪽) 흰 비늘 띠
       g.lineJoin = 'round'; g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(T); g.fillStyle = '#7d9466'; g.fill(T); g.fillStyle = '#f6f2ea'; g.fill(U)
