@@ -17,7 +17,7 @@ const DARK_T = 29 * 60, END_T = 30 * 60   // 세이렌을 못 쓰러뜨리면 29
 
 // 캐릭터 — w 시작 스킬, mod 고유 특성
 const CHARS = [
-  { id: 'chiikawa', name: '치이카와', w: 'sasu', hp: 100, trait: '울보 근성', note: '체력이 절반 아래면 공격력 +30% · 경험치 +10%', mod: { clutch: 0.3, growth: 0.1 } },
+  { id: 'chiikawa', name: '치이카와', w: 'sasu', hp: 100, trait: '울보 근성', note: '체력이 절반 이하면 공격력 +30%, 레벨업마다 +1%씩 더 · Lv 50부터는 체력과 상관없이 늘 · 경험치 +10%', mod: { clutch: 0.3, growth: 0.1 } },
   { id: 'hachiware', name: '하치와레', w: 'guitar', hp: 110, trait: '어떻게든 돼라!', note: '행운 +20% · 잭팟 확률 2배 · 리롤 · 스킵 · 제외 +1', mod: { luck: 0.2, jackpot: 1, boxes: 1 } },
   { id: 'usagi', name: '우사기', w: 'stick', hp: 100, trait: '야하!', note: '이동 속도 +20% · 공격력 +10%', mod: { move: 0.2, might: 0.1 } },
   { id: 'momonga', name: '모몽가', w: 'momo', hp: 90, trait: '내 거야!', note: '보스 · 정예에게 주는 피해 +30% · 이동 속도 +15%', mod: { bossX: 0.3, move: 0.15 } },
@@ -62,6 +62,7 @@ const synOf = id => SYN.find(s => id in s[1])
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-15', [
+    '치이카와 강화 — 울보 근성(체력 절반 이하면 공격력 +30%)이 레벨업마다 +1%씩 더 세지고(Lv 20이면 +49%), Lv 50부터는 체력과 상관없이 늘 켜져요',
     '세이렌을 쓰러뜨리면 세이렌과 (나와 있던) 검은 별똥별이 갑자기 사라지지 않고 둥실 떠오르며 사라져요',
     '첫 보스 데카츠요를 덜 무섭게(무섭다는 의견) — 뾰족한 이빨 줄 · 길게 늘어진 혀 · 세 손가락 팔 대신 반짝이는 큰 눈 · 발그레 볼 · 작은 송곳니가 보이는 벌린 웃음 · 끝이 동그란 팔 · 짧은 다리 · 끝이 둥근 뿔. 기술은 그대로예요',
     '그림 손질 — 세이렌을 주인공들처럼 큰 머리와 몸으로 나누고(팔이 붙는 목에서 들어가요) 아랫몸은 꼬리 쪽으로 갸름하게, 인어도 몸 가운데부터 아래로 점점 갸름하게',
@@ -1843,7 +1844,7 @@ function weapons(dt) {
   const CD = S.cdr * (G.help.some(h => h.k === 'pajama') ? 0.75 : 1)   // 파자마 파티즈 응원 — 쿨타임 -25%
   for (const w of G.weapons) {
     SRC = w.id
-    const st = w.st, A = st.area * S.area, D = st.dmg * S.might * (G.ch.mod.clutch && pl.hp < S.maxHp / 2 ? 1 + G.ch.mod.clutch : 1)   // 치이카와 — 체력 절반 아래
+    const st = w.st, A = st.area * S.area, D = st.dmg * S.might * (G.ch.mod.clutch && (G.lvl >= 50 || pl.hp <= S.maxHp / 2) ? 1 + G.ch.mod.clutch + 0.01 * (G.lvl - 1) : 1)   // 치이카와 — 체력 절반 이하(Lv 50부터는 늘) 공격력 +30% + 레벨업마다 1%
     if (w.id === 'ura') {   // 쿨타임마다 둘레 전부
       w.R = 70 * A; w.pulse = Math.max(0, (w.pulse || 0) - dt)
       if ((w.t -= dt) <= 0) {
