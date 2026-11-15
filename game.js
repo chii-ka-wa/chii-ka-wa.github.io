@@ -83,7 +83,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 const PATCH = [
   ['2026-11-16', [
     '20~25분 난이도 완화 · 25분부터 더 어렵게 — 보통 적 피가 20분 → 24분에 2.6배로 뛰던 것을 1.7배로(24분 기준 예전의 2/3), 대신 세이렌이 나오는 25분부터 가파르게 올라 27분 뒤로는 예전보다 단단해요(30분 1.3배). 닿으면 아픈 정도도 20~25분은 천천히, 25분부터 빠르게. 20분 뒤 고블린 폭탄 · 돌격대 간격 15~19초 → 20~26초, 20~25분 보스 넷 → 셋(요리사 괴물 21:30 → 22:00 · 중간보스 거대 키메라 23:00 → 23:30 · 24분 중간보스 데카츠요는 빠져요)',
-    '아노코의 꼬리가 앞(가는 쪽)에 붙어 있던 것 — 다른 친구들처럼 등 쪽(가는 쪽 반대)으로',
+    '아노코 · 세이렌 · 인어의 꼬리가 앞(가는 쪽)에 붙어 있던 것 — 다른 친구들처럼 등 쪽(가는 쪽 반대)으로',
   ]],
   ['2026-11-15', [
     '각성 업적 셋 — 각성한 토벌대(각성시킨 스킬) · 각성 도감(각성해 본 스킬 종류, 16종 모두면 금메달) · 다 막아 냈다(각성 스킬로 막은 날아오는 것)',
@@ -1223,8 +1223,8 @@ function siren(g, angry = false, p = {}) {
   const f = p.foot || 0, red = '#d46a6a', deep = '#9c4040', black = '#1f1715', px = g.getTransform().a
   const CY = -17.2, RX = 14.6, RY = 16.2   // 몸 — 위로 길쭉(상체가 높다)
   const wave = x => -8.6 + 1.3 * (1 - (x / RX) ** 2)   // 아랫몸 경계 — 가운데가 앞으로 볼록
-  // 꼬리 — 인어와 같은 모양으로 짧게: 오른쪽 아래 몸 속에서 가늘게 이어져 나와 지느러미로 벌어진다(걸음마다 살랑)
-  g.save(); g.scale(1.45, 1.45)
+  // 꼬리 — 인어와 같은 모양으로 짧게: 등 쪽(보는 쪽 반대 · 왼쪽) 아래 몸 속에서 가늘게 이어져 나와 지느러미로 벌어진다(걸음마다 살랑) — 오른쪽 그림을 거울로
+  g.save(); g.scale(-1.45, 1.45)
   g.beginPath(); g.moveTo(3, -5.2); g.quadraticCurveTo(6.4, -3.6, 8.2, -3.5); g.quadraticCurveTo(9.4, -4.2, 10.6, -5.6 + f * 0.6); g.quadraticCurveTo(10.4, -2.6, 11.4, -0.2 + f * 0.3); g.quadraticCurveTo(9.4, -1.2, 8.2, -2.3); g.quadraticCurveTo(5.4, -2, 2.4, -1.4); g.closePath()
   g.fillStyle = red; g.fill(); g.lineWidth = LW / 1.45; g.strokeStyle = OUT; g.stroke()
   g.strokeStyle = 'rgba(120,40,40,.45)'; g.lineWidth = 0.3; g.beginPath(); for (const [x, y] of [[10.2, -4.6], [10.4, -2.8], [10.6, -1]]) { g.moveTo(8.6, -2.9); g.lineTo(x, y) } g.stroke()   // 지느러미 결
@@ -1306,7 +1306,9 @@ function siren(g, angry = false, p = {}) {
 const MER = [{ red: '#d86868' }, { red: '#e07a8e' }, { red: '#d9785a' }]
 function mermaid(g, o, p = {}) {
   const f = p.foot || 0, red = o.red
+  g.save(); g.scale(-1, 1)   // 꼬리는 등 쪽(보는 쪽 반대 · 왼쪽) — 오른쪽 그림을 거울로
   g.beginPath(); g.moveTo(3, -5.2); g.quadraticCurveTo(6.4, -3.6, 8.2, -3.5); g.quadraticCurveTo(9.4, -4.2, 10.6, -5.6 + f); g.quadraticCurveTo(10.4, -2.6, 11.4, -0.2 + f * 0.5); g.quadraticCurveTo(9.4, -1.2, 8.2, -2.3); g.quadraticCurveTo(5.4, -2, 2.4, -1.4); g.closePath(); g.fillStyle = red; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()   // 꼬리 — 몸 속에서 가늘게 이어져 나와 지느러미로 벌어진다(이음새가 뜨지 않게)
+  g.restore()
   const S = mochiSegs(16.4, 17.4, 0.5, 0, true, 0.54), hw = 8.2, m = -9.7, be = hw * 0.22, cy = m + (-1 - m) * 0.35   // 가운데(m)가 가장 넓고 아래로 점점 좁아지는 몸
   S.splice(1, 3, [hw, m, hw, cy, hw * 0.5, -1, be, -1], [be, -1, be * 0.35, -0.7, -be * 0.35, -0.7, -be, -1], [-be, -1, -hw * 0.5, -1, -hw, cy, -hw, m])
   const B = segPath(S)
