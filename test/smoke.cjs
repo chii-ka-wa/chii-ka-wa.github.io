@@ -112,13 +112,16 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.screenshot({ path: OUT + '8-siren2.png' })
     // 남은 피를 줄여 클리어까지
     await page.evaluate(() => { const M = window.__mjg, F = M.G.final; for (const m of F.mermaids) m.hp = Math.min(m.hp, 1); F.siren.hp = Math.min(F.siren.hp, 50); F.siren.x = M.pl.x + 70; F.siren.y = M.pl.y })   // 세이렌을 옆으로 — 멀리 가 있어 클리어가 늦는 일이 없게
-    const sent = []   // 익명 통계 — 가짜 주소로 돌려 실제로 보내는 줄 · 머리말을 확인(진짜 Supabase 에는 안 간다)
-    page.on('request', q => { if (q.url().startsWith('https://stats.invalid/')) sent.push({ url: q.url(), h: q.headers(), body: q.postDataJSON() }) })   // 받는 건 request 이벤트로 — keepalive 요청은 route 에 가끔 안 잡힌다
+    // 익명 통계 — 가짜 주소로 돌려 게임이 보내는 주소 · 머리말 · 내용을 확인(진짜 Supabase 에는 안 간다). keepalive 요청은 Playwright 의 route · request 이벤트에 가끔 안 잡혀서 fetch 를 감싸 받아 둔다
     await page.route('https://stats.invalid/**', rt => rt.fulfill({ status: 201, body: '' }))
-    await page.evaluate(() => Object.assign(window.__mjg.STATS, { url: 'https://stats.invalid', key: 'sb_publishable_test', host: location.hostname }))
+    await page.evaluate(() => {
+      Object.assign(window.__mjg.STATS, { url: 'https://stats.invalid', key: 'sb_publishable_test', host: location.hostname })
+      const f0 = window.fetch; window.__sent = []
+      window.fetch = (url, o = {}) => { if (String(url).startsWith('https://stats.invalid/')) window.__sent.push({ url: String(url), h: o.headers, body: JSON.parse(o.body) }); return f0(url, o) }
+    })
     r = await sim(page, F + 200, { god: true }); console.log('clear', r)
     if (r.mode !== 'over') errors.push('[desktop] 세이렌을 쓰러뜨리지 못함 ' + JSON.stringify(r))
-    for (let i = 0; i < 30 && !sent.length; i++) await page.waitForTimeout(100)   // 보낼 때까지 기다린다
+    const sent = await page.evaluate(() => window.__sent)
     const st = sent[0]; console.log('stat sent', sent.length, JSON.stringify(st?.body))
     if (sent.length !== 1 || typeof st.body.up !== 'number' || !st.url.endsWith('/rest/v1/runs') || st.h.apikey !== 'sb_publishable_test' || st.body.result !== 'clear' || st.body.killer !== null || st.body.diff !== 'hard') errors.push('[desktop] 통계 보내기 ' + JSON.stringify(st))
     await page.evaluate(() => { window.__mjg.STATS.url = '' })
@@ -235,6 +238,28 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const d = await page.evaluate(() => ({ book: Math.round(window.__mjg.G.dmg.book || 0), pile: Math.round(window.__mjg.G.dmg.pile || 0) }))
     console.log('kani', k, d)
     if (k.id !== 'book' || k.n1 !== k.n0 + 1 || k.pile !== 2 || !d.book || !d.pile) errors.push('[kani] 헌책 날리기 · 헌책 더미 ' + JSON.stringify({ k, d }))
+  })
+
+  await run('awaken', { width: 1280, height: 800 }, async page => {   // 각성 — Lv 8 이 있어야 보스가 각성의 별을 떨어뜨리고, 각성 상자(카드 하나 · 리롤 꺼짐)에서 고르면 세지고, 기타 음표가 적 탄을 반쯤 막는다
+    const r = await page.evaluate(() => {
+      const M = window.__mjg, out = {}; M.startGame(1); const G = M.G, w = G.weapons[0]
+      const step = n => { for (let i = 0; i < n; i++) { M.pl.inv = 1e9; M.pl.hp = 1e6; M.step(1 / 30) } }
+      const calm = () => { while (M.mode === 'box') M.pick0(); G.queue.length = 0; G.gems.length = 0; G.rest = null; if (M.mode !== 'play') M.resume() }
+      const boss = () => { const e = M.summon('dekatsuyo'); e.hp = 1; for (let n = 0; !e.dead && n < 300; n++) { e.x = M.pl.x + 80; e.y = M.pl.y; step(1) } const k = G.items.map(i => i.k); calm(); return k }
+      out.before = boss().includes('awaken'); G.items.length = 0
+      w.lv = 8; w.st = M.wstat(w); const it = boss(); out.after = it.includes('awaken')
+      G.queue.push('awaken'); step(1)
+      out.cards = document.querySelectorAll('#ui .card.a').length; out.rr = document.querySelector('#ui .btn.act')?.disabled
+      const n0 = w.st.n; M.pick0(); out.aw = G.aw.has('guitar') && w.st.n === n0 + 1
+      G.foes.forEach(f => { f.dead = true }); let hit = 0
+      for (let k = 0; k < 200; k++) {
+        w.t = 0; w.on = 0; step(1); const o = G.shots.find(s => s.k === 'orb'); if (!o) continue
+        const b = { k: 'spike', x: o.x, y: o.y, vx: 0, vy: 0, t: 0, life: 9, dmg: 1, r: 5 }; G.eshots = [b]; step(1); hit += b.dead ? 1 : 0; G.eshots = []
+      }
+      out.block = hit / 200; return out
+    })
+    console.log('awaken', r)
+    if (r.before || !r.after || r.cards !== 1 || !r.rr || !r.aw || !(r.block >= 0.3 && r.block <= 0.7)) errors.push('[awaken] 각성 ' + JSON.stringify(r))
   })
 
   await run('dark', { width: 1280, height: 800 }, async page => {   // 29분 검은 별똥별 — 나오고 · 스킬에 안 맞고 · 30분에 생존 클리어

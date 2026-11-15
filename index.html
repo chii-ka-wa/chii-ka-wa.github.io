@@ -143,6 +143,9 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .card kbd { position: absolute; top: 6px; right: 10px }
 .box:not(.ready) .card { pointer-events: none }
 .box.banning .card { border-color: #ff5b5b; box-shadow: 0 4px 0 #ff5b5b }
+.box.banning .card.keep { opacity: .45; border-color: var(--ink); box-shadow: 0 4px 0 var(--ink); cursor: not-allowed }   /* 가진 스킬은 제외 못 한다 */
+.box.awaken { background: linear-gradient(#ffe3f4, var(--card) 60%) }
+.card.a { background: #fff3fb; border-color: #e85bb5; box-shadow: 0 4px 0 #e85bb5 }
 .box.jackpot .card { cursor: default }
 .hint { margin: 4px 0 0; color: var(--soft); font-size: 15px }
 .btn.act { font-size: 16px; padding: 8px 14px }

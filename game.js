@@ -29,21 +29,21 @@ const CHARS = [
 
 // 스킬 — cd 쿨타임(초) · dmg 피해 · n 개수 · area 크기 배수 · spd 속도 배수 · dur 지속(초) · pierce 꿰뚫는 수. ups[i] = 레벨 i+2 가 될 때 더하는 것(최고 Lv 8)
 const WEAP = {
-  book: { name: '헌책 날리기', note: '헌책을 펼치면 책장이 가까운 적 쪽으로 부채꼴을 그리며 차례로 날아간다 — 몰려 있는 적에게 좋다', how: '앞쪽 부채꼴로 책장 날리기', cd: 1.3, dmg: 8, n: 3, pierce: 1, ups: [{ n: 1 }, { dmg: 3 }, { pierce: 1 }, { n: 1 }, { cd: -0.3 }, { dmg: 5 }, { n: 1, pierce: 1 }] },   // 카니 시작 스킬
+  book: { name: '헌책 날리기', note: '헌책을 펼치면 책장이 가까운 적 쪽으로 부채꼴을 그리며 차례로 날아간다 — 몰려 있는 적에게 좋다', how: '앞쪽 부채꼴로 책장 날리기', cd: 1.2, dmg: 20, n: 3, pierce: 4, ups: [{ n: 1 }, { dmg: 8 }, { pierce: 1 }, { n: 1 }, { cd: -0.3 }, { dmg: 10 }, { n: 1, pierce: 2 }] },   // 카니 시작 스킬
   pile: { name: '헌책 더미', note: '지나온 자리에 헌책을 쌓아 둔다 — 적이 닿으면 기우뚱하다 와르르 무너져 둘레에 피해. 쫓아오는 적에게 좋다', how: '지나온 자리에 무너지는 덫', cd: 2.2, dmg: 24, dur: 8, ups: [{ dmg: 8 }, { n: 1 }, { area: 0.2 }, { cd: -0.4 }, { dmg: 10 }, { n: 1 }, { area: 0.2, dmg: 12 }] },
-  sasu: { name: '사스마타 찌르기', note: '가장 가까운 적에게 사스마타를 찔러 넣는다 — 꿰뚫는다', how: '가까운 적을 꿰뚫어 찌르기', cd: 1.1, dmg: 11, pierce: 2, ups: [{ n: 1 }, { dmg: 5 }, { cd: -0.2 }, { n: 1 }, { dmg: 6 }, { pierce: 2 }, { dmg: 10 }] },
+  sasu: { name: '사스마타 찌르기', note: '가장 가까운 적에게 사스마타를 찔러 넣는다 — 꿰뚫는다', how: '가까운 적을 꿰뚫어 찌르기', cd: 1, dmg: 16, pierce: 3, ups: [{ n: 1 }, { dmg: 8 }, { cd: -0.2 }, { n: 1 }, { dmg: 10 }, { pierce: 3 }, { n: 1, dmg: 14, pierce: 2 }] },
   stick: { name: '토벌봉', note: '봉을 휘두르면 양 끝에서 폭발이 일어난다(두 번째는 위아래로)', how: '양옆을 휘둘러 끝이 폭발', cd: 1.5, dmg: 13, ups: [{ dmg: 5 }, { area: 0.15 }, { cd: -0.25 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { dmg: 10 }] },
   yaha: { name: '야하!', note: '높이 뛰어올라 내려찍으면 둘레에 충격파 — 밀쳐 낸다', how: '뛰어올라 내 둘레 충격파', cd: 3.2, dmg: 26, ups: [{ area: 0.15 }, { dmg: 10 }, { cd: -0.5 }, { area: 0.15 }, { dmg: 12 }, { n: 1 }, { dmg: 18, area: 0.15 }] },
   ura: { name: '우라!', note: '기합을 계속 질러 둘레의 적에게 피해를 준다', how: '내 둘레에 계속 피해', cd: 0.45, dmg: 4, ups: [{ area: 0.1 }, { dmg: 1 }, { area: 0.1 }, { cd: -0.08 }, { dmg: 2 }, { area: 0.1 }, { dmg: 2 }] },
-  weed: { name: '풀뽑기', note: '풀뽑기 검정 5급의 솜씨 — 적 발밑의 풀을 뽑아 터뜨린다', how: '적 발밑이 터짐', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
+  weed: { name: '풀뽑기', note: '풀뽑기 검정 5급의 솜씨 — 가까운 적 발밑의 풀을 뽑아 터뜨린다', how: '적 발밑이 터짐', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
   tears: { name: '와아… (울음)', note: '눈물이 높이 튀어 멀리 떨어진 자리를 적신다', how: '멀리 있는 적에게 물폭탄', cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
   guitar: { name: '하치와레의 기타', note: '음표가 몸 둘레를 돌며 적을 쳐 낸다', how: '음표가 내 둘레를 돎', cd: 2.2, dmg: 9, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 3 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 4, dur: 1 }] },
-  nantoka: { name: '어떻게든 돼라!', note: '화면 안 적에게 별이 번개처럼 꽂힌다', how: '화면 안 적에게 번개', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
+  nantoka: { name: '어떻게든 돼라!', note: '가까운 적부터 별이 번개처럼 꽂힌다', how: '가까운 적에게 번개', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
   ramen: { name: '라멘 국물', note: '근처 바닥에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다', how: '바닥 장판 · 느리게', cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
   curry: { name: '극매운 카레', note: '적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배', how: '적이 몰린 곳에 큰 폭발', cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
   pochette: { name: '포셰트 부메랑', note: '던지면 되돌아오는 포셰트 — 오가며 계속 맞힌다', how: '갔다 돌아오는 부메랑', cd: 1.8, dmg: 10, ups: [{ dmg: 4 }, { n: 1 }, { area: 0.25 }, { dmg: 5 }, { n: 1 }, { spd: 0.3 }, { n: 1 }] },
-  momo: { name: '내놔!', note: '가장 강한 적(보스 · 정예 먼저)에게 달려들어 낚아채는 큰 한 방', how: '가장 센 적에게 큰 한 방', cd: 1.9, dmg: 38, ups: [{ dmg: 14 }, { n: 1 }, { cd: -0.3 }, { dmg: 18 }, { n: 1 }, { cd: -0.3 }, { dmg: 30 }] },
-  kanpai: { name: '건배!', note: '잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다', how: '적 사이를 튕겨 다니기', cd: 1.6, dmg: 9, pierce: 1, bounce: 3, ups: [{ bounce: 1 }, { dmg: 4 }, { n: 1 }, { bounce: 2 }, { dmg: 5 }, { cd: -0.3 }, { bounce: 2, dmg: 6 }] },
+  momo: { name: '내놔!', note: '보스 · 정예 먼저, 없으면 가장 가까운 적에게 달려들어 낚아채는 큰 한 방 — 둘레도 조금 할퀸다', how: '보스 · 가까운 적에게 큰 한 방', cd: 1.9, dmg: 38, ups: [{ dmg: 14 }, { n: 1 }, { cd: -0.3 }, { dmg: 18 }, { n: 1 }, { cd: -0.3 }, { dmg: 30 }] },
+  kanpai: { name: '건배!', note: '잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다', how: '적 사이를 튕겨 다니기', cd: 1.4, dmg: 18, pierce: 1, bounce: 4, ups: [{ bounce: 2 }, { dmg: 6 }, { n: 1 }, { bounce: 2 }, { dmg: 8 }, { cd: -0.3 }, { n: 1, bounce: 2, dmg: 8 }] },
   sword: { name: '랏코 선생의 일섬', note: '화면을 가로지르는 칼바람 — 줄 위의 적을 모두 벤다', how: '화면을 가로지르는 베기', cd: 2.4, dmg: 20, ups: [{ dmg: 7 }, { area: 0.25 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.25 }, { n: 1, dmg: 10 }] },
 }
 const UP = { n: v => `개수 +${v}`, dmg: v => `피해 +${v}`, cd: v => `쿨타임 ${v}초`, area: v => `범위 +${Math.round(v * 100)}%`, spd: v => `속도 +${Math.round(v * 100)}%`, dur: v => `지속 +${v}초`, pierce: v => `관통 +${v}`, bounce: v => `튕김 +${v}` }
@@ -59,9 +59,34 @@ const SYN = [
   ['카니의 헌책방', { book: { n: 1, pierce: 1 }, pile: { n: 1, area: 0.2 } }],
 ]
 const synOf = id => SYN.find(s => id in s[1])
+// 각성 — Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 「각성의 별」. 수치는 한 레벨 몫쯤만 오르고(up), 모두 날아오는 것(적 탄)을 p 확률로 막는다 — 탄 하나에 스킬마다 한 번 굴린다(parry)
+const AW = {
+  book: { name: '헌책방 대방출', note: '날아가는 책장이 날아오는 것에 닿으면 40% 확률로 막는다', up: { n: 1, dmg: 4 }, p: 0.4 },
+  pile: { name: '헌책 성벽', note: '세워 둔 헌책 더미가 날아오는 것을 60% 확률로 막는 벽이 된다', up: { dmg: 10 }, p: 0.6 },
+  sasu: { name: '사스마타 쳐 내기', note: '찌르는 사스마타가 날아오는 것에 닿으면 50% 확률로 쳐 낸다', up: { dmg: 8, pierce: 2 }, p: 0.5 },
+  stick: { name: '토벌봉 회오리', note: '휘두를 때 둘레의 날아오는 것을 50% 확률로 쳐 낸다', up: { dmg: 8, area: 0.1 }, p: 0.5 },
+  yaha: { name: '야하야하!', note: '충격파가 퍼지며 날아오는 것을 45% 확률로 날려 버린다', up: { dmg: 12 }, p: 0.45 },
+  ura: { name: '우라라라!', note: '기합이 닿는 둘레로 날아온 것을 30% 확률로 튕겨 낸다', up: { dmg: 2, area: 0.1 }, p: 0.3 },
+  weed: { name: '풀뽑기 검정 3급', note: '풀이 뽑혀 터지는 자리의 날아오는 것을 50% 확률로 덮친다', up: { n: 1, dmg: 6 }, p: 0.5 },
+  tears: { name: '엉엉 대홍수', note: '눈물이 떨어진 자리(멀리서 쏘는 적 둘레)의 날아오는 것을 60% 확률로 씻어 낸다', up: { n: 1, dmg: 8 }, p: 0.6 },
+  guitar: { name: '하치와레 라이브', note: '도는 음표가 날아오는 것에 닿으면 50% 확률로 막는다', up: { n: 1, dmg: 3 }, p: 0.5 },
+  nantoka: { name: '어떻게든 됐다!', note: '별 번개가 칠 때마다 가까이 날아오는 것 하나를 40% 확률로 떨어뜨린다', up: { n: 1, dmg: 8 }, p: 0.4 },
+  ramen: { name: '특제 진한 국물', note: '국물 장판 위로 날아오는 것을 35% 확률로 녹인다', up: { dmg: 3, area: 0.15 }, p: 0.35 },
+  curry: { name: '지옥의 카레', note: '매운 폭발이 둘레의 날아오는 것을 60% 확률로 태운다', up: { dmg: 12, area: 0.1 }, p: 0.6 },
+  pochette: { name: '포셰트 방패', note: '오가는 포셰트가 날아오는 것에 닿으면 50% 확률로 막는다', up: { n: 1, dmg: 5 }, p: 0.5 },
+  momo: { name: '다 내놔!', note: '낚아챌 때마다 가까이 날아오는 것 하나를 45% 확률로 같이 낚아챈다', up: { dmg: 30 }, p: 0.45 },
+  kanpai: { name: '모두 건배!', note: '잔이 날아오는 것에 부딪치면 50% 확률로 깨뜨린다', up: { bounce: 2, dmg: 6 }, p: 0.5 },
+  sword: { name: '진 · 일섬', note: '칼바람이 줄 위의 날아오는 것도 60% 확률로 벤다', up: { dmg: 10, area: 0.2 }, p: 0.6 },
+}
+const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-15', [
+    '각성 스킬 대규모 업데이트 — Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 「각성의 별」이 떨어져요. 먹으면 Lv 8 스킬 하나를 골라 각성(스킬마다 한 레벨 몫쯤 세지고, 날아오는 것을 확률로 막아요 — 사스마타는 쳐 내고 · 기타 음표는 막고 · 헌책 더미는 벽이 되고 · 카레 폭발은 태우고 …). 각성 상자는 스킵 · 제외가 없고, 고를 스킬이 넷 이상이면 리롤(레벨 업 상자와 따로 두 번). 스킬마다 각성 효과는 도감 · 일시정지에서',
+    '덜 쓰이던 스킬 강화(Lv 8 기준) — 사스마타 찌르기 피해 32 → 48 · 관통 4 → 8 · 개수 3 → 4 · 쿨타임 0.9 → 0.8초 · 더 굵게 / 건배! 피해 24 → 40 · 튕김 8 → 10 · 개수 2 → 3 · 쿨타임 1.3 → 1.1초 · 더 빠르고 멀리 튕겨요 / 헌책 날리기 피해 16 → 38 · 관통 3 → 7 · 쿨타임 1 → 0.9초 · 책장이 더 크고 멀리 / 내놔! 맞힌 적 둘레도 30% 피해로 할퀴어요',
+    '한 마리씩 노리는 스킬은 가까운 적부터 — 어떻게든 돼라!(화면 안 아무 적 → 가까운 적), 풀뽑기(가까운 10마리 중 아무나 → 가까운 적), 내놔!(보스 · 정예 다음은 피 많은 적 → 가까운 적)',
+    '레벨 업 상자의 제외 — 이미 가진 스킬은 뺄 수 없어요',
+    '어려움 — 멀리서 쏘는 몬스터(가면 키메라 · 복어 · 문어)가 나오는 비중을 3/4로',
     '치이카와 강화 — 울보 근성(공격력 +30%)이 켜지는 체력 기준이 레벨업마다 +1%씩 넓어져요(Lv 1은 50% 이하 · Lv 2는 51% 이하 · Lv 20은 69% 이하), Lv 50부터는 체력과 상관없이 늘 켜져요',
     '세이렌을 쓰러뜨리면 세이렌과 (나와 있던) 검은 별똥별이 갑자기 사라지지 않고 둥실 떠오르며 사라져요',
     '첫 보스 데카츠요를 덜 무섭게(무섭다는 의견) — 뾰족한 이빨 줄 · 길게 늘어진 혀 · 세 손가락 팔 대신 반짝이는 큰 눈 · 발그레 볼 · 작은 송곳니가 보이는 벌린 웃음 · 끝이 동그란 팔 · 짧은 다리 · 끝이 둥근 뿔. 기술은 그대로예요',
@@ -154,6 +179,7 @@ const ITEMS = {
   pajama: { name: '꿀맛 페스티벌 티켓', note: '파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%' },
   battery: { name: '건전지', note: '한잎이 · 두잎이가 6초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다' },
   chest: { name: '보물상자', note: '보스가 떨어뜨린다 — 잭팟 확률 50%' },
+  awaken: { name: '각성의 별', note: 'Lv 8 스킬이 있을 때 보스(중간보스 빼고)가 떨어뜨린다 — Lv 8 스킬 하나를 각성(조금 세지고 날아오는 것을 가끔 막는다)' },
 }
 
 // 토벌 대상 — r 몸 반지름 · hp(시간이 갈수록 세진다) · spd 이동 · dmg 닿으면 · xp 떨어뜨리는 경험치 · col 터질 때 색
@@ -262,7 +288,7 @@ const killerName = s => !s ? null : typeof s === 'string' ? s : s.kind ? BOSS[s.
 function statRow(result) {
   const b = G.final ? G.final.siren : G.foes.find(e => e.boss && !e.dead)
   return { v: PATCH_ID, ch: G.ch.id, diff: G.diff, result, t: Math.round(G.t), lvl: G.lvl, kills: G.kills, killer: result === 'dead' ? G.killer || null : null,
-    boss: G.dark ? '검은 별똥별' : b ? BOSS[b.kind]?.name ?? null : null, weapons: G.weapons.map(w => w.id + w.lv).join(' '), touch: matchMedia('(hover: none)').matches,
+    boss: G.dark ? '검은 별똥별' : b ? BOSS[b.kind]?.name ?? null : null, weapons: G.weapons.map(w => w.id + (G.aw.has(w.id) ? 9 : w.lv)).join(' '), touch: matchMedia('(hover: none)').matches,
     up: Object.values(save.up).reduce((a, n) => a + n, 0) }   // 상점에서 산 영구 강화 칸 수(0 = 강화 없이)
 }
 function report(result) {
@@ -1513,6 +1539,11 @@ const ICO = {
     g.fillStyle = '#ffd23f'; for (const x of [-8, 6]) { rr(g, x, -8.4, 2.2, 18.4, 0.6); g.fill() }
     rr(g, -2.6, -3.4, 5.2, 5.6, 1); ink(g, '#ffd23f', 1.1); el(g, 0, -0.8, 0.8); g.fillStyle = OUT; g.fill()
   },
+  awaken: g => {   // 각성의 별 — 분홍 빛살 · 금별
+    g.lineCap = 'round'; g.lineWidth = 1.6; g.strokeStyle = '#ff9be0'
+    for (let k = 0; k < 8; k++) { const a = k * TAU / 8 + 0.2; g.beginPath(); g.moveTo(Math.cos(a) * 10, Math.sin(a) * 10 + 0.5); g.lineTo(Math.cos(a) * 13, Math.sin(a) * 13 + 0.5); g.stroke() }
+    starP(g, 0, 0.5, 10, 4.4); ink(g, '#ffd23f', 1.5); starP(g, 0, 0.5, 4.6, 2); g.fillStyle = '#fff6c2'; g.fill()
+  },
   cheer: party,
   // 난이도
   easy: sprout, normal: bigStar,
@@ -1694,6 +1725,7 @@ function newGame(ch) {
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
+    aw: new Set(), arr: b,   // 각성한 스킬 · 각성 상자 리롤(따로 센다)
   }
   S = null; addWeapon(ch.w); stats(); pl.hp = S.maxHp
   cam.x = cam.y = 0; shake = 0; calm()
@@ -1728,6 +1760,7 @@ function wstat(w) {
   for (const up of d.ups.slice(0, w.lv - 1)) for (const k in up) st[k] += up[k]
   const s = synOf(w.id)
   if (G.weapons.some(x => x.id === mateOf(w.id))) for (const k in s[1][w.id]) st[k] += s[1][w.id][k]
+  if (G.aw.has(w.id)) for (const k in AW[w.id].up) st[k] += AW[w.id].up[k]
   return st
 }
 function addWeapon(id) {
@@ -1769,6 +1802,17 @@ const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, ...o }) }
 const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < 360) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
 const num = (x, y, v, kind) => { if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
 const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
+/** 각성 스킬(SRC)이 날아오는 것 b 를 AW.p 확률로 막는다 — 탄 하나에 스킬마다 한 번만 굴린다. 막으면 true */
+function parry(b) {
+  if (b.dead || !G.aw.has(SRC) || (b.tried ||= new Set()).has(SRC)) return false
+  b.tried.add(SRC); if (rnd() >= AW[SRC].p) return false
+  b.dead = true; fx({ k: 'ring', x: b.x, y: b.y, R: 18, T: 0.3, col: '#ffd23f' })
+  if (G.fx.length < 150 && rnd() < 0.35) fx({ k: 'text', x: b.x, y: b.y - 22, s: '막았다!', col: '#ffd23f', T: 0.6 })
+  return true
+}
+const parryIn = (x, y, R) => { if (G.aw.has(SRC)) for (const b of G.eshots) if ((b.x - x) ** 2 + (b.y - y) ** 2 < (R + b.r) ** 2) parry(b) }
+/** R 안에서 나에게 다가오는 가장 가까운 날아오는 것 */
+function incoming(R) { let T = null, bd = R * R; for (const b of G.eshots) { const d = (b.x - pl.x) ** 2 + (b.y - pl.y) ** 2; if (!b.dead && d < bd && (pl.x - b.x) * b.vx + (pl.y - b.y) * b.vy > 0) { bd = d; T = b } } return T }
 function splash(x, y, R, dmg, col, sea = 1) { near(x, y, R, e => { hurt(e, dmg, x, y, 60, sea) }); fx({ k: 'boom', x, y, R, col, T: 0.35 }) }
 
 // ---- 스킬 — 한 발씩(여러 개면 0.12초 간격으로)
@@ -1781,30 +1825,32 @@ const SHOT = {
   book(w, st, i, A, D) {   // 첫 장을 날릴 때 가까운 적 쪽을 정하고, 장마다 부채꼴로 조금씩 돌려 차례로
     if (i === 0) { const e = closest(1)[0]; w.aim = e ? Math.atan2(e.y - pl.y, e.x - pl.x) : Math.atan2(pl.face[1], pl.face[0]) }
     const a = w.aim + (i - (w.n - 1) / 2) * 0.26, v = 460 * st.spd * S.speed
-    G.shots.push({ src: SRC, k: 'ball', look: 'page', x: pl.x, y: pl.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 8 * Math.sqrt(A), sc: Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 50, life: 0.65, t: 0, hit: new Set() })
+    G.shots.push({ src: SRC, k: 'ball', look: 'page', x: pl.x, y: pl.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 10 * Math.sqrt(A), sc: Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 50, life: 0.8, t: 0, hit: new Set() })
   },
   sasu(w, st, i, A, D) {
     const e = alive(w.list[i % (w.list.length || 1)]) || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, v = 520 * st.spd * S.speed
-    G.shots.push({ src: SRC, k: 'ball', col: SASU[G.ch.id] || '#d6dde6', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 9 * Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 70, life: 0.75, t: 0, hit: new Set() })
+    G.shots.push({ src: SRC, k: 'ball', col: SASU[G.ch.id] || '#d6dde6', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 13 * Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 70, life: 0.75, t: 0, hit: new Set() })
   },
   stick(w, st, i, A, D) {   // 양옆(첫 번째) · 위아래(두 번째)로 휘두르고 양 끝이 터진다
     const vert = i % 2 === 1, L = 92 * A, Wd = 24 * A, cy = pl.y - 8
     near(pl.x, cy, L + Wd, e => { const ex = Math.abs(e.x - pl.x), ey = Math.abs(e.y - cy); if (vert ? ex < Wd + e.r && ey < L * 0.8 + e.r : ey < Wd + e.r && ex < L + e.r) hurt(e, D, pl.x, cy, 120) })
     for (const s of [-1, 1]) splash(pl.x + (vert ? 0 : s * L), cy + (vert ? s * L * 0.8 : 0), 34 * A, D * 0.7, '#ff8a3d')
+    parryIn(pl.x, cy, L)
     fx({ k: 'swing', x: pl.x, y: cy, L, vert, T: 0.22 }); shake = Math.max(shake, 1.5)
   },
   yaha(w, st, i, A, D) { pl.jump = 0.3; G.shots.push({ src: SRC, k: 'ring', x: pl.x, y: pl.y, t: -0.26, T: 0.32, R: 92 * A, dmg: D, hit: new Set() }) },
-  weed(w, st, i, A, D) { const c = closest(10), e = c.length ? pickOf(c) : null; G.shots.push({ src: SRC, k: 'drop', x: e ? e.x : pl.x + (rnd() - 0.5) * 320, y: e ? e.y : pl.y + (rnd() - 0.5) * 320, t: 0, T: 0.5, R: 46 * A, dmg: D }) },
+  weed(w, st, i, A, D) { const e = alive(w.list[i]) || closest(1)[0]; G.shots.push({ src: SRC, k: 'drop', x: e ? e.x : pl.x + (rnd() - 0.5) * 320, y: e ? e.y : pl.y + (rnd() - 0.5) * 320, t: 0, T: 0.5, R: 46 * A, dmg: D }) },
   tears(w, st, i, A, D) {   // 멀리(150 밖) 있는 화면 안 적 — 움직이는 쪽을 미리 겨눈다
     const far = visible().filter(e => (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 > 150 * 150), e = far.length ? pickOf(far) : closest(1)[0], T = 0.6 / Math.sqrt(st.spd * S.speed)
     const x1 = e ? e.x + e.vx * T : pl.x + pl.face[0] * 260, y1 = e ? e.y + e.vy * T : pl.y + pl.face[1] * 260
     G.shots.push({ src: SRC, k: 'arc', x0: pl.x, y0: pl.y, x1, y1, x: pl.x, y: pl.y, t: 0, T, H: 120, R: 54 * A, dmg: D, u: 0 })
   },
-  nantoka(w, st, i, A, D) {   // 화면 안 아무 적에게 하늘에서 지그재그로
-    const c = visible(); if (!c.length) return
-    const e = pickOf(c), R = 32 * A, { x, y } = e
+  nantoka(w, st, i, A, D) {   // 가까운 적부터(화면 안) 하늘에서 지그재그로
+    const e = alive(w.list[i]) || closest(1)[0]; if (!e || !onScreen(e, 20)) return
+    const R = 32 * A, { x, y } = e
     near(x, y, R, f => { hurt(f, D, x, y, 80) })
     fx({ k: 'bolt', x, y, R, pts: zig(x + (rnd() - 0.5) * 60, y - 440, x, y - 6), T: 0.3 }); fx({ k: 'boom', x, y, R, col: '#ffe066', T: 0.3 })
+    const b = G.aw.has(SRC) && incoming(260); if (b && parry(b)) fx({ k: 'bolt', x: b.x, y: b.y, R: 14, pts: zig(b.x + (rnd() - 0.5) * 40, b.y - 300, b.x, b.y), T: 0.25 })
     shake = Math.max(shake, 2)
   },
   ramen(w, st, i, A, D) { const a = rnd() * TAU, d = 50 + rnd() * 90; G.shots.push({ src: SRC, k: 'zone', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 45 * A, dmg: D, tick: 0, t: 0, life: st.dur * S.dur }) },
@@ -1819,20 +1865,22 @@ const SHOT = {
     G.shots.push({ src: SRC, k: 'pot', x: best ? best.x : pl.x + pl.face[0] * 140, y: best ? best.y : pl.y + pl.face[1] * 140, t: 0, T: 1, R, dmg: D })
   },
   pochette(w, st, i, A, D) { const e = closest(i + 1)[i] || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, s = st.spd * S.speed; G.shots.push({ src: SRC, k: 'boom', x: pl.x, y: pl.y, dx, dy, v: 600 * s, acc: -800 * s, r: 11 * A, dmg: D, hit: new Map(), t: 0, life: 2.4, a: 0 }) },
-  momo(w, st, i, A, D) {   // 가장 강한 적에게 달려들어 낚아챈다
+  momo(w, st, i, A, D) {   // 보스 · 정예 먼저, 없으면 가까운 적에게 달려들어 낚아챈다(둘레도 조금)
     const e = alive(w.list[i]) || strongest(1)[0]; if (!e) return
-    hurt(e, D, pl.x, pl.y, 60); fx({ k: 'grab', x0: pl.x, y0: pl.y - 16, x: e.x, y: e.y - e.r * 1.4, T: 0.3 })
+    hurt(e, D, pl.x, pl.y, 60); near(e.x, e.y, 40 * A, f => { if (f !== e) hurt(f, D * 0.3, e.x, e.y, 90) }); fx({ k: 'boom', x: e.x, y: e.y, R: 40 * A, col: '#ffc2e0', T: 0.25 }); fx({ k: 'grab', x0: pl.x, y0: pl.y - 16, x: e.x, y: e.y - e.r * 1.4, T: 0.3 })
+    const b = G.aw.has(SRC) && incoming(220); if (b && parry(b)) fx({ k: 'grab', x0: pl.x, y0: pl.y - 16, x: b.x, y: b.y, T: 0.25 })
   },
-  kanpai(w, st, i, A, D) { const e = alive(w.list[i % (w.list.length || 1)]) || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, v = 500 * st.spd * S.speed; G.shots.push({ src: SRC, k: 'ball', look: 'cup', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 8 * Math.sqrt(A), dmg: D, pierce: 1, bounce: st.bounce, kb: 40, life: 1.3, t: 0, hit: new Set() }) },
+  kanpai(w, st, i, A, D) { const e = alive(w.list[i % (w.list.length || 1)]) || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, v = 650 * st.spd * S.speed; G.shots.push({ src: SRC, k: 'ball', look: 'cup', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 8 * Math.sqrt(A), dmg: D, pierce: 1, bounce: st.bounce, kb: 40, life: 1.3, t: 0, hit: new Set() }) },
   sword(w, st, i, A, D) {   // 화면 안 아무 적 쪽으로 화면을 가로지르는 칼바람
     const c = visible(), e = c.length ? pickOf(c) : null, a = e ? Math.atan2(e.y - pl.y, e.x - pl.x) : Math.atan2(pl.face[1], pl.face[0])
     const x = pl.x, y = pl.y - 14, dx = Math.cos(a), dy = Math.sin(a), L = Math.max(VW, VH) * 0.9, W = 15 * A
     for (const f of G.foes) { if (f.dead) continue; const ex = f.x - x, ey = f.y - f.r - y, u = ex * dx + ey * dy; if (u > 0 && u < L && Math.abs(ex * dy - ey * dx) < W + f.r) hurt(f, D, x, y, 50) }
+    if (G.aw.has(SRC)) for (const b of G.eshots) { const ex = b.x - x, ey = b.y - y, u = ex * dx + ey * dy; if (u > 0 && u < L && Math.abs(ex * dy - ey * dx) < W + b.r) parry(b) }
     fx({ k: 'beam', x, y, a, L, W, T: 0.3 })
   },
 }
-/** 화면 안 강한 순 n — 보스 > 정예 > 남은 피 */
-function strongest(n) { const v = e => (e.boss ? 2e9 : e.elite ? 1e9 : 0) + e.hp; return visible().sort((a, b) => v(b) - v(a)).slice(0, n) }
+/** 화면 안 n — 보스 > 정예 > 가까운 순 */
+function strongest(n) { const v = e => (e.boss ? 2e9 : e.elite ? 1e9 : 0) - (e.x - pl.x) ** 2 - (e.y - pl.y) ** 2; return visible().sort((a, b) => v(b) - v(a)).slice(0, n) }
 /** 번개 — (x0, y0) 에서 (x1, y1) 까지 지그재그 아홉 점 */
 function zig(x0, y0, x1, y1) {
   const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, pts = [[x0, y0]]
@@ -1848,7 +1896,7 @@ function weapons(dt) {
     if (w.id === 'ura') {   // 쿨타임마다 둘레 전부
       w.R = 70 * A; w.pulse = Math.max(0, (w.pulse || 0) - dt)
       if ((w.t -= dt) <= 0) {
-        w.t = Math.max(0.2, st.cd * CD); w.pulse = 0.2; w.fire = G.t; near(pl.x, pl.y, w.R, e => { hurt(e, D, pl.x, pl.y, 30) })
+        w.t = Math.max(0.2, st.cd * CD); w.pulse = 0.2; w.fire = G.t; near(pl.x, pl.y, w.R, e => { hurt(e, D, pl.x, pl.y, 30) }); parryIn(pl.x, pl.y, w.R)
         if (rnd() < 0.08) fx({ k: 'text', x: pl.x + (rnd() - 0.5) * 30, y: pl.y - 50, s: '우라!', col: '#ffd23f', T: 0.7 })
       }
       continue
@@ -1863,7 +1911,7 @@ function weapons(dt) {
       continue
     }
     if (w.q > 0) { if ((w.qt -= dt) <= 0) { SHOT[w.id](w, st, w.n - w.q, A, D); w.q--; w.qt = 0.12; w.fire = G.t } }
-    else if ((w.t -= dt) <= 0) { w.n = w.q = st.n + S.amount; w.qt = 0; w.t = st.cd * CD; w.list = w.id === 'sasu' || w.id === 'kanpai' ? closest(w.n) : w.id === 'momo' ? strongest(w.n) : [] }
+    else if ((w.t -= dt) <= 0) { w.n = w.q = st.n + S.amount; w.qt = 0; w.t = st.cd * CD; w.list = ['sasu', 'kanpai', 'nantoka', 'weed'].includes(w.id) ? closest(w.n) : w.id === 'momo' ? strongest(w.n) : [] }
   }
 }
 
@@ -1918,7 +1966,7 @@ function spawner(dt) {
     G.spawnT = Math.max(0.09, 0.55 - m * 0.02)
     const n = Math.min(want - G.foes.length, 1 + (m / 1.8 | 0))
     for (let i = 0; i < n; i++) {
-      const far = G.D.shot ? 1 : 0   // 원거리 일반 몬스터(가면 키메라 · 복어 · 문어)는 어려움에서만
+      const far = G.D.shot ? 0.75 : 0   // 원거리 일반 몬스터(가면 키메라 · 복어 · 문어)는 어려움에서만 — 비중 3/4
       const w = [['goblin', 1], ['bug', m < 6 ? 0.7 : 0.3], ['chimera', m >= 1 ? 0.5 + m * 0.03 : 0], ['beetle', m >= 3 ? 0.15 + m * 0.02 : 0], ['star', m >= 5 ? 0.12 + (m - 5) * 0.01 : 0], ['dekatsu', m >= 4 ? 0.1 + m * 0.03 : 0],
         ['spiker', far * (m >= 6 ? 0.1 + (m - 6) * 0.035 : 0)], ['fugu', far * (m >= 8 ? 0.08 + (m - 8) * 0.03 : 0)], ['octo', far * (m >= 12 ? 0.08 + (m - 12) * 0.03 : 0)], ['parttimer', m >= 14 ? 0.05 + (m - 14) * 0.02 : 0]]
       let q = rnd() * w.reduce((s, x) => s + x[1], 0), type = 'goblin'
@@ -2103,7 +2151,7 @@ function kill(e, quiet = false) {
     G.bosses++; G.won = 2.8; G.endKind = 'siren'; const v = e.angry ? SPR.sirenAngry : SPR[e.type]; fx({ k: 'bye', s: (e.fx < 0 ? v.L : v.R)[0], x: e.x, y: e.y, T: 1.6 }); if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; say('세이렌 격파! 토벌 성공!', 3, '#ffd23f')
     for (const f of G.foes) if (!f.dead) kill(f, true)
   } else if (e.mid) { say(`${B.name} 격파!`, 1.6, '#ffb35e'); G.rest = { name: `중간보스 ${B.name}`, at: G.t + 1.2 } }
-  else { G.bosses++; item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
+  else { G.bosses++; if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
 }
 /** 둘레 R 안 작은 적(보스 · 돌격대 빼고)을 밀쳐 낸다 — 세기 kb(밀리는 거리 ≈ kb / 9) */
 function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return; const [dx, dy] = toward(e); e.kx += dx * kb; e.ky += dy * kb }) }
@@ -2140,6 +2188,7 @@ const USE = {
     for (const e of G.foes) if (!e.dead && !e.rush && onScreen(e, 40)) { if (e.boss) hurt(e, 300 * S.might, pl.x, pl.y); else kill(e) }
   },
   chest: () => G.queue.push('chest'),
+  awaken: () => G.queue.push('awaken'),
   pajama: () => summonHelp('pajama'),
   battery: () => summonHelp('leaf'),
   earplug: () => {
@@ -2173,9 +2222,7 @@ function helpers(dt) {
         G.shots.push({ src: SRC, k: 'ball', look: 'note', x, y, vx: dx * 430, vy: dy * 430, r: 11, dmg: D * 0.6, pierce: 2, kb: 90, life: 0.9, t: 0, hit: new Set() })
       }
     } else {   // 가장 가까운 다가오는 것(없으면 가까운 적) 쪽으로 빠르게 돌아 서서 막고, 닿은 적은 세게 밀쳐 낸다
-      let T = null, bd = 450 ** 2
-      for (const b of G.eshots) { const d = (b.x - pl.x) ** 2 + (b.y - pl.y) ** 2; if (!b.dead && d < bd && (pl.x - b.x) * b.vx + (pl.y - b.y) * b.vy > 0) { bd = d; T = b } }
-      T ||= closest(1, pl.x, pl.y, null, 450)[0]
+      const T = incoming(450) || closest(1, pl.x, pl.y, null, 450)[0]
       if (T) { const da = ((Math.atan2((T.y - pl.y) / 0.8, T.x - pl.x) - h.a) % TAU + TAU * 1.5) % TAU - Math.PI; h.a += Math.sign(da) * Math.min(Math.abs(da), dt * 12) }
       else h.a += dt * 2
       const [x, y] = helpPos(h, 0), D = (18 + G.t / 6) * S.might
@@ -2248,7 +2295,8 @@ function step(dt) {
     for (let i = 0; i < 8; i++) { const a = rnd() * TAU; part(z.x, z.y, Math.cos(a) * 160, Math.sin(a) * 90 - 80, i % 2 ? z.col : '#fff', 0.35, 2.6) }
     shake = Math.max(shake, z.k === 'land' ? 8 : 4)
   }
-  for (const b of G.eshots) {   // 날아오는 것 — 피하는 수밖에
+  for (const b of G.eshots) {   // 날아오는 것 — 피하거나 각성 스킬 · 한잎이 두잎이로 막기
+    if (b.dead) continue
     b.t += dt
     if (G.freeze <= 0) { b.x += b.vx * dt; b.y += b.vy * dt }
     if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < (pl.r + b.r) ** 2) { ouch(b.dmg, b); b.dead = true; if (b.slow) { pl.slowT = Math.max(pl.slowT, b.slow); fx({ k: 'text', x: pl.x, y: pl.y - 50, s: '끈적!', col: '#f2c94c', T: 0.6 }) } }
@@ -2284,11 +2332,12 @@ function shots(dt) {
       case 'ball':   // 사스마타(꿰뚫는다) · 건배(옆 적에게 튕겨 간다)
         b.x += b.vx * dt; b.y += b.vy * dt
         if (b.t > b.life) { b.dead = true; break }
+        parryIn(b.x, b.y, b.r)
         near(b.x, b.y, b.r, e => {
           if (b.hit.has(e)) return
           b.hit.add(e); hurt(e, b.dmg, b.x - b.vx * 0.05, b.y - b.vy * 0.05, b.kb)
           if (b.bounce > 0) {
-            const n = closest(1, e.x, e.y, b.hit, 230)[0]
+            const n = closest(1, e.x, e.y, b.hit, 300)[0]
             if (n) { b.bounce--; const v = Math.hypot(b.vx, b.vy), [dx, dy] = toward(n, b.x, b.y); b.vx = dx * v; b.vy = dy * v; b.t = 0; b.life = 0.8; return true }
           }
           if (--b.pierce <= 0) { b.dead = true; return true }
@@ -2296,18 +2345,18 @@ function shots(dt) {
         break
       case 'arc': {   // 눈물 — 포물선, 떨어진 자리 스플래시
         const u = b.u = Math.min(1, b.t / b.T); b.x = b.x0 + (b.x1 - b.x0) * u; b.y = b.y0 + (b.y1 - b.y0) * u
-        if (u >= 1) { splash(b.x1, b.y1, b.R, b.dmg, '#7cc8ff'); b.dead = true }
+        if (u >= 1) { splash(b.x1, b.y1, b.R, b.dmg, '#7cc8ff'); parryIn(b.x1, b.y1, b.R); b.dead = true }
         break
       }
       case 'drop':   // 풀뽑기 — 표시가 다 차면 뽑힌다
-        if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#8fd16a'); fx({ k: 'sprout', x: b.x, y: b.y, R: b.R, T: 0.5 }); shake = Math.max(shake, 3); b.dead = true }
+        if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#8fd16a'); parryIn(b.x, b.y, b.R); fx({ k: 'sprout', x: b.x, y: b.y, R: b.R, T: 0.5 }); shake = Math.max(shake, 3); b.dead = true }
         break
       case 'pile':   // 헌책 더미 — 적이 닿으면 기우뚱, 0.25초 뒤 와르르(둘레 피해)
-        if (!b.fall) { if (b.t > b.life) { b.dead = true; break } near(b.x, b.y, 14, () => { b.fall = b.t; return true }) }
+        if (!b.fall) { if (b.t > b.life) { b.dead = true; break } parryIn(b.x, b.y - 10, 24); near(b.x, b.y, 14, () => { b.fall = b.t; return true }) }
         else if (b.t - b.fall >= 0.25) { splash(b.x, b.y, b.R, b.dmg, '#8fd14f'); fx({ k: 'text', x: b.x, y: b.y - 34, s: '와르르!', col: '#c9f08a', T: 0.6 }); shake = Math.max(shake, 2); b.dead = true }
         break
       case 'pot':   // 카레 냄비 — 1초 뒤 매운 폭발(인어 · 세이렌에게 1.5배)
-        if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#e8b02a', 1.5); fx({ k: 'text', x: b.x, y: b.y - 34, s: '맵다!', col: '#ffcf4a', T: 0.6 }); shake = Math.max(shake, 3); b.dead = true }
+        if (b.t >= b.T) { splash(b.x, b.y, b.R, b.dmg, '#e8b02a', 1.5); parryIn(b.x, b.y, b.R); fx({ k: 'text', x: b.x, y: b.y - 34, s: '맵다!', col: '#ffcf4a', T: 0.6 }); shake = Math.max(shake, 3); b.dead = true }
         break
       case 'ring': {   // 야하! 충격파 — 반지름이 커지며 닿은 적을 한 번씩
         if (b.t < 0) { b.x = pl.x; b.y = pl.y; break }
@@ -2317,6 +2366,7 @@ function shots(dt) {
           fx({ k: 'text', x: b.x, y: b.y - 60, s: '야하!', col: '#ffd23f', T: 0.8 })
         }
         const R = b.R * Math.min(1, b.t / b.T)
+        parryIn(b.x, b.y, R)
         near(b.x, b.y, R, e => { if (!b.hit.has(e)) { b.hit.add(e); hurt(e, b.dmg, b.x, b.y, 220) } })
         if (b.t > b.T + 0.18) b.dead = true
         break
@@ -2325,16 +2375,19 @@ function shots(dt) {
         const a = b.w.ang + b.i / b.n * TAU
         b.x = pl.x + Math.cos(a) * b.R; b.y = pl.y + Math.sin(a) * b.R * 0.85
         if ((b.life -= dt) <= 0) { b.dead = true; break }
+        parryIn(b.x, b.y, b.r + 4)
         near(b.x, b.y, b.r, e => { const t = b.hit.get(e); if (t === undefined || G.t - t > 0.45) { b.hit.set(e, G.t); hurt(e, b.dmg, pl.x, pl.y, 190) } })
         break
       }
       case 'boom':   // 포셰트 — 갔다가 돌아온다
         b.v += b.acc * dt; b.x += b.dx * b.v * dt; b.y += b.dy * b.v * dt; b.a += dt * 12
         if (b.t > b.life) { b.dead = true; break }
+        parryIn(b.x, b.y, b.r)
         near(b.x, b.y, b.r, e => { const t = b.hit.get(e); if (t === undefined || G.t - t > 0.5) { b.hit.set(e, G.t); hurt(e, b.dmg, b.x - b.dx * Math.sign(b.v), b.y - b.dy * Math.sign(b.v), 70) } })
         break
       case 'zone':   // 라멘 국물 — 밟은 적을 느리게 하고 데운다
         if ((b.tick -= dt) <= 0) { b.tick = 0.3; near(b.x, b.y, b.R, e => { hurt(e, b.dmg, b.x, b.y, 0); slow(e, 0.4, 0.6) }) }
+        parryIn(b.x, b.y, b.R)
         if (b.t > b.life) b.dead = true
         break
     }
@@ -2363,12 +2416,14 @@ function offers(keep = []) {
   return out
 }
 function label(o) {
+  if (o.t === 'a') { const a = AW[o.id]; return { name: a.name, lv: `각성 · ${WEAP[o.id].name} Lv 8 → ★`, note: `${upText(a.up)} · ${a.note}` } }
   if (o.t === 'f') return { name: FILL[o.id].name, lv: '보너스', note: FILL[o.id].note }
   if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id), d = WEAP[o.id]; return { name: d.name, ...(w ? { lv: `Lv ${w.lv} → ${w.lv + 1} · ${d.how}`, note: Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ') } : { lv: `새 스킬 · ${d.how}`, note: d.note }) } }
   const lv = G.passives[o.id], p = PASS[o.id]; return { name: p.name, lv: lv ? `Lv ${lv} → ${lv + 1}` : '새 아이템', note: p.note }
 }
 function take(o) {
-  if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id); if (w) { w.lv++; w.st = wstat(w) } else addWeapon(o.id) }
+  if (o.t === 'a') awaken(o.id)
+  else if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id); if (w) { w.lv++; w.st = wstat(w) } else addWeapon(o.id) }
   else if (o.t === 'p') { G.passives[o.id] = (G.passives[o.id] || 0) + 1; stats() }
   else if (o.id === 'onigiri') pl.hp = Math.min(S.maxHp, pl.hp + S.maxHp * 0.4)
   else { G.cheer++; stats() }
@@ -2381,33 +2436,39 @@ function synCard(o) {
   const s = synOf(o.id)
   return h('div', { class: 'syn' }, h('mark', {}, '시너지'), ` 「${s[0]}」 · 내 `, ic(m), ` ${WEAP[m].name}의 짝`, h('br'), synText(s))
 }
+function awaken(id) { const w = G.weapons.find(x => x.id === id); G.aw.add(id); w.st = wstat(w); say(`각성 — 「${AW[id].name}」!`, 2.6, '#ff9be0') }
+/** 아직 각성 안 한 Lv 8 스킬 · 각성 상자 카드(그중 셋까지 무작위) */
+const awCan = () => G.weapons.filter(w => w.lv >= 8 && !G.aw.has(w.id))
+function awOffers() { const c = awCan(), out = []; while (out.length < 3 && c.length) out.push({ t: 'a', id: c.splice(rnd() * c.length | 0, 1)[0].id }); return out }
+const owned = o => o.t === 'w' && G.weapons.some(w => w.id === o.id)   // 가진 스킬 — 제외 못 한다
 let BOX = null
 const ACTS = [['rr', '리롤'], ['skips', '스킵'], ['bans', '제외']]
 function openBox() {
-  const chest = G.queue.shift() === 'chest'
-  if (!chest) { const v = Math.round(S.maxHp * 0.1); pl.hp = Math.min(S.maxHp, pl.hp + v); num(pl.x, pl.y - 48, `+${v}`, 'heal') }   // 레벨 업 — 체력 10% 회복
-  chest ? SND.chest() : SND.level(); SND.voice(G.ch.id, 'happy')
-  const jack = rnd() < (chest ? 0.5 : 0.01 * S.luck * (G.ch.mod.jackpot ? 2 : 1))   // 잭팟 — 셋 다 받는다. 레벨 업 1%(행운 배수 · 하치와레 2배), 보물상자 50%
-  const box = BOX = { opts: offers(), jack, ready: false, ban: false }
+  const kind = G.queue.shift(), chest = kind === 'chest', aw = kind === 'awaken'   // aw — 각성 상자: 잭팟 · 스킵 · 제외 없이 리롤만(G.arr, 레벨 업 상자와 따로)
+  if (aw && !awCan().length) return next()
+  if (kind === 'level') { const v = Math.round(S.maxHp * 0.1); pl.hp = Math.min(S.maxHp, pl.hp + v); num(pl.x, pl.y - 48, `+${v}`, 'heal') }   // 레벨 업 — 체력 10% 회복
+  chest || aw ? SND.chest() : SND.level(); SND.voice(G.ch.id, 'happy')
+  const jack = !aw && rnd() < (chest ? 0.5 : 0.01 * S.luck * (G.ch.mod.jackpot ? 2 : 1))   // 잭팟 — 셋 다 받는다. 레벨 업 1%(행운 배수 · 하치와레 2배), 보물상자 50%
+  const box = BOX = { opts: aw ? awOffers() : offers(), jack, ready: false, ban: false }, acts = aw ? ACTS.slice(0, 1) : ACTS, cnt = k => aw ? 'arr' : k
   if (jack) G.jackpots++
   mode = 'box'; calm(); pauseBtn.hidden = true; still = 2
   const cards = h('div', { class: 'cards' }), hint = h('p', { class: 'hint' })
-  const btns = ACTS.map(([k, s], j) => h('button', { type: 'button', class: 'btn act', onclick: () => act(k) }, s, h('em'), h('kbd', {}, j + 4)))
+  const btns = acts.map(([k, s], j) => h('button', { type: 'button', class: 'btn act', onclick: () => act(k) }, s, h('em'), h('kbd', {}, j + 4)))
   const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, '셋 다 받기', h('kbd', {}, 'Enter'))
-  const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}` },
-    h('p', { class: 'box-title' }, chest ? [ic('chest'), ' 보물상자!'] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
+  const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}${aw ? ' awaken' : ''}` },
+    h('p', { class: 'box-title' }, aw ? [ic('awaken'), ' 각성!'] : chest ? [ic('chest'), ' 보물상자!'] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
     jack && h('p', { class: 'jack' }, 'JACKPOT!!'), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
-  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
+  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}${box.ban && owned(o) ? ' keep' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
   const sync = () => {
     cards.replaceChildren(...box.opts.map(card)); root.classList.toggle('banning', box.ban)
-    hint.textContent = box.ban ? '이번 판에서 뺄 카드를 고르세요 (제외를 다시 누르면 취소)' : jack ? '셋 다 가져요!' : '하나를 고르세요'
-    btns.forEach((b, j) => { const k = ACTS[j][0]; b.querySelector('em').textContent = G[k]; b.disabled = !G[k]; b.classList.toggle('on', box.ban && k === 'bans') })
+    hint.textContent = aw ? `Lv 8 스킬 하나를 각성시켜요 — 스킵 · 제외는 없어요${awCan().length > 3 ? ' (리롤로 다른 스킬도)' : ''}` : box.ban ? '이번 판에서 뺄 카드를 고르세요 — 가진 스킬은 못 빼요 (제외를 다시 누르면 취소)' : jack ? '셋 다 가져요!' : '하나를 고르세요'
+    btns.forEach((b, j) => { const k = cnt(acts[j][0]); b.querySelector('em').textContent = G[k]; b.disabled = !G[k] || aw && awCan().length <= 3; b.classList.toggle('on', box.ban && k === 'bans') })
   }
   function pick(i) {
     const o = box.opts[i]
     if (!o || !box.ready || BOX !== box) return
     if (box.ban) {   // 제외 — 이번 판에서 안 나오고, 그 자리에 새 카드
-      if (o.t === 'f') return
+      if (o.t === 'f' || owned(o)) return
       G.bans--; G.banned.add(o.t + o.id); box.ban = false
       box.opts = offers(box.opts.filter(x => x !== o)); box.opts.splice(i, 0, box.opts.pop())
       return sync()
@@ -2418,6 +2479,7 @@ function openBox() {
   function act(k) {
     if (!box.ready || BOX !== box) return
     if (k === 'take') { box.opts.forEach(take); return next() }
+    if (aw) { if (k !== 'rr' || !G.arr || awCan().length <= 3) return; G.arr--; box.opts = awOffers(); return sync() }
     if (!G[k]) return
     if (k === 'bans') { box.ban = !box.ban; return sync() }
     G[k]--
@@ -2676,7 +2738,7 @@ function hud(c) {
   txt(c, `처치 ${G.kills}`, W / 2, 73, 12)
   const top = W < 700 ? 84 : 44   // 좁은 화면(휴대폰)은 스킬 줄을 타이머 · 다음 보스 · 처치 글자 아래로 — 안 겹치게
   let x = 10
-  for (const w of G.weapons) { const p = Math.max(0, 1 - (G.t - (w.fire ?? -9)) / 0.25); if (p) { c.globalAlpha = p * 0.7; c.fillStyle = '#fff'; oval(c, x + 13, top + 13, 17, 17); c.fill(); c.globalAlpha = 1 } c.drawImage(SPR.E[w.id].c, x - 3 * p, top - 3 * p, 26 + 6 * p, 26 + 6 * p); txt(c, String(w.lv), x + 22, top + 26, 11, w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
+  for (const w of G.weapons) { const p = Math.max(0, 1 - (G.t - (w.fire ?? -9)) / 0.25); if (p) { c.globalAlpha = p * 0.7; c.fillStyle = '#fff'; oval(c, x + 13, top + 13, 17, 17); c.fill(); c.globalAlpha = 1 } c.drawImage(SPR.E[w.id].c, x - 3 * p, top - 3 * p, 26 + 6 * p, 26 + 6 * p); txt(c, G.aw.has(w.id) ? '★' : String(w.lv), x + 22, top + 26, 11, G.aw.has(w.id) ? '#ff9be0' : w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
   x = 10
   for (const id in G.passives) { c.drawImage(SPR.E[id].c, x, top + 32, 20, 20); txt(c, String(G.passives[id]), x + 17, top + 52, 10); x += 22 }
   let sy = top + 72
@@ -2783,7 +2845,8 @@ function guide() {
     h('ul', { class: 'rules' },
       h('li', {}, '적을 쓰러뜨리면 떨어지는 보석(경험치)을 주워 레벨을 올려요. 레벨이 오를 때마다 새 스킬 · 스킬 레벨 업 · 아이템 셋 중 하나.'),
       h('li', {}, '스킬 · 아이템은 6칸씩, 스킬은 Lv 8 · 아이템은 Lv 5 까지. 아주 가끔(1%) 잭팟이 터지면 셋 다 가져요.'),
-      h('li', {}, '한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기).'),
+      h('li', {}, '한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기 — 가진 스킬은 못 빼요).'),
+      h('li', {}, '각성 — Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 각성의 별이 떨어져요. 먹으면 Lv 8 스킬 하나를 골라 각성(조금 세지고, 날아오는 것을 가끔 막아요). 각성 상자는 스킵 · 제외가 없고, 고를 스킬이 넷 이상이면 리롤(레벨 업 상자와 따로 두 번).'),
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
       h('li', {}, '업적 — 처음 화면 「업적」. 판이 끝날 때 쌓여서 동 · 은 · 금메달을 따요. 금메달 하나마다 토벌 보상금 +1%.'),
       h('li', {}, '판이 끝나면 토벌 보상금(버틴 시간 · 처치 · 보스 · 클리어, 어려울수록 더) — 처음 화면 「상점」에서 체력 · 힘 같은 영구 강화를 조금씩 살 수 있어요. 다 사도 같은 아이템 한 레벨 정도예요.'),
@@ -2794,7 +2857,7 @@ function guide() {
     h('h3', {}, '캐릭터'),
     h('ul', { class: 'list' }, CHARS.map(ch => li(portrait(ch.id), `${ch.name} — ${ch.trait}`, ch.note, ['시작 스킬: ', ic(ch.w), ` ${WEAP[ch.w].name}`]))),
     h('h3', {}, '스킬 (최고 Lv 8)'),
-    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(ic(id), w.name, w.note, `짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」`))),
+    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(ic(id), w.name, w.note, `짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」 · 각성 「${AW[id].name}」: ${upText(AW[id].up)} · ${AW[id].note}`))),
     h('h3', {}, '시너지'),
     h('ul', { class: 'list' }, SYN.map(s => li(ic('syn'), s[0], synText(s)))),
     h('h3', {}, '아이템 (최고 Lv 5)'),
@@ -2812,7 +2875,7 @@ function guide() {
 /** 지금 가진 스킬 · 아이템 — pick 을 주면 눌러서 자세히 볼 수 있는 단추로 */
 const chips = pick => {
   const chip = (kind, id, txt) => pick ? h('button', { type: 'button', class: `chip${kind === 'w' ? ' w' : ''}`, onclick: e => pick(kind, id, e.currentTarget) }, txt) : h('span', { class: `chip${kind === 'w' ? ' w' : ''}` }, txt)
-  return h('div', { class: 'build' }, G.weapons.map(w => chip('w', w.id, [ic(w.id), ` ${WEAP[w.id].name} Lv${w.lv}`])), Object.entries(G.passives).map(([id, lv]) => chip('p', id, [ic(id), ` ${PASS[id].name} Lv${lv}`])))
+  return h('div', { class: 'build' }, G.weapons.map(w => chip('w', w.id, [ic(w.id), G.aw.has(w.id) ? ` ★ ${AW[w.id].name}` : ` ${WEAP[w.id].name} Lv${w.lv}`])), Object.entries(G.passives).map(([id, lv]) => chip('p', id, [ic(id), ` ${PASS[id].name} Lv${lv}`])))
 }
 /** 스킬 · 아이템 자세히 — 지금 수치(아이템 · 캐릭터 보정까지), 다음 레벨, 시너지 */
 function skillInfo(kind, id) {
@@ -2831,7 +2894,8 @@ function skillInfo(kind, id) {
   const sy = synOf(id), mate = mateOf(id), on = G.weapons.some(x => x.id === mate)
   return [
     h('p', { class: 't' }, ic(id), ` ${d.name}`, h('small', {}, ` Lv${w.lv}/${max}`)), h('p', {}, `${d.how} — ${d.note}`), kv(rows),
-    h('p', { class: 'next' }, w.lv < max ? `다음 Lv${w.lv + 1} — ${Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ')}` : '최대 레벨이에요'),
+    h('p', { class: 'next' }, w.lv < max ? `다음 Lv${w.lv + 1} — ${Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ')}` : G.aw.has(id) ? '각성했어요' : '최대 레벨 — 보스를 쓰러뜨리면 각성의 별이 떨어져요'),
+    h('p', { class: `syn${G.aw.has(id) ? ' on' : ''}` }, ic('awaken'), ` 각성 「${AW[id].name}」 — ${upText(AW[id].up)} · ${AW[id].note}`),
     h('p', { class: `syn${on ? ' on' : ''}` }, on ? [ic('syn'), ` 시너지 「${sy[0]}」 켜짐 — ${synText(sy)}`] : [`시너지 「${sy[0]}」 — `, ic(mate), ` ${WEAP[mate].name}을(를) 얻으면 ${synText(sy)}`]),
   ]
 }
@@ -2956,4 +3020,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { render, autoQ, addWeapon, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { render, autoQ, addWeapon, WEAP, PLAN, wstat, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

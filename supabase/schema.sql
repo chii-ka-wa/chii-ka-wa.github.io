@@ -12,7 +12,7 @@ create table if not exists public.runs (
   kills      int  not null check (kills between 0 and 2000000),
   killer     text check (char_length(killer) <= 40),                              -- 쓰러뜨린 것(쓰러졌을 때만)
   boss       text check (char_length(boss) <= 40),                                -- 그때 나와 있던 보스
-  weapons    text check (char_length(weapons) <= 300),                            -- 스킬 id + 레벨(예: sasu8 ramen8)
+  weapons    text check (char_length(weapons) <= 300),                            -- 스킬 id + 레벨(예: sasu8 ramen9 — 9 는 각성)
   touch      boolean not null default false,                                      -- 휴대폰 · 태블릿(손가락)
   up         int  not null default 0 check (up between 0 and 100)                 -- 상점에서 산 영구 강화 칸 수(0 = 강화 없이)
 );

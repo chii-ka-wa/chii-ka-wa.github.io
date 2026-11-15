@@ -18,7 +18,7 @@ from runs where result = 'dead' group by 1, 2 order by 판 desc limit 40;
 select ch as 캐릭터, count(*) as 쓰러짐, round(avg(t) / 60.0, 1) as 평균_분, mode() within group (order by killer) as 가장_많은_원인
 from runs where result = 'dead' group by 1 order by 쓰러짐 desc;
 
--- 5. 많이 쓴 스킬(끝났을 때 가진 것)
+-- 5. 많이 쓴 스킬(끝났을 때 가진 것) — 레벨 9 는 각성(2026-11-15 판부터)
 select regexp_replace(w, '\d+$', '') as 스킬, count(*) as 판, round(avg(regexp_replace(w, '^\D+', '')::int), 1) as 평균_레벨
 from runs, unnest(string_to_array(weapons, ' ')) as w where w <> '' group by 1 order by 판 desc;
 
