@@ -28,7 +28,7 @@ async function music(b, name, id, dur) {
 
 ;(async () => {
   const b = await chromium.launch()
-  if (process.env.FFMPEG) { await music(b, 'field', 'chiikawa', 28); await music(b, 'siren', '', 16) }
+  if (process.env.FFMPEG) { await music(b, 'field', 'chiikawa', 32); await music(b, 'siren', '', 16) }
   const p = await b.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFactor: 2 })
   p.on('pageerror', e => console.log('pageerror', e.message))
   await p.addInitScript(() => { window.requestAnimationFrame = () => 0; localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'normal', bgm: 0, sfx: 0, noStats: true, zoom: 0.85 })) })   // 게임 루프를 멈추고 직접 한 프레임씩 · 조금 넓게 보기
@@ -113,8 +113,16 @@ async function music(b, name, id, dur) {
 
   await p.evaluate(() => { window.__mjg.startGame(0); window.__card('title', 0) })
   await card('title', 75)                                                                                                       // 0 ~ 2.5초 — 제목
+  await p.evaluate(() => window.__ff(180))
+  await play(120, '돌아다니면 「떠돌이 보물상자」!', '토벌 보상금 — 운이 좋으면 500!', [], i => p.evaluate(i => {   // 3분 — 멀리 걸어가면 앞에 보물상자, 주우면 500(이 장면만 꼭 나오게 · 꼭 500 이 나오게)
+    const M = window.__mjg, G = M.G, W = window
+    if (i === 0) { W.__loot = M.LOOT.map(x => [...x]); M.LOOT.splice(0, M.LOOT.length, [500, 100]); W.__wp = M.WANDER.p; M.WANDER.p = 1; G.lastBox = -1e9; G.items = G.items.filter(it => it.k !== 'coinbox') }
+    if (i === 12) G.anchor = [M.pl.x - 1e4, M.pl.y]   // 조금 걸은 뒤 — 다음 프레임에 가는 쪽 앞에 나온다
+    const it = G.items.find(x => x.k === 'coinbox'); if (it && i > 50) { it.x += (M.pl.x - it.x) * 0.3; it.y += (M.pl.y - it.y) * 0.3 }
+  }, i))
+  await p.evaluate(() => { const M = window.__mjg; M.LOOT.splice(0, M.LOOT.length, ...window.__loot); M.WANDER.p = window.__wp })
   await p.evaluate(() => window.__ff(600))
-  await play(180, '몰려오는 몬스터를 스킬로 싹!', '레벨 업마다 스킬 · 아이템을 골라 키워요', ['shot-b.png', 'crowd'])            // 10분 — 스킬 난무 · 레벨 업 상자
+  await play(150, '몰려오는 몬스터를 스킬로 싹!', '레벨 업마다 스킬 · 아이템을 골라 키워요', ['shot-b.png', 'crowd'])            // 10분 — 스킬 난무 · 레벨 업 상자
   await p.evaluate(() => { window.__pick = '사스마타' })
   await play(150, '보스를 쓰러뜨리면 「각성의 별」!', 'Lv 8 스킬 하나가 각성해요', [], i => p.evaluate(i => {   // 10분 — 고블린 대장을 쓰러뜨리면 각성의 별 → 각성 상자에서 사스마타 각성
     const M = window.__mjg, G = M.G, W = window
