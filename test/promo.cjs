@@ -82,7 +82,8 @@ async function music(b, name, id, dur) {
       const D = M.G.dark, a = Math.PI / 2 + Math.sin(M.G.t * 0.9) * 1.9; if (D) { D.x += (M.pl.x + Math.cos(a) * 170 - D.x) * 0.15; D.y += (M.pl.y + Math.sin(a) * 140 - D.y) * 0.15 }   // 검은 별똥별도 화면 안에서 나를 둘러 막 돌아다니게 — 닿지 않을 만큼 떨어져, 위(세이렌 자리)는 빼고 옆 · 아래로 오간다
     }
     let top = 0, hold = 0
-    W.__seg = (calm = 0, follow = null) => { top = 0; hold = 0; W.__still = 0; W.__shown = follow ? 1 : 0; W.__calm = calm; W.__follow = follow; M.pl.inv = 0; if (calm) for (const e of M.G.foes) if (!e.boss && Math.random() > calm) e.dead = true }   // calm — 보스가 잘 보이게 일반 적을 덜어 내고 더 나오지 않게
+    W.__seg = (calm = 0, follow = null) => { top = 0; hold = 0; W.__still = 0; M.G.items.length = 0;   // 장면마다 바닥에 쌓인 줍는 것은 치운다
+      W.__shown = follow ? 1 : 0; W.__calm = calm; W.__follow = follow; M.pl.inv = 0; if (calm) for (const e of M.G.foes) if (!e.boss && Math.random() > calm) e.dead = true }   // calm — 보스가 잘 보이게 일반 적을 덜어 내고 더 나오지 않게
     W.__frame = () => {
       const aw = M.mode === 'box' && document.querySelector('#ui .box.awaken'); document.getElementById('pcap').style.opacity = aw ? 0 : 1   // 각성 상자 — 1.5초 보여 주고 W.__pick 카드를 눌러 고른다(자막은 상자를 가리지 않게 잠깐 숨김)
       if (aw) { if (++hold > 45) { ([...aw.querySelectorAll('.card')].find(c => c.textContent.includes(W.__pick)) || aw.querySelector('.card')).click(); hold = 0 } return M.mode }
@@ -129,7 +130,7 @@ async function music(b, name, id, dur) {
   }, i), 1)
   console.log('awakened', await p.evaluate(() => { for (const [e] of window.__ring) e.dead = true; window.__mjg.G.eshots.length = 0; return [...window.__mjg.G.aw].join(',') }))   // 쏘던 적은 치운다
   await p.evaluate(() => { window.__ff(1203); window.__near('anoko') })
-  await play(165, '20분 — 커다란 토벌!', '보스 「아노코」 등장', ['shot-c.png', 80], null, 0.45, 'anoko')                                                        // 20분 — 아노코
+  await play(165, '20분 — 커다란 토벌!', '보스 「아노코」 등장', ['shot-c.png', 80], () => p.evaluate(() => { const e = window.__mjg.G.foes.find(f => f.kind === 'anoko' && !f.dead); if (e && e.hp < e.max * 0.4) e.hp = e.max * 0.4 }), 0.45, 'anoko')   // 아노코가 장면 안에 쓰러지지 않게                                                        // 20분 — 아노코
   await p.evaluate(() => { window.__ff(window.__mjg.FINAL_T + 1.5); window.__near('siren') })
   const split = fi / FPS
   await play(90, '25분 — 최종보스 「세이렌」', '인어 셋이 지키고 있어요…', [], null, 0.3, 'siren')                                     // 25분 — 세이렌 등장

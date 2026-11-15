@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '20~25분 난이도 완화 · 25분부터 더 어렵게 — 보통 적 피가 20분 → 24분에 2.6배로 뛰던 것을 1.7배로(24분 기준 예전의 2/3), 대신 세이렌이 나오는 25분부터 가파르게 올라 27분 뒤로는 예전보다 단단해요(30분 1.3배). 닿으면 아픈 정도도 20~25분은 천천히, 25분부터 빠르게. 20분 뒤 고블린 폭탄 · 돌격대 간격 15~19초 → 20~26초, 20~25분 보스 넷 → 셋(요리사 괴물 21:30 → 22:00 · 중간보스 거대 키메라 23:00 → 23:30 · 24분 중간보스 데카츠요는 빠져요)',
     '아노코의 꼬리가 앞(가는 쪽)에 붙어 있던 것 — 다른 친구들처럼 등 쪽(가는 쪽 반대)으로',
   ]],
   ['2026-11-15', [
@@ -225,7 +226,7 @@ const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인�
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'rps'], [1080, 'chef', 1], [1200, 'anoko'],
-  [1290, 'chef'], [1380, 'bigChimera', 1], [1440, 'dekatsuyo', 1]]
+  [1320, 'chef'], [1410, 'bigChimera', 1]]   // 20~25분은 보스 셋(예전 넷 — 24분 중간보스 데카츠요는 뺐다)
 // 영구 강화(처음 화면 「상점」) — 판마다 받는 토벌 보상금으로 산다. 한 칸이 같은 아이템 한 레벨의 1/5쯤, 다 사도 아이템 한 레벨 몫이라 판의 밸런스가 무너지지 않는다
 //   id = 같은 일을 하는 아이템(아이콘) · per = 한 칸 · max = 칸 수 · cost = 첫 칸 값(n 번째 칸은 cost × n)
 const SHOP = {
@@ -1924,13 +1925,14 @@ function weapons(dt) {
 }
 
 // ---- 적
-const HPK = [1, 1.4, 1.8, 2.3, 4.3, 13, 26]   // 보통 적 피 배수 — 0 · 5 · 10 … 30분, 사이는 잇는다
+const HPK = [1, 1.4, 1.8, 2.3, 4.3, 8, 34]   // 보통 적 피 배수 — 0 · 5 · 10 … 30분, 사이는 잇는다. 20~25분은 완만하게(예전 4.3 → 13), 세이렌이 나오는 25분부터 가파르게
+const dmgK = m => 1 + 0.055 * Math.min(m, 20) + 0.02 * clamp(m - 20, 0, 5) + 0.12 * Math.max(0, m - 25)   // 닿으면 아픈 정도 — 20분까지 분마다 +5.5%, 20~25분 +2%, 25분부터 +12%
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
   const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm)) * G.D.hp * (big ? 1 : G.crowd || 1)
   const e = {
-    type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * (1 + m * 0.055), xp: F.xp * (big ? 1 : G.crowd || 1),
+    type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * dmgK(m), xp: F.xp * (big ? 1 : G.crowd || 1),
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
     elite: type === 'golden', boss: big, kind: big ? type : null, heavy: ['dekatsu', 'golden', 'beetle', 'parttimer'].includes(type),
   }
@@ -1968,8 +1970,8 @@ function ring(e, ahead = false) {
   e.x = pl.x + c * t; e.y = pl.y + s * t
 }
 function spawner(dt) {
-  const m = G.t / 60, raw = (22 + m * 10 + m * m * 0.45) * (G.final ? 0.5 : 1), want = Math.min(MAX_FOES, raw)
-  G.crowd = clamp(raw / MAX_FOES, 1, 320 / MAX_FOES)   // 예전 한도 320 만큼의 피 · 경험치를 남은 적이 나눠 든다
+  const m = G.t / 60, full = 22 + m * 10 + m * m * 0.45, raw = full * (G.final ? 0.5 : 1), want = Math.min(MAX_FOES, raw)
+  G.crowd = clamp(full / MAX_FOES, 1, 320 / MAX_FOES)   // 세이렌 때 나오는 수는 반이어도 남은 적의 피 몫은 그대로(예전엔 25분에 적이 갑자기 약해졌다)   // 예전 한도 320 만큼의 피 · 경험치를 남은 적이 나눠 든다
   if ((G.spawnT -= dt) <= 0) {
     G.spawnT = Math.max(0.09, 0.55 - m * 0.02)
     const n = Math.min(want - G.foes.length, 1 + (m / 1.8 | 0))
@@ -1991,7 +1993,7 @@ function spawner(dt) {
     for (let i = 0; i < n; i++) { const a = i / n * TAU; spawn('chimera', pl.x + Math.cos(a) * R, pl.y + Math.sin(a) * R) }
     G.nextSwarm += 120; say('키메라 떼가 몰려온다!', 1.8)
   }
-  if (!G.final && G.t >= G.nextEvt) { event(m); G.nextEvt = G.t + (m < 15 ? 30 + rnd() * 12 : m < 20 ? 22 + rnd() * 8 : 15 + rnd() * 4) }
+  if (!G.final && G.t >= G.nextEvt) { event(m); G.nextEvt = G.t + (m < 15 ? 30 + rnd() * 12 : m < 20 ? 22 + rnd() * 8 : 20 + rnd() * 6) }
 }
 // ---- 변수 기술 — 10분부터. 스킬로 못 막는다 — 보고 피해야 한다. 피해는 최대 체력의 f
 const pct = f => S.maxHp * f
