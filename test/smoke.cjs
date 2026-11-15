@@ -253,6 +253,28 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (m1 !== 'revive' || r.mode !== 'play' || !r.full || !r.inv || r.stone !== 2 || r.revives !== 1 || !(r.foes < foes0) || m2 !== 'over') errors.push('[revive] 부활석 ' + JSON.stringify({ m1, foes0, r, m2 }))
   })
 
+  await run('wander', { width: 390, height: 844 }, async page => {   // 떠돌이 보물상자 — 멀리 돌아다니면 나오고, 연 결과가 표(평균 보상금 ≈ 44 · 부활석 ≈ 3%)대로, 주운 부활석이 있으면 그것부터 쓰고 상점 것은 못 쓴다, 결과 화면 보상금에 더해진다
+    await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'easy', stone: 2, noStats: true }))); await page.reload(); await page.waitForTimeout(500)
+    const r = await page.evaluate(() => {
+      const M = window.__mjg, out = {}; M.startGame(0); const G = M.G, pl = M.pl
+      const step = () => { G.queue.length = 0; pl.inv = 9; pl.hp = Math.max(pl.hp, 50); M.step(1 / 30) }
+      G.lastBox = -1e9; let n = 0
+      while (!G.items.some(i => i.k === 'coinbox') && n++ < 150) { pl.x += 1600; step() }
+      out.spawned = G.items.some(i => i.k === 'coinbox'); out.tries = n
+      const N = 3000; G.found = 0; G.runStones = 0
+      for (let i = 0; i < N; i++) { G.items = [{ x: pl.x, y: pl.y, k: 'coinbox', t: 0 }]; step() }
+      out.avg = +(G.found / N).toFixed(1); out.stone = +(G.runStones / N * 100).toFixed(1)
+      G.runStones = 1; G.found = 123; return out
+    })
+    const die = () => page.evaluate(() => { const M = window.__mjg; M.pl.hp = 0; M.G.dying = 0.01; M.step(1 / 30); return M.mode })
+    const m1 = await die(), hint = await page.locator('#ui .revive').innerText()
+    await page.locator('#ui .revive .btn.main').click()
+    const a = await page.evaluate(() => ({ shop: JSON.parse(localStorage.getItem('mjg.v1')).stone, run: window.__mjg.G.runStones }))
+    const m2 = await die(), coin = await page.locator('#ui .coin small').innerText()
+    console.log('wander', r, m1, a, m2, coin.slice(0, 60))
+    if (!r.spawned || !(r.avg > 39 && r.avg < 50) || !(r.stone > 1.5 && r.stone < 4.5) || m1 !== 'revive' || !/상점 부활석 2개는 이번 판엔 못 써요/.test(hint) || a.shop !== 2 || a.run !== 0 || m2 !== 'over' || !/떠돌이 보물상자 123/.test(coin)) errors.push('[wander] 떠돌이 보물상자 ' + JSON.stringify({ r, m1, a, m2, coin }))
+  })
+
   await run('awaken', { width: 1280, height: 800 }, async page => {   // 각성 — Lv 8 이 있어야 보스가 각성의 별을 떨어뜨리고, 각성 상자(카드 하나 · 리롤 꺼짐)에서 고르면 세지고, 기타 음표가 적 탄을 반쯤 막는다
     const r = await page.evaluate(() => {
       const M = window.__mjg, out = {}; M.startGame(1); const G = M.G, w = G.weapons[0]

@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '떠돌이 보물상자 — 한자리에 머물지 않고 멀리 돌아다니면 드물게 나타나요(25초 뒤 사라져요). 열면 토벌 보상금 10 ~ 200(클수록 드물게), 1% 확률로 500(화려하게!), 3% 확률로 이번 판에서만 쓰는 부활석. 주운 부활석이 있으면 그것부터 쓰고, 그 판에는 상점 부활석을 못 써요(섞어 쓰지 않기 · 한 판 횟수는 그대로)',
     '상점에 부활석(1,000) — 쓰러지면 「부활할까요?」 창이 떠서 하나 써서 다시 일어나요. 체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 1.2초 무적 · 화면 안 일반 몬스터를 모두 토벌(보스 빼고). 한 판에 쉬움 3 · 보통 2 · 어려움 1번까지',
     '20~25분 난이도 완화 · 25분부터 더 어렵게 — 보통 적 피가 20분 → 24분에 2.6배로 뛰던 것을 1.7배로(24분 기준 예전의 2/3), 대신 세이렌이 나오는 25분부터 가파르게 올라 27분 뒤로는 예전보다 단단해요(30분 1.3배). 닿으면 아픈 정도도 20~25분은 천천히, 25분부터 빠르게. 20분 뒤 고블린 폭탄 · 돌격대 간격 15~19초 → 20~26초, 20~25분 보스 넷 → 셋(요리사 괴물 21:30 → 22:00 · 중간보스 거대 키메라 23:00 → 23:30 · 24분 중간보스 데카츠요는 빠져요)',
     '아노코 · 세이렌 · 인어의 꼬리가 앞(가는 쪽)에 붙어 있던 것 — 다른 친구들처럼 등 쪽(가는 쪽 반대)으로',
@@ -185,8 +186,14 @@ const ITEMS = {
   pajama: { name: '꿀맛 페스티벌 티켓', note: '파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%' },
   battery: { name: '건전지', note: '한잎이 · 두잎이가 6초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다' },
   chest: { name: '보물상자', note: '보스가 떨어뜨린다 — 잭팟 확률 50%' },
+  coinbox: { name: '떠돌이 보물상자', note: '한자리에 머물지 않고 멀리 돌아다니면 드물게 나타난다(25초 뒤 사라진다) — 토벌 보상금 10 ~ 500(클수록 드물고 500 은 1%), 3% 확률로 이번 판에서만 쓰는 부활석' },
   awaken: { name: '각성의 별', note: 'Lv 8 스킬이 있을 때 보스(중간보스 빼고)가 떨어뜨린다 — Lv 8 스킬 하나를 각성(조금 세지고 날아오는 것을 가끔 막는다)' },
 }
+
+// 떠돌이 보물상자 — 처음 자리(앵커)에서 d 만큼 멀어질 때마다 앵커를 옮기고 p 확률로 가는 쪽 앞에. 바닥에 하나만 · 앞 상자에서 gap 초 뒤부터 · life 초 뒤 사라진다
+const WANDER = { d: 1500, p: 0.08, gap: 90, life: 25 }
+// 떠돌이 보물상자에서 나오는 것 — [토벌 보상금(또는 'stone' 부활석), 확률 %]. 합 100. 500 말고는 200 을 넘지 않는다
+const LOOT = [['stone', 3], [500, 1], [10, 28], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
 
 // 토벌 대상 — r 몸 반지름 · hp(시간이 갈수록 세진다) · spd 이동 · dmg 닿으면 · xp 떨어뜨리는 경험치 · col 터질 때 색
 const FOES = {
@@ -1551,6 +1558,7 @@ const ICO = {
     g.fillStyle = '#ffd23f'; for (const x of [-8, 6]) { rr(g, x, -8.4, 2.2, 18.4, 0.6); g.fill() }
     rr(g, -2.6, -3.4, 5.2, 5.6, 1); ink(g, '#ffd23f', 1.1); el(g, 0, -0.8, 0.8); g.fillStyle = OUT; g.fill()
   },
+  coinbox: g => { g.save(); g.translate(-1.5, 1.5); g.scale(0.85, 0.85); ICO.chest(g); g.restore(); g.save(); g.translate(7, -6.5); g.scale(0.55, 0.55); ICO.coin(g); g.restore() },   // 떠돌이 보물상자 — 작은 보물상자 + 동전
   awaken: g => {   // 각성의 별 — 분홍 빛살 · 금별
     g.lineCap = 'round'; g.lineWidth = 1.6; g.strokeStyle = '#ff9be0'
     for (let k = 0; k < 8; k++) { const a = k * TAU / 8 + 0.2; g.beginPath(); g.moveTo(Math.cos(a) * 10, Math.sin(a) * 10 + 0.5); g.lineTo(Math.cos(a) * 13, Math.sin(a) * 13 + 0.5); g.stroke() }
@@ -1744,7 +1752,8 @@ function newGame(ch) {
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
-    aw: new Set(), arr: b, parried: 0, revives: 0,   // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
+    aw: new Set(), arr: b, parried: 0, revives: 0, anchor: [0, 0], lastBox: -99, found: 0, runStones: 0, gotRunStone: false,   // … · 떠돌이 보물상자(앵커 · 마지막 때 · 받은 보상금) · 주운 부활석(이번 판만)
+      // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
   }
   S = null; addWeapon(ch.w); stats(); pl.hp = S.maxHp
   cam.x = cam.y = 0; shake = 0; calm()
@@ -2209,6 +2218,17 @@ const USE = {
   },
   chest: () => G.queue.push('chest'),
   awaken: () => G.queue.push('awaken'),
+  coinbox: () => {   // 떠돌이 보물상자 — LOOT 표대로
+    let q = rnd() * 100, v = LOOT.at(-1)[0]
+    for (const [k, w] of LOOT) if ((q -= w) < 0) { v = k; break }
+    SND.chest()
+    if (v === 'stone') { G.runStones++; G.gotRunStone = true; return say('부활석 획득! (이번 판만)', 2.8, '#9fe3ff') }
+    G.found += v
+    if (v < 500) return say(`보물상자 — 보상금 +${v}`, 1.8, '#ffd23f')
+    SND.level(); shake = 10; fx({ k: 'white', T: 0.5 }); fx({ k: 'pillar', T: 1 }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 240, T: 0.9, col: '#ffd23f' }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 150, T: 0.6, col: '#ff9be0' })   // 500 — 화려하게
+    for (let i = 0; i < 48; i++) { const a = rnd() * TAU, sp = 120 + rnd() * 260; part(pl.x, pl.y - 20, Math.cos(a) * sp, Math.sin(a) * sp - 160, ['#ffd23f', '#ff9be0', '#ffffff', '#9fe3ff'][i % 4], 0.9 + rnd() * 0.5, 2.5 + rnd() * 2.5) }
+    say('대박!! 보상금 +500!', 3.2, '#ffd23f')
+  },
   pajama: () => summonHelp('pajama'),
   battery: () => summonHelp('leaf'),
   earplug: () => {
@@ -2280,7 +2300,7 @@ function gainXp(v) {
 function step(dt) {
   G.t += dt
   const dead = G.dying > 0
-  if (dead && (G.dying -= dt / 0.3) <= 0) return save.stone > 0 && G.revives < G.D.revive ? askRevive() : finish(false)   // 쓰러지는 동안은 느린 화면(dt 는 0.3배로 들어온다)
+  if (dead && (G.dying -= dt / 0.3) <= 0) return canRevive() ? askRevive() : finish(false)   // 쓰러지는 동안은 느린 화면(dt 는 0.3배로 들어온다)
   if (G.won && (G.won -= dt) <= 0) return finish(true)
   if (G.t >= END_T && !dead && !G.won) { G.endKind = 'time'; return finish(true) }   // 30분 — 검은 별똥별에게서 끝까지 도망쳤다
   // 나
@@ -2296,6 +2316,13 @@ function step(dt) {
   }
   const siren = alive(G.final?.siren)
   if (siren && sick('charm') && !dead) { const [dx, dy] = toward(siren); pl.x += dx * 55 * dt; pl.y += dy * 55 * dt }   // 매혹 — 세이렌 쪽으로 끌려간다
+  if (!dead && !G.won && Math.hypot(pl.x - G.anchor[0], pl.y - G.anchor[1]) > WANDER.d) {   // 떠돌이 보물상자 — 멀리 돌아다닐 때만(제자리 · 작은 원으로 맴돌면 안 나온다)
+    G.anchor = [pl.x, pl.y]
+    if (G.t - G.lastBox > WANDER.gap && !G.items.some(i => i.k === 'coinbox') && rnd() < WANDER.p) {
+      const R = Math.min(VW, VH) * 0.36, x = pl.x + pl.face[0] * R, y = pl.y + pl.face[1] * R
+      G.lastBox = G.t; item(x, y, 'coinbox'); fx({ k: 'ring', x, y, R: 40, T: 0.6, col: '#ffd23f' }); fx({ k: 'text', x, y: y - 40, s: '보물상자!', col: '#ffd23f', T: 1.2 })
+    }
+  }
   pl.inv -= dt; pl.hurtT -= dt; pl.slowT -= dt; pl.jump = Math.max(0, pl.jump - dt)
   if (!dead) pl.hp = Math.min(S.maxHp, pl.hp + S.regen * dt)
   G.freeze = Math.max(0, G.freeze - dt)
@@ -2327,7 +2354,7 @@ function step(dt) {
     if (g.pull || d < S.magnet) { g.pull = true; g.sp = Math.min(1000, g.sp + 1620 * dt); const s = Math.min(d, g.sp * dt); g.x += dx / d * s; g.y += dy / d * s }
     if (d < pl.r + 8 && !dead) { g.dead = true; gainXp(g.v) }
   }
-  for (const it of G.items) { it.t += dt; if (!dead && (it.x - pl.x) ** 2 + (it.y - pl.y) ** 2 < (pl.r + 16) ** 2) { it.dead = true; USE[it.k](); fx({ k: 'flash', x: pl.x, y: pl.y - 20, R: 70, col: '#ffffff', T: 0.35 }) } }
+  for (const it of G.items) { it.t += dt; if (it.k === 'coinbox' && it.t > WANDER.life) { it.dead = true; continue } if (!dead && (it.x - pl.x) ** 2 + (it.y - pl.y) ** 2 < (pl.r + 16) ** 2) { it.dead = true; USE[it.k](); fx({ k: 'flash', x: pl.x, y: pl.y - 20, R: 70, col: '#ffffff', T: 0.35 }) } }
   // 효과
   for (const p of G.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; p.vx *= 0.97; if (p.t > p.T) p.dead = true }
   for (const f of G.fx) {
@@ -2520,22 +2547,26 @@ function breather() {
   fx({ k: 'pillar', T: 0.7 }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 170, T: 0.5, col: '#7ff3ff' })
   regrid(); shove(170, 700); near(pl.x, pl.y, 170, e => { slow(e, 1, 0.4) }); pl.inv = Math.max(pl.inv, 1.2)
 }
-/** 쓰러졌을 때 — 부활석이 있고 이번 판 횟수가 남았으면 물어본다 */
+/** 부활할 수 있나 — 이번 판 횟수(난이도)가 남고, 이번 판에 부활석을 주웠으면 주운 것이, 아니면 상점 부활석이 있어야. 주운 것과 상점 것을 섞어 쓰지 않는다(주웠으면 상점 것은 이번 판엔 못 쓴다) */
+const canRevive = () => G.revives < G.D.revive && (G.gotRunStone ? G.runStones > 0 : save.stone > 0)
+/** 쓰러졌을 때 — 부활할 수 있으면 물어본다 */
 function askRevive() {
   mode = 'revive'; calm(); pauseBtn.hidden = true; SND.duck(true)
   show(h('div', { class: 'panel revive' }, h('p', { class: 'h' }, ic('stone'), ' 부활할까요?'),
-    h('p', { class: 'sub' }, `부활석 ${save.stone}개 — 이번 판 ${G.revives} / ${G.D.revive}번 썼어요(${G.D.name})`),
+    h('p', { class: 'sub' }, `${G.gotRunStone ? `이번 판에서 주운 부활석 ${G.runStones}개` : `부활석 ${save.stone}개`} — 이번 판 ${G.revives} / ${G.D.revive}번 썼어요(${G.D.name})`),
+    G.gotRunStone && save.stone > 0 && h('p', { class: 'hint' }, `주운 부활석을 먼저 써요 — 상점 부활석 ${save.stone}개는 이번 판엔 못 써요`),
     h('p', { class: 'hint' }, '부활하면 체력이 가득 차고, 화면 안의 몬스터를 모두 쓰러뜨려요(보스 빼고)'),
     h('div', { class: 'row' }, btn('그만두기', () => finish(false)), btn([ic('stone'), ' 부활하기'], revive, 'main', 'Enter'))))
 }
 function revive() {
-  if (mode !== 'revive' || !save.stone) return
-  save.stone--; G.revives++; persist()
+  if (mode !== 'revive' || !canRevive()) return
+  if (G.gotRunStone) G.runStones--; else { save.stone--; persist() }
+  G.revives++
   G.dying = 0; G.killer = null; pl.hp = S.maxHp; G.eshots.length = 0
   mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; SND.duck(false); SND.level(); SND.voice(G.ch.id, 'happy')
   for (const e of G.foes) if (!e.dead && !e.boss && !e.rush && onScreen(e, 40)) kill(e)   // 폭탄 — 화면 안 일반 몬스터 토벌
   fx({ k: 'white', T: 0.4 }); shake = 8; breather()
-  say(`부활! — 부활석 ${save.stone}개 남았어요`, 2.2, '#9fe3ff')
+  say(G.gotRunStone ? '부활! — 주운 부활석을 썼어요' : `부활! — 부활석 ${save.stone}개 남았어요`, 2.2, '#9fe3ff')
 }
 function boxKey(e) {
   if (!BOX || e.repeat) return
@@ -2890,7 +2921,7 @@ function guide() {
       h('li', {}, '짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.'),
       h('li', {}, '업적 — 처음 화면 「업적」. 판이 끝날 때 쌓여서 동 · 은 · 금메달을 따요. 금메달 하나마다 토벌 보상금 +1%.'),
       h('li', {}, '판이 끝나면 토벌 보상금(버틴 시간 · 처치 · 보스 · 클리어, 어려울수록 더) — 처음 화면 「상점」에서 체력 · 힘 같은 영구 강화를 조금씩 살 수 있어요. 다 사도 같은 아이템 한 레벨 정도예요.'),
-      h('li', {}, `부활석 — 상점에서 ${STONE.toLocaleString()}에 사 두면, 쓰러졌을 때 하나 써서 다시 일어날 수 있어요(체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 잠깐 무적 · 화면 안 일반 몬스터 토벌). 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지.`),
+      h('li', {}, `부활석 — 상점에서 ${STONE.toLocaleString()}에 사 두면, 쓰러졌을 때 하나 써서 다시 일어날 수 있어요(체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 잠깐 무적 · 화면 안 일반 몬스터 토벌). 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지. 떠돌이 보물상자에서 주운 부활석(이번 판만)이 있으면 그것부터 쓰고, 그 판에는 상점 부활석을 못 써요.`),
       h('li', {}, '난이도 — ', Object.entries(DIFF).map(([k, d], i) => [i ? ' / ' : '', ic(k), ` ${d.name}: ${d.note}`]), '. 기록은 난이도마다 따로.'),
       h('li', {}, '10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.'),
       h('li', {}, `${FINAL_T / 60}분에 세이렌과 인어 셋이 나와요. 세이렌을 쓰러뜨리면 토벌 성공!`),
@@ -2995,7 +3026,8 @@ function bounty(win) {
   const parts = [['버틴 시간', G.t / 10], ['처치', G.kills / 200], ['보스', G.bosses * 15], ['클리어', win ? 60 : 0]].map(([k, v]) => [k, Math.floor(v * G.D.coin)])
   const base = parts.reduce((a, p) => a + p[1], 0), g = golds(), bonus = Math.ceil(base * g / 100)   // 업적 금메달 하나마다 +1%(올림 — 금메달이 있으면 적어도 1)
   if (bonus) parts.push([`금메달 ${g}개 보너스`, bonus])
-  return { parts, sum: base + bonus }
+  if (G.found) parts.push(['떠돌이 보물상자', G.found])   // 상자에서 받은 것은 그대로(난이도 배수 · 금메달 보너스 없이)
+  return { parts, sum: base + bonus + G.found }
 }
 /** 판이 끝나면 업적 누적을 더하고, 새로 딴 메달 [id, 단계] 를 돌려준다 */
 function achieve(win, coin) {
