@@ -32,7 +32,7 @@ const WEAP = {
   book: { name: '헌책 날리기', note: '헌책을 펼치면 책장이 가까운 적 쪽으로 부채꼴을 그리며 차례로 날아간다 — 몰려 있는 적에게 좋다', how: '앞쪽 부채꼴로 책장 날리기', cd: 1.2, dmg: 20, n: 3, pierce: 4, ups: [{ n: 1 }, { dmg: 8 }, { pierce: 1 }, { n: 1 }, { cd: -0.3 }, { dmg: 10 }, { n: 1, pierce: 2 }] },   // 카니 시작 스킬
   pile: { name: '헌책 더미', note: '지나온 자리에 헌책을 쌓아 둔다 — 적이 닿으면 기우뚱하다 와르르 무너져 둘레에 피해. 쫓아오는 적에게 좋다', how: '지나온 자리에 무너지는 덫', cd: 2.2, dmg: 24, dur: 8, ups: [{ dmg: 8 }, { n: 1 }, { area: 0.2 }, { cd: -0.4 }, { dmg: 10 }, { n: 1 }, { area: 0.2, dmg: 12 }] },
   sasu: { name: '사스마타 찌르기', note: '가장 가까운 적에게 사스마타를 찔러 넣는다 — 꿰뚫는다', how: '가까운 적을 꿰뚫어 찌르기', cd: 1, dmg: 16, pierce: 3, ups: [{ n: 1 }, { dmg: 8 }, { cd: -0.2 }, { n: 1 }, { dmg: 10 }, { pierce: 3 }, { n: 1, dmg: 14, pierce: 2 }] },
-  stick: { name: '토벌봉', note: '봉을 휘두르면 양 끝에서 폭발이 일어난다(두 번째는 위아래로)', how: '양옆을 휘둘러 끝이 폭발', cd: 1.5, dmg: 13, ups: [{ dmg: 5 }, { area: 0.15 }, { cd: -0.25 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { dmg: 10 }] },
+  stick: { name: '토벌봉', note: '가장 가까운 적 쪽으로 봉을 휘두르면 양 끝에서 폭발이 일어난다(두 번째는 그와 직각으로)', how: '가까운 적 쪽으로 휘둘러 양 끝이 폭발', cd: 1.3, dmg: 15, ups: [{ dmg: 6 }, { area: 0.15 }, { cd: -0.25 }, { dmg: 7 }, { area: 0.2 }, { n: 1 }, { dmg: 12 }] },
   yaha: { name: '야하!', note: '높이 뛰어올라 내려찍으면 둘레에 충격파 — 밀쳐 낸다', how: '뛰어올라 내 둘레 충격파', cd: 3.2, dmg: 26, ups: [{ area: 0.15 }, { dmg: 10 }, { cd: -0.5 }, { area: 0.15 }, { dmg: 12 }, { n: 1 }, { dmg: 18, area: 0.15 }] },
   ura: { name: '우라!', note: '기합을 계속 질러 둘레의 적에게 피해를 준다', how: '내 둘레에 계속 피해', cd: 0.45, dmg: 4, ups: [{ area: 0.1 }, { dmg: 1 }, { area: 0.1 }, { cd: -0.08 }, { dmg: 2 }, { area: 0.1 }, { dmg: 2 }] },
   weed: { name: '풀뽑기', note: '풀뽑기 검정 5급의 솜씨 — 가까운 적 발밑의 풀을 뽑아 터뜨린다', how: '적 발밑이 터짐', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '우사기 토벌봉 상향 — 늘 양옆으로만 휘두르던 것을 가장 가까운 적 쪽으로(두 번째는 그와 직각으로), 위아래에서 오는 적 · 보스도 맞혀요. 쿨타임 1.5 → 1.3초 · 피해 13 → 15 · 레벨업 피해 +5 / +6 / +10 → +6 / +7 / +12',
     '경험치 너프 — 치이카와 +10% → +5% · 시사 +25% → +15%',
     'PC 마우스로 움직일 때 — 스틱 원이 마우스를 따라오지 않고 누른 자리에 고정돼요. 누른 자리에서 마우스 쪽으로 움직여요(휴대폰 터치는 그대로)',
     '2배속 — 게임 중 오른쪽 위 소리 단추 왼쪽의 ×2 단추를 누르면 2배 빠르게, 한 번 더 누르면 원래 속도로',
@@ -303,6 +304,11 @@ const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } c
 //   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
 const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — 넣기만 된다(RLS). url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
 const statsOn = () => !!STATS.url && !save.noStats && location.hostname === STATS.host && !navigator.globalPrivacyControl && navigator.doNotTrack !== '1'
+if (statsOn()) {   // 방문 통계(Google 애널리틱스) — 익명 통계와 같은 규칙(이 주소에서만 · 보내지 않기 · 추적 거부면 안 불러온다)
+  window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments) }
+  gtag('js', new Date()); gtag('config', 'G-DZDG6FBGP0')
+  document.head.append(Object.assign(document.createElement('script'), { async: true, src: 'https://www.googletagmanager.com/gtag/js?id=G-DZDG6FBGP0' }))
+}
 const KILLER = { spike: '가면 키메라 독침', net: '복어 기름 그물', soy: '문어 간장', note: '세이렌 음표', paper: '날아오는 종이', shard: '검은 별똥별 조각', rock: '던진 돌', claw: '날아오는 발톱', bomb: '폭발', land: '내려찍기' }
 const killerName = s => !s ? null : typeof s === 'string' ? s : s.kind ? BOSS[s.kind]?.name ?? s.kind : FOES[s.type]?.name ?? KILLER[s.k] ?? s.k ?? null
 function statRow(result) {
@@ -1858,12 +1864,14 @@ const SHOT = {
     const e = alive(w.list[i % (w.list.length || 1)]) || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, v = 520 * st.spd * S.speed
     G.shots.push({ src: SRC, k: 'ball', col: SASU[G.ch.id] || '#d6dde6', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 13 * Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 70, life: 0.75, t: 0, hit: new Set() })
   },
-  stick(w, st, i, A, D) {   // 양옆(첫 번째) · 위아래(두 번째)로 휘두르고 양 끝이 터진다
-    const vert = i % 2 === 1, L = 92 * A, Wd = 24 * A, cy = pl.y - 8
-    near(pl.x, cy, L + Wd, e => { const ex = Math.abs(e.x - pl.x), ey = Math.abs(e.y - cy); if (vert ? ex < Wd + e.r && ey < L * 0.8 + e.r : ey < Wd + e.r && ex < L + e.r) hurt(e, D, pl.x, cy, 120) })
-    for (const s of [-1, 1]) splash(pl.x + (vert ? 0 : s * L), cy + (vert ? s * L * 0.8 : 0), 34 * A, D * 0.7, '#ff8a3d')
+  stick(w, st, i, A, D) {   // 가까운 적 쪽(첫 번째) · 그와 직각(두 번째, 조금 짧게)으로 휘두르고 양 끝이 터진다 — 예전엔 늘 양옆이라 위아래 적 · 보스를 거의 못 때렸다
+    const cy = pl.y - 8
+    if (i === 0) { const e = closest(1)[0]; w.aim = e ? Math.atan2(e.y - cy, e.x - pl.x) : Math.atan2(pl.face[1], pl.face[0]) }
+    const a = w.aim + (i % 2) * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a), L = 92 * A * (i % 2 ? 0.8 : 1), Wd = 24 * A
+    near(pl.x, cy, L + Wd, e => { const dx = e.x - pl.x, dy = e.y - cy; if (Math.abs(dx * sa - dy * ca) < Wd + e.r && Math.abs(dx * ca + dy * sa) < L + e.r) hurt(e, D, pl.x, cy, 120) })
+    for (const s of [-1, 1]) splash(pl.x + s * ca * L, cy + s * sa * L, 34 * A, D * 0.7, '#ff8a3d')
     parryIn(pl.x, cy, L)
-    fx({ k: 'swing', x: pl.x, y: cy, L, vert, T: 0.22 }); shake = Math.max(shake, 1.5)
+    fx({ k: 'swing', x: pl.x, y: cy, ex: ca * L, ey: sa * L, T: 0.22 }); shake = Math.max(shake, 1.5)
   },
   yaha(w, st, i, A, D) { pl.jump = 0.3; G.shots.push({ src: SRC, k: 'ring', x: pl.x, y: pl.y, t: -0.26, T: 0.32, R: 92 * A, dmg: D, hit: new Set() }) },
   weed(w, st, i, A, D) { const e = alive(w.list[i]) || closest(1)[0]; G.shots.push({ src: SRC, k: 'drop', x: e ? e.x : pl.x + (rnd() - 0.5) * 320, y: e ? e.y : pl.y + (rnd() - 0.5) * 320, t: 0, T: 0.5, R: 46 * A, dmg: D }) },
@@ -2758,7 +2766,7 @@ function effect(c, f, ox, oy) {
       txt(c, '내놔!', f.x, f.y - 14, 13, '#ffb3d1'); break
     }
     case 'swing': {   // 토벌봉 — 노란 봉, 양 끝에 불꽃
-      const ex = f.vert ? 0 : f.L, ey = f.vert ? f.L * 0.8 : 0
+      const { ex, ey } = f
       c.globalAlpha = (1 - u) * 0.6; c.strokeStyle = '#fff3c4'; c.lineWidth = 10 * (1 - u) + 2; c.lineCap = 'round'
       c.beginPath(); c.moveTo(f.x - ex, f.y - ey); c.lineTo(f.x + ex, f.y + ey); c.stroke()
       c.globalAlpha = 1 - u; c.strokeStyle = OUT; c.lineWidth = 5; c.stroke(); c.strokeStyle = '#ffd54a'; c.lineWidth = 3; c.stroke()
@@ -2847,7 +2855,7 @@ function title() {
     h('div', { class: 'row' }, btn('도감', guide), btn(save.seen === PATCH_ID ? '패치노트' : h('span', {}, '패치노트', h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, '상점 ', ic('coin'), ` ${save.coin.toLocaleString()}`), shop), btn(h('span', {}, '업적 ', medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn('토벌 시작!', chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? `토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : `몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
-    STATS.url && h('p', { class: 'fine' }, '게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)를 모아요 · ',
+    STATS.url && h('p', { class: 'fine' }, '게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)와 방문 통계(Google 애널리틱스)를 모아요 · ',
       h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? '다시 보내기' : '보내지 않기' } }, save.noStats ? '다시 보내기' : '보내지 않기')),
     h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
 }
