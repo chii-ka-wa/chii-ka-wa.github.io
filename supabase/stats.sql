@@ -34,6 +34,7 @@ from runs where v >= '2026-11-14' and result <> 'quit' group by 1, 2 order by 1,
 
 -- 8. 스킬 인기 — 많이 고른 스킬부터 안 고른 스킬까지(한 번도 안 고른 스킬도 0 으로 나온다). 끝났을 때 가진 스킬 기준
 --    시작 스킬은 그 캐릭터 판에서 빼고 센다(늘 가지고 시작하니까). 레벨업을 충분히 한 5분 넘게 버틴 판만. 레벨 9 는 각성
+--    밸런스를 바꾼 뒤만 보려면 r.t >= 300 뒤에 and r.created_at >= '2026-11-15 23:00+09' 처럼 더한다(헌책 날리기 · 더미는 2026-11-14 18시에 생겼다)
 with s(id, 이름, 시작) as (values
   ('sasu', '사스마타 찌르기', 'chiikawa'), ('guitar', '하치와레의 기타', 'hachiware'), ('stick', '토벌봉', 'usagi'), ('momo', '내놔!', 'momonga'),
   ('kanpai', '건배!', 'kurimanju'), ('sword', '랏코 선생의 일섬', 'rakko'), ('book', '헌책 날리기', 'kani'), ('ramen', '라멘 국물', 'shisa'),

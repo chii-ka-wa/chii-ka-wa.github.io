@@ -36,10 +36,10 @@ const WEAP = {
   yaha: { name: '야하!', note: '높이 뛰어올라 내려찍으면 둘레에 충격파 — 밀쳐 낸다', how: '뛰어올라 내 둘레 충격파', cd: 3.2, dmg: 26, ups: [{ area: 0.15 }, { dmg: 10 }, { cd: -0.5 }, { area: 0.15 }, { dmg: 12 }, { n: 1 }, { dmg: 18, area: 0.15 }] },
   ura: { name: '우라!', note: '기합을 계속 질러 둘레의 적에게 피해를 준다', how: '내 둘레에 계속 피해', cd: 0.45, dmg: 4, ups: [{ area: 0.1 }, { dmg: 1 }, { area: 0.1 }, { cd: -0.08 }, { dmg: 2 }, { area: 0.1 }, { dmg: 2 }] },
   weed: { name: '풀뽑기', note: '풀뽑기 검정 5급의 솜씨 — 가까운 적 발밑의 풀을 뽑아 터뜨린다', how: '적 발밑이 터짐', cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
-  tears: { name: '와아… (울음)', note: '눈물이 높이 튀어 멀리 떨어진 자리를 적신다', how: '멀리 있는 적에게 물폭탄', cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
-  guitar: { name: '하치와레의 기타', note: '음표가 몸 둘레를 돌며 적을 쳐 낸다', how: '음표가 내 둘레를 돎', cd: 2.2, dmg: 9, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 3 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 4, dur: 1 }] },
+  tears: { name: '와아… (울음)', note: '눈물이 높이 튀어 떨어진 자리를 적신다 — 멀리 있는 적과 가장 가까운 적을 번갈아', how: '멀리 · 가까운 적에게 번갈아 물폭탄', cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
+  guitar: { name: '하치와레의 기타', note: '음표가 몸 둘레를 돌며 안팎으로 오가 적을 쳐 낸다 — 몸에 붙은 적도', how: '음표가 내 둘레를 안팎으로 돎', cd: 1.6, dmg: 12, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 4 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 5, dur: 1 }] },
   nantoka: { name: '어떻게든 돼라!', note: '가까운 적부터 별이 번개처럼 꽂힌다', how: '가까운 적에게 번개', cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
-  ramen: { name: '라멘 국물', note: '근처 바닥에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다', how: '바닥 장판 · 느리게', cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
+  ramen: { name: '라멘 국물', note: '가까운 적 발밑에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다', how: '가까운 적 발밑 장판 · 느리게', cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
   curry: { name: '극매운 카레', note: '적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배', how: '적이 몰린 곳에 큰 폭발', cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
   pochette: { name: '포셰트 부메랑', note: '던지면 되돌아오는 포셰트 — 오가며 계속 맞힌다', how: '갔다 돌아오는 부메랑', cd: 1.8, dmg: 10, ups: [{ dmg: 4 }, { n: 1 }, { area: 0.25 }, { dmg: 5 }, { n: 1 }, { spd: 0.3 }, { n: 1 }] },
   momo: { name: '내놔!', note: '보스 · 정예 먼저, 없으면 가장 가까운 적에게 달려들어 낚아채는 큰 한 방 — 둘레도 조금 할퀸다', how: '보스 · 가까운 적에게 큰 한 방', cd: 1.9, dmg: 38, ups: [{ dmg: 14 }, { n: 1 }, { cd: -0.3 }, { dmg: 18 }, { n: 1 }, { cd: -0.3 }, { dmg: 30 }] },
@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '덜 쓰이던 스킬 손질 — 와아… (울음): 멀리만 던지던 물폭탄을 멀리 있는 적과 가장 가까운 적에게 번갈아(붙은 적을 못 떼어 내던 것) / 하치와레의 기타: 음표가 돌면서 몸 가까이까지 들어왔다 나가요(몸에 붙은 적도 맞아요) · 쿨타임 2.2 → 1.6초 · 피해 9 → 12 · 레벨업 피해 +3 / +4 → +4 / +5 / 라멘 국물: 둘레 아무 데나 쏟던 국물을 가까운 적 발밑에',
     '우사기 토벌봉 상향 — 늘 양옆으로만 휘두르던 것을 가장 가까운 적 쪽으로(두 번째는 그와 직각으로), 위아래에서 오는 적 · 보스도 맞혀요. 쿨타임 1.5 → 1.3초 · 피해 13 → 15 · 레벨업 피해 +5 / +6 / +10 → +6 / +7 / +12',
     '경험치 너프 — 치이카와 +10% → +5% · 시사 +25% → +15%',
     'PC 마우스로 움직일 때 — 스틱 원이 마우스를 따라오지 않고 누른 자리에 고정돼요. 누른 자리에서 마우스 쪽으로 움직여요(휴대폰 터치는 그대로)',
@@ -1875,8 +1876,8 @@ const SHOT = {
   },
   yaha(w, st, i, A, D) { pl.jump = 0.3; G.shots.push({ src: SRC, k: 'ring', x: pl.x, y: pl.y, t: -0.26, T: 0.32, R: 92 * A, dmg: D, hit: new Set() }) },
   weed(w, st, i, A, D) { const e = alive(w.list[i]) || closest(1)[0]; G.shots.push({ src: SRC, k: 'drop', x: e ? e.x : pl.x + (rnd() - 0.5) * 320, y: e ? e.y : pl.y + (rnd() - 0.5) * 320, t: 0, T: 0.5, R: 46 * A, dmg: D }) },
-  tears(w, st, i, A, D) {   // 멀리(150 밖) 있는 화면 안 적 — 움직이는 쪽을 미리 겨눈다
-    const far = visible().filter(e => (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 > 150 * 150), e = far.length ? pickOf(far) : closest(1)[0], T = 0.6 / Math.sqrt(st.spd * S.speed)
+  tears(w, st, i, A, D) {   // 번갈아 — 멀리(150 밖) 있는 화면 안 적 한 번, 가장 가까운 적 한 번(예전엔 멀리만 던져 붙은 적을 못 떼어 냈다). 움직이는 쪽을 미리 겨눈다
+    const far = (w.k = (w.k || 0) + 1) % 2 ? visible().filter(e => (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 > 150 * 150) : [], e = far.length ? pickOf(far) : closest(1)[0], T = 0.6 / Math.sqrt(st.spd * S.speed)
     const x1 = e ? e.x + e.vx * T : pl.x + pl.face[0] * 260, y1 = e ? e.y + e.vy * T : pl.y + pl.face[1] * 260
     G.shots.push({ src: SRC, k: 'arc', x0: pl.x, y0: pl.y, x1, y1, x: pl.x, y: pl.y, t: 0, T, H: 120, R: 54 * A, dmg: D, u: 0 })
   },
@@ -1888,7 +1889,7 @@ const SHOT = {
     const b = G.aw.has(SRC) && incoming(260); if (b && parry(b)) fx({ k: 'bolt', x: b.x, y: b.y, R: 14, pts: zig(b.x + (rnd() - 0.5) * 40, b.y - 300, b.x, b.y), T: 0.25 })
     shake = Math.max(shake, 2)
   },
-  ramen(w, st, i, A, D) { const a = rnd() * TAU, d = 50 + rnd() * 90; G.shots.push({ src: SRC, k: 'zone', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 45 * A, dmg: D, tick: 0, t: 0, life: st.dur * S.dur }) },
+  ramen(w, st, i, A, D) { const e = pickOf(closest(4)), a = rnd() * TAU, d = 50 + rnd() * 90; G.shots.push({ src: SRC, k: 'zone', x: e ? e.x : pl.x + Math.cos(a) * d, y: e ? e.y : pl.y + Math.sin(a) * d, R: 45 * A, dmg: D, tick: 0, t: 0, life: st.dur * S.dur }) },
   curry(w, st, i, A, D) {   // 가까운 적 12 중 둘레에 적이 가장 많은 자리(이미 냄비가 있는 자리는 빼고)
     const R = 62 * A
     let best = null, bn = 0
@@ -2426,8 +2427,8 @@ function shots(dt) {
         break
       }
       case 'orb': {   // 기타 음표
-        const a = b.w.ang + b.i / b.n * TAU
-        b.x = pl.x + Math.cos(a) * b.R; b.y = pl.y + Math.sin(a) * b.R * 0.85
+        const a = b.w.ang + b.i / b.n * TAU, R = b.R * (0.6 + 0.4 * Math.cos(b.t * 2.4))   // 돌면서 안쪽(0.2배)까지 들어왔다 나간다 — 몸에 붙은 적도 맞게
+        b.x = pl.x + Math.cos(a) * R; b.y = pl.y + Math.sin(a) * R * 0.85
         if ((b.life -= dt) <= 0) { b.dead = true; break }
         parryIn(b.x, b.y, b.r + 4)
         near(b.x, b.y, b.r, e => { const t = b.hit.get(e); if (t === undefined || G.t - t > 0.45) { b.hit.set(e, G.t); hurt(e, b.dmg, pl.x, pl.y, 190) } })

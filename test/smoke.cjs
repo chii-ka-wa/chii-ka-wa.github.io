@@ -287,7 +287,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const n0 = w.st.n; M.pick0(); out.aw = G.aw.has('guitar') && w.st.n === n0 + 1
       G.foes.forEach(f => { f.dead = true }); let hit = 0
       for (let k = 0; k < 200; k++) {
-        w.t = 0; w.on = 0; step(1); const o = G.shots.find(s => s.k === 'orb'); if (!o) continue
+        w.t = 0; w.on = 0; step(1); const o = G.shots.find(s => s.k === 'orb'); if (!o || Math.hypot(o.x - M.pl.x, o.y - M.pl.y) < 30) continue   // 음표가 몸 가까이 들어왔을 때는 빼고(탄이 몸에 먼저 맞는다)
         const b = { k: 'spike', x: o.x, y: o.y, vx: 0, vy: 0, t: 0, life: 9, dmg: 1, r: 5 }; G.eshots = [b]; step(1); hit += b.dead ? 1 : 0; G.eshots = []
       }
       out.block = hit / 200; out.parried = G.parried; return out
