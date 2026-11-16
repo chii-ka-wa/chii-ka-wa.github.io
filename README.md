@@ -28,7 +28,7 @@
 - 아이콘(스킬 · 아이템 · 난이도 · 소리 단추 등)은 이모지 대신 코드로 직접 그립니다(`game.js` 의 `ICO`) — 기기마다 다르게 보이지 않게. 캔버스에는 `icoSpr(id)`, 메뉴에는 `ic(id)`
 - 처음 화면 「패치노트」에서 바뀐 점을 볼 수 있습니다. 유치원 · 초등학생도 읽기 쉽게 한 줄에 그림 하나 · 꼬리표 하나(`new` 새로워요 · `up` 세졌어요 · `down` 약해졌어요 · `fix` 바뀌었어요) · 짧은 문장 하나로 씁니다(`['up', 'stick', tr`…`]` — 그림은 `ICO` 이름이나 캐릭터 · 적 그림 이름). 새 기록은 `game.js`의 `PATCH` 맨 위에 날짜와 함께 넣으면, 아직 안 본 사람에게 NEW 가 뜹니다.
 - 언어(처음 화면 오른쪽 위, `save.lang`): 한국어 · 日本語 · English · 简体中文 · 繁體中文. 고르면 이 브라우저에 기억하고 다시 불러옵니다. 한국어가 원문이고, 화면에 나오는 글은 모두 ``tr`…` `` 로 감쌉니다 — 열쇠는 한국어 원문(`${}` 자리는 `{0}` `{1}` …), 번역은 `i18n/<언어>.js`. 스킬 · 캐릭터 이름과 설명은 그 나라 먼작귀 팬이 아는 이름 · 말투로 옮겼습니다. 글을 고치거나 더하면 네 파일에도 넣고 `node test/i18n.cjs` 로 빠진 것을 찾습니다(번역이 없으면 그 자리는 한국어로 나옴). 익명 통계는 어느 말로 해도 한국어 이름으로 모읍니다(`ko()`).
-- 언어를 정해 들어오는 주소: `?lang=en`(ja · zh-cn · zh-tw 도) — 그 말로 정하고 기억한 뒤 주소에서 지웁니다. 영어 홍보 링크는 **https://chii-ka-wa.github.io/en/** — `en/index.html` 이 영어 공유 미리보기(`og-en.png`)를 보여 주고 `/?lang=en` 으로 보냅니다.
+- 언어를 정해 들어오는 주소: `?lang=en`(ja · zh-cn · zh-tw 도) — 그 말로 정하고 기억한 뒤 주소에서 지웁니다. 나라별 홍보 링크는 **/en/ · /ja/ · /zh-cn/ · /zh-tw/** — `<언어>/index.html` 이 그 말 공유 미리보기(`og-<언어>.png`)를 보여 주고 `/?lang=…` 으로 보냅니다.
 
 ## 파일
 
@@ -64,7 +64,7 @@
 
 - `index.html` 머리말: 제목 · 설명 · 키워드 · canonical · robots, 공유 미리보기(Open Graph · X 카드), 아이콘, 검색 엔진용 구조화 데이터(JSON-LD `VideoGame`), 자바스크립트가 꺼진 곳을 위한 `<noscript>` 소개
 - `og.png`(1200×630 공유 썸네일) · `icon-512.png` · `apple-touch-icon.png`(180) · `favicon.png`(64) — 게임 속 직접 그린 캐릭터로 `test/og.cjs` 가 만든다(그림을 고치면 다시 실행) 다시 만들면 index.html 의 `og.png?v=` · `favicon.png?v=` · `apple-touch-icon.png?v=` 숫자를 올린다(카카오톡 · X · 브라우저가 옛 그림을 붙잡고 있지 않게).
-- 영어판: `OG_LANG=en node test/og.cjs` → `og-en.png`(영어 공유 썸네일), `PROMO_LANG=en … node test/promo.cjs` → `promo/en/`(게임도 영어 · 주소는 chii-ka-wa.github.io/en).
+- 나라별 판(en · ja · zh-CN · zh-TW): `OG_LANG=ja node test/og.cjs` → `og-ja.png`(공유 썸네일), `PROMO_LANG=ja … node test/promo.cjs` → `promo/ja/`(게임도 그 말 · 주소는 chii-ka-wa.github.io/ja). 홍보 글은 `test/promo.cjs` 의 `PT` 표.
 - SNS 홍보: `test/promo.cjs` 가 `promo/`(git 에 안 올림)에 이미지 3장(정사각 1080 · 세로 1080×1920 · 가로 1600×900)과 숏츠 영상 `shorts.mp4`(세로 1080×1920 · 30fps · 약 27초 — 제목 → 10분 → 20분 아노코 → 25분 세이렌 토벌 성공 → 주소, 게임 배경음을 OfflineAudioContext 로 그려 넣고 -16 LUFS)를 만든다. 게임을 한 프레임씩 직접 돌려 찍어 기기 속도와 상관없이 매끄럽다. 로컬 서버(8765) + `NODE_PATH=<playwright> FFMPEG=<libx264 ffmpeg> node test/promo.cjs`(FFMPEG 가 없으면 이미지만)
 - `robots.txt`(사이트맵 위치) · `sitemap.xml`(내용을 바꾸면 `lastmod` 날짜를 고친다) · `site.webmanifest`(홈 화면에 추가할 때 이름 · 아이콘)
 

@@ -1,12 +1,20 @@
 // 공유 썸네일 · 아이콘 만들기 — 게임 속 그림(직접 그린 캐릭터)으로 og.png(1200×630) · icon-512.png · apple-touch-icon.png(180) · favicon.png(64)
-//   실행: 로컬 서버(8765)를 띄우고 NODE_PATH=<playwright 가 있는 node_modules> node test/og.cjs   (OG_LANG=en 이면 영어 og-en.png 만 — en/index.html 의 미리보기)
+//   실행: 로컬 서버(8765)를 띄우고 NODE_PATH=<playwright 가 있는 node_modules> node test/og.cjs   (OG_LANG=en · ja · zh-CN · zh-TW 이면 그 말 og-<언어>.png 만 — <언어>/index.html 의 미리보기)
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path')
-const ROOT = path.join(__dirname, '..'), EN = process.env.OG_LANG === 'en'
+const ROOT = path.join(__dirname, '..'), LANG = process.env.OG_LANG || 'ko'
+const O = {   // 로고 두 줄 · 부제 · 오른쪽 위 한 줄 · 글꼴(일본 · 중국 글자는 게임이 불러오는 글꼴)
+  ko: ['먼작귀', '서바이버즈', '먼가 작고 귀여운 녀석들의 토벌 생존기', '비공식 팬게임 · 무료 · 브라우저에서 바로', 'Jua'],
+  en: ['Chiikawa', 'Survivors', 'A Subjugation Survival Tale of Something Small and Cute', 'Unofficial fan game · Free · Play in your browser', 'Jua'],
+  ja: ['ちいかわ', 'サバイバーズ', 'なんか小さくてかわいいやつらの討伐サバイバル', '非公式ファンゲーム・無料・ブラウザですぐ遊べる', 'Jua, "Zen Maru Gothic"'],
+  'zh-CN': ['吉伊卡哇', '幸存者', '小小可爱的家伙们的讨伐生存记', '非官方粉丝游戏 · 免费 · 浏览器直接玩', 'Jua, "Noto Sans SC"'],
+  'zh-TW': ['吉伊卡哇', '倖存者', '又小又可愛的傢伙們的討伐求生記', '非官方同人遊戲 · 免費 · 瀏覽器直接玩', 'Jua, "Noto Sans TC"'],
+}[LANG]
 ;(async () => {
   const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 1200, height: 630 } })
+  await p.addInitScript(l => { if (l) localStorage.setItem('mjg.v1', JSON.stringify({ lang: l, noStats: true })) }, LANG === 'ko' ? '' : LANG)   // 게임이 그 말 글꼴을 불러오게
   await p.goto('http://127.0.0.1:8765/'); await p.waitForTimeout(800)
-  const out = await p.evaluate(async EN => {
-    await document.fonts.load('80px Jua')
+  const out = await p.evaluate(async ([O, KO]) => {
+    const [L1, L2, SUB, TAG, FAM] = O; await document.fonts.load(`80px ${FAM}`, O.join(''))
     const M = window.__mjg, ink = '#4a3b35', mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c }
     const field = (g, w, h, seed) => {   // 풀밭 — 옅은 풀 무더기 · 데이지
       let s = seed; const r = () => (s = (s * 16807) % 2147483647) / 2147483647
@@ -16,7 +24,7 @@ const ROOT = path.join(__dirname, '..'), EN = process.env.OG_LANG === 'en'
       for (let i = 0; i < w * h / 14000; i++) { const x = r() * w, y = r() * h; g.fillStyle = ['#fff', '#ffe07a', '#e3c8ff'][i % 3]; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 3.4, 0, Math.PI * 2); g.fill() } g.fillStyle = '#f2b13a'; g.beginPath(); g.arc(x, y, 2.6, 0, Math.PI * 2); g.fill() }
     }
     const logo = (g, txt, x, y, size, fill) => {   // 진한 테두리 글씨(게임 로고처럼)
-      g.font = `${size}px Jua`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'
+      g.font = `${size}px ${FAM}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'
       g.fillStyle = ink; g.fillText(txt, x, y + size * 0.1); g.strokeStyle = ink; g.lineWidth = size * 0.16; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y)
     }
     const put = (g, id, x, y, u, pose = {}) => { const a = M.art(id, 8, { look: 1.2, ...pose }), k = u / 8; g.drawImage(a.c, x - a.ox * u, y - a.oy * u, a.c.width * k, a.c.height * k) }   // 모두 같은 배율(u = 1 단위당 px), 발끝이 y
@@ -24,11 +32,11 @@ const ROOT = path.join(__dirname, '..'), EN = process.env.OG_LANG === 'en'
     { // og.png
       const c = mk(1200, 630), g = c.getContext('2d'); field(g, 1200, 630, 7)
       g.fillStyle = 'rgba(255,253,248,.82)'; g.beginPath(); g.roundRect(170, 46, 860, 300, 44); g.fill(); g.lineWidth = 6; g.strokeStyle = ink; g.stroke()
-      logo(g, EN ? 'Chiikawa' : '먼작귀', 600, 178, 128, '#fff'); logo(g, EN ? 'Survivors' : '서바이버즈', 600, 268, 78, '#ff8fab')
-      g.font = '30px Jua'; g.fillStyle = ink; g.textAlign = 'center'; g.fillText(EN ? 'A Subjugation Survival Tale of Something Small and Cute' : '먼가 작고 귀여운 녀석들의 토벌 생존기', 600, 318, 800)
+      logo(g, L1, 600, 178, 128, '#fff'); logo(g, L2, 600, 268, 78, '#ff8fab')
+      g.font = `30px ${FAM}`; g.fillStyle = ink; g.textAlign = 'center'; g.fillText(SUB, 600, 318, 800)
       const ids = ['chiikawa', 'hachiware', 'usagi', 'momonga', 'kurimanju', 'rakko', 'shisa', 'kani'], walk = [{}, ...M.WALK]
       ids.forEach((id, i) => { const x = 105 + i * 141, y = 598; g.fillStyle = 'rgba(70,90,50,.22)'; g.beginPath(); g.ellipse(x, y - 4, 50, 11, 0, 0, Math.PI * 2); g.fill(); put(g, id, x, y - 6, 5.3, walk[i % 5]) })
-      g.font = '24px Jua'; g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = 6; g.textAlign = 'right'; const tag = EN ? 'Unofficial fan game · Free · Play in your browser' : '비공식 팬게임 · 무료 · 브라우저에서 바로'; g.strokeText(tag, 1180, 34); g.fillText(tag, 1180, 34)
+      g.font = `24px ${FAM}`; g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = 6; g.textAlign = 'right'; g.strokeText(TAG, 1180, 34); g.fillText(TAG, 1180, 34)
       res.og = c.toDataURL('image/png')
     }
     const icon = n => {   // 둥근 네모 풀색 바탕에 치이카와 얼굴
@@ -37,11 +45,11 @@ const ROOT = path.join(__dirname, '..'), EN = process.env.OG_LANG === 'en'
       g.drawImage(a.c, sx, sy, side, side, 0, n * 0.1, n, n)
       return c.toDataURL('image/png')
     }
-    if (!EN) { res.icon512 = icon(512); res.apple = icon(180); res.fav = icon(64) }
+    if (KO) { res.icon512 = icon(512); res.apple = icon(180); res.fav = icon(64) }
     return res
-  }, EN)
+  }, [O, LANG === 'ko'])
   const save = (name, url) => fs.writeFileSync(path.join(ROOT, name), Buffer.from(url.split(',')[1], 'base64'))
-  if (EN) { save('og-en.png', out.og); await b.close(); return console.log('og-en.png') }
+  if (LANG !== 'ko') { const f = `og-${LANG.toLowerCase()}.png`; save(f, out.og); await b.close(); return console.log(f) }
   save('og.png', out.og); save('icon-512.png', out.icon512); save('apple-touch-icon.png', out.apple); save('favicon.png', out.fav)
   await b.close(); console.log('og.png · icon-512.png · apple-touch-icon.png · favicon.png')
 })()
