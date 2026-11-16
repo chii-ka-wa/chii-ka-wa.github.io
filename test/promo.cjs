@@ -101,20 +101,21 @@ async function music(b, name, id, dur) {
   const shot = () => p.screenshot({ path: path.join(FR, `f${String(fi++).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92 })
   const still = (name, all) => p.evaluate(all => {   // 이미지용 — 피해 숫자 · 적 탄 · 효과 · 알림 글을 잠깐 치우고 그린 캔버스(다음 프레임은 그대로). all 이면 효과 · 알림 글은 남긴다(격파 장면)
     const M = window.__mjg, G = M.G, keep = [G.nums, G.eshots, G.fx, G.banner, G.haz]; G.nums = []; G.haz = []
-    if (all) G.eshots = G.eshots.filter(b => b.k === 'shard'); else { G.eshots = []; G.fx = []; G.banner = null }   // 격파 장면 — 경고 원 · 다른 탄은 치우고 검은 별똥별 조각만
+    if (all) { G.eshots = G.eshots.filter(b => b.k === 'shard'); G.fx = G.fx.filter(f => f.k !== 'white') } else { G.eshots = []; G.fx = []; G.banner = null }   // 격파 장면 — 경고 원 · 다른 탄은 치우고 검은 별똥별 조각만
     M.pl.inv = 0; M.render()
     const u = document.getElementById('cv').toDataURL('image/png'); [G.nums, G.eshots, G.fx, G.banner, G.haz] = keep; M.render(); return u
   }, all).then(u => fs.writeFileSync(path.join(OUT, name), Buffer.from(u.split(',')[1], 'base64')))
   const play = async (n, cap, sub, at, on, calm = 0, follow = null) => { let best = 0, won = 0; await p.evaluate(([a, s, c, f]) => { window.__cap(a, s); window.__seg(c, f) }, [cap, sub, calm, follow]); for (let i = 0; i < n; i++) { const m = await p.evaluate(() => window.__frame()); if (m === 'over') break; if (on) await on(i); if (follow && i === 54) await p.evaluate(() => window.__cap('')); await shot()
     if (at[1] === 'crowd') { const k = await p.evaluate(() => { const M = window.__mjg, v = M.G.foes.filter(e => !e.dead && Math.abs(e.x - M.pl.x) < 260 && Math.abs(e.y - M.pl.y) < 420).length; return M.mode === 'play' ? v : 0 }); if (i > 20 && k > best) { best = k; await still(at[0]) } }   // 화면에 적이 가장 많을 때
     else if (at[1] === 'won') { if (!won && await p.evaluate(() => { const w = window.__mjg.G.won; return w > 0 && w < 2.7 })) { won = 1; await still(at[0], true) } }   // 세이렌이 쓰러진 직후
+    else if (at[1] === 'jackpot') { if (!won && await p.evaluate(() => window.__mjg.G.found >= 500)) won = i; if (won && i === won + 8) await still(at[0], true) }   // 500 을 주운 0.27초 뒤(흰 섬광은 빼고)
     else if (i === at[1]) await still(at[0]) } }
   const card = async (kind, n) => { for (let f = 0; f < n; f++) { await p.evaluate(([k, f]) => window.__card(k, f), [kind, f]); await shot() } await p.evaluate(() => window.__card(null)) }
 
   await p.evaluate(() => { window.__mjg.startGame(0); window.__card('title', 0) })
   await card('title', 75)                                                                                                       // 0 ~ 2.5초 — 제목
   await p.evaluate(() => window.__ff(180))
-  await play(120, '돌아다니면 「떠돌이 보물상자」!', '토벌 보상금 — 운이 좋으면 500!', [], i => p.evaluate(i => {   // 3분 — 멀리 걸어가면 앞에 보물상자, 주우면 500(이 장면만 꼭 나오게 · 꼭 500 이 나오게)
+  await play(120, '돌아다니면 「떠돌이 보물상자」!', '토벌 보상금 — 운이 좋으면 500!', ['shot-a.png', 'jackpot'], i => p.evaluate(i => {   // 3분 — 멀리 걸어가면 앞에 보물상자, 주우면 500(이 장면만 꼭 나오게 · 꼭 500 이 나오게)
     const M = window.__mjg, G = M.G, W = window
     if (i === 0) { W.__loot = M.LOOT.map(x => [...x]); M.LOOT.splice(0, M.LOOT.length, [500, 100]); W.__wp = M.WANDER.p; M.WANDER.p = 1; G.lastBox = -1e9; G.items = G.items.filter(it => it.k !== 'coinbox') }
     if (i === 12) G.anchor = [M.pl.x - 1e4, M.pl.y]   // 조금 걸은 뒤 — 다음 프레임에 가는 쪽 앞에 나온다
@@ -149,11 +150,12 @@ async function music(b, name, id, dur) {
   console.log('frames', fi, 'seconds', total.toFixed(1), 'siren at', split.toFixed(1))
 
   // 홍보 이미지 — 위에서 찍은 게임 화면(캔버스만)을 액자에 넣는다
-  const shots = ['shot-b.png', 'shot-c.png', 'shot-d.png'].map(f => 'data:image/png;base64,' + fs.readFileSync(path.join(OUT, f)).toString('base64'))
+  const shots = ['shot-a.png', 'shot-b.png', 'shot-c.png', 'shot-d.png'].map(f => 'data:image/png;base64,' + fs.readFileSync(path.join(OUT, f)).toString('base64'))
   const imgs = await p.evaluate(async shots => {
     const P = window.__promo, mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')] }
     const im = await Promise.all(shots.map(s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = s })))
-    const [B, C, D] = im, out = {}
+    const [A, B, C, D] = im, out = {}
+    const pop = (g, cx, cy, s, rot, cap, size) => { g.save(); g.translate(cx, cy); g.rotate(rot); g.beginPath(); g.roundRect(-s / 2 - 14, -s / 2 - 14, s + 28, s + 28, 34); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 9; g.strokeStyle = P.ink; g.stroke(); P.frame(g, A, -s / 2, -s / 2, s, s, 24, 210, 430, 660, 660); P.chip(g, cap, 0, s / 2 + 12, size, '#fff3a8'); g.translate(s / 2 - 4, -s / 2 + 4); g.rotate(0.2); g.scale(s / 62, s / 62); window.__mjg.ICO.coinbox(g); g.restore() }   // 떠돌이 보물상자 500 대박 — 기울인 작은 사진 + 귀퉁이에 보물상자
     { // 정사각 1080 — 인스타 피드 · 카카오
       const [c, g] = mk(1080, 1080); P.field(g, 1080, 1080, 5)
       P.text(g, '비공식 팬게임 · 무료', 1050, 56, 30, '#fff', 8, 'right')
@@ -161,6 +163,7 @@ async function music(b, name, id, dur) {
       P.text(g, '먼가 작고 귀여운 녀석들의 토벌 생존기', 540, 362, 34)
       P.frame(g, B, 90, 392, 900, 560, 40, 0, 640, 1080, 672)
       P.put(g, 'chiikawa', 120, 1040, 4.6, { look: 1.2 }); P.put(g, 'hachiware', 965, 1040, 4.6, { look: 1.2 })
+      pop(g, 830, 560, 270, 0.08, '돌아다니면 보물상자!', 30)
       P.chip(g, 'chii-ka-wa.github.io', 540, 1010, 40, '#fff')
       out.square = c.toDataURL('image/png')
     }
@@ -170,6 +173,7 @@ async function music(b, name, id, dur) {
       P.logo(g, '먼작귀', 540, 330, 200, '#fff'); P.logo(g, '서바이버즈', 540, 470, 118, '#ff8fab')
       P.text(g, '먼가 작고 귀여운 녀석들의 토벌 생존기', 540, 552, 44)
       P.frame(g, D, 70, 600, 940, 1040, 48, 0, 380, 1080, 1195)
+      pop(g, 265, 1420, 300, -0.08, '돌아다니면 보물상자!', 34)
       P.lineup(g, P.IDS, 540, 1800, 124, 4.4)
       P.chip(g, 'chii-ka-wa.github.io', 540, 1862, 40, '#fff')
       out.story = c.toDataURL('image/png')
@@ -183,6 +187,7 @@ async function music(b, name, id, dur) {
       P.lineup(g, ['chiikawa', 'hachiware', 'usagi', 'momonga', 'kani'], 560, 860, 150, 4.2)
       g.beginPath(); g.roundRect(1110, 50, 400, 800, 64); g.fillStyle = P.ink; g.fill()   // 휴대폰 속 게임 화면
       P.frame(g, B, 1128, 68, 364, 764, 48, 150, 190, 780, 1637)   // 가운데를 조금 당겨 크게
+      pop(g, 1075, 680, 230, -0.1, '돌아다니면 보물상자!', 26)
       P.text(g, '비공식 팬게임', 1580, 40, 26, '#fff', 7, 'right')
       out.wide = c.toDataURL('image/png')
     }
