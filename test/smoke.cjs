@@ -50,8 +50,9 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const nb = page.getByRole('button', { name: /패치노트/ })   // 패치노트 — 처음엔 NEW, 보고 나면 사라진다
     if (!/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트에 NEW 없음')
     await nb.click(); await page.waitForTimeout(200)
-    const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.scroll li').length, buff: [...document.querySelectorAll('.buff')].map(b => b.querySelectorAll('.cmp em').length) }))
-    if (pn.h !== '패치노트' || pn.n < 5 || pn.buff.join() !== '12,6,6') errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
+    const pn = await page.evaluate(() => ({ h: document.querySelector('.panel .h').textContent, n: document.querySelectorAll('.kid li').length, days: document.querySelectorAll('.scroll h3.day').length,   // 쉬운 패치노트 — 줄마다 그림 · 꼬리표 · 문장
+      bad: [...document.querySelectorAll('.kid li')].filter(li => !li.querySelector('img.ico')?.naturalWidth || !li.querySelector('mark')?.textContent || !li.querySelector('p')?.textContent).length }))
+    if (pn.h !== '패치노트' || pn.n < 5 || pn.days < 5 || pn.bad) errors.push('[desktop] 패치노트 ' + JSON.stringify(pn))
     await page.screenshot({ path: OUT + '1-notes.png' })
     await page.getByRole('button', { name: '← 처음으로' }).click(); await page.waitForTimeout(100)
     if (/NEW/.test(await nb.innerText())) errors.push('[desktop] 패치노트을 봐도 NEW가 남음')
@@ -305,6 +306,23 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const end = await page.evaluate(() => ({ mode: window.__mjg.mode, kind: window.__mjg.G.endKind, h: document.querySelector('.result .h')?.textContent }))
     console.log('dark', seen, end)
     if (!seen || end.mode !== 'over' || end.kind !== 'time') errors.push(`[dark] 검은 별똥별 ${seen} · 끝 ${JSON.stringify(end)}`)
+  })
+
+  // 언어 — 처음 화면 오른쪽 위에서 고르면 기억하고 다시 불러온다. 다른 말에서는 처음 화면 · 도감 · 패치노트 · 캐릭터 고르기 · 레벨 업 상자 · 일시정지에 한국어가 남지 않는다(언어 이름 「한국어」 빼고)
+  await run('lang', { width: 1280, height: 800 }, async page => {
+    const han = () => page.evaluate(() => (document.querySelector('#ui').innerText.replace(/한국어/g, '').match(/[가-힣]+/g) || []).slice(0, 6))
+    for (const code of ['ja', 'en', 'zh-CN', 'zh-TW']) {
+      await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true }))); await page.reload(); await page.waitForTimeout(400)
+      await page.click('.lang summary'); await Promise.all([page.waitForNavigation(), page.click(`.lang button[lang="${code}"]`)]); await page.waitForTimeout(600)
+      const left = { title: await han() }
+      await page.locator('#ui .row .btn').nth(0).click(); left.guide = await han(); await page.locator('#ui .btn.main').last().click()
+      await page.locator('#ui .row .btn').nth(1).click(); left.notes = await han(); await page.screenshot({ path: OUT + `lang-${code}.png` }); await page.locator('#ui .btn.main').last().click()
+      await page.locator('#ui .btn.main').first().click(); await page.waitForTimeout(200); left.chars = await han()
+      await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.queue.push('level'); M.step(1 / 60) }); left.box = await han()
+      await page.evaluate(() => window.__mjg.pick0()); await page.keyboard.press('Escape'); await page.waitForTimeout(100); left.pause = await han()
+      const lang = await page.evaluate(() => [document.documentElement.lang, JSON.parse(localStorage.getItem('mjg.v1')).lang])
+      if (lang[0] !== code || lang[1] !== code || Object.values(left).some(a => a.length)) errors.push(`[lang] ${code} ${JSON.stringify({ lang, left })}`)
+    }
   })
 
   await browser.close()
