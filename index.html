@@ -224,6 +224,44 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 
 
 .guide .scroll .kid p { margin: 3px 0 0; font-family: inherit; font-size: 17px; line-height: 1.45; color: var(--ink) }
+/* 도감 — 초등학생도 읽기 쉽게: 둥근 글씨 · 진한 색 · 줄마다 그림. 짝꿍은 초록, 각성은 분홍 */
+.dex-nav { flex: none; display: flex; gap: 6px; overflow-x: auto; margin: 0 0 8px; padding: 2px 2px 6px; scrollbar-width: thin }
+.dex-nav button { flex: none; font: inherit; font-size: 14px; padding: 4px 12px 4px 6px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap }
+.dex-nav button:hover { background: #ffe3ea }
+.dex-nav .ico, .dex .scroll h3.sec .ico { vertical-align: -0.35em }
+.dex .scroll h3.sec { font-size: 20px; color: var(--ink); scroll-margin-top: 4px }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.steps li { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; padding: 7px 12px; background: #fff; border: 2px solid #eadccd; border-radius: 14px }
+.steps > li > .ico { width: 36px; height: 36px; vertical-align: 0 }
+.dex .scroll .steps p, .dex .scroll p.lead, .dex .scroll p.legend { margin: 0; font-family: inherit; font-size: 16px; line-height: 1.45; color: var(--ink) }
+.dex .steps small { display: block; margin-top: 2px; font-size: 13.5px; color: var(--soft) }
+.dex .steps .df { display: block }
+.dex .scroll p.lead { margin: 0 0 8px; font-size: 15px }
+.dex .scroll p.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: 14px }
+.dex .list b { font-size: 17px }
+.dex .list span, .dex .list em { font-family: inherit; font-size: 14.5px; line-height: 1.45; color: var(--ink) }
+.dex .list em { color: #b8691f }
+.tag { display: block; margin-top: 6px; padding: 4px 10px; border-radius: 12px; font-size: 14.5px; line-height: 1.4; color: var(--ink) }
+.legend .tag { display: inline-block; margin: 0; padding: 2px 4px }
+.tag i { display: inline-block; margin-right: 6px; padding: 1px 10px 1px 4px; border-radius: 999px; color: #fff; font-style: normal; font-size: 13px }
+.tag .ico { width: 22px; height: 22px; vertical-align: -6px }
+.tag small { color: var(--soft); font-size: 13px }
+.tag.mate { background: #e8f7ea; border: 2px solid #a7dcb1 }
+.tag.mate i { background: #3fae5a }
+.tag.aw { background: #fff0f7; border: 2px solid #ffbfdc }
+.tag.aw i { background: #ff5ba7 }
+.list li.pair { grid-template-columns: 96px 1fr; background: #f5fcf6; border-color: #bfe6c6 }
+.pair .duo { display: flex; align-items: center; justify-content: center; gap: 2px }
+.pair .duo .ico { width: 34px; height: 34px; vertical-align: 0 }
+.pair .duo i { font-style: normal; font-size: 20px; color: #3fae5a }
+.list li.awk { background: #fff7fb; border-color: #ffc9e3 }
+/* 결과 — 토벌 보상금 · 떠돌이 보물상자 · 합계를 줄마다 */
+.coin.pay { max-width: 440px; margin: 8px auto; padding: 6px 12px; background: #fffaf0; border: 2px solid #f0dcb0; border-radius: 14px; text-align: left }
+.pay p { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; margin: 4px 0; font-size: 17px }
+.pay p .ico { width: 28px; height: 28px; vertical-align: 0 }
+.pay p b { font-weight: normal; font-size: 19px; color: #c07a2c; white-space: nowrap }
+.pay p.sum { grid-template-columns: 1fr auto; padding: 6px 0 0 38px; border-top: 2px dashed #f0dcb0 }
+.pay p.sum b { font-size: 22px; color: #e8475f }
 /* 도감 */
 .guide { text-align: left }
 .guide .h { text-align: center }

@@ -107,6 +107,9 @@ const PATCH = [
     ['new', 'globe', tr`이제 다른 나라 말로도 놀 수 있어요! 처음 화면 오른쪽 위에서 골라요 — 한국어 · 日本語 · English · 简体中文 · 繁體中文`],
     ['fix', 'party', tr`패치노트를 그림과 쉬운 말로 바꿨어요`],
     ['fix', 'awaken', tr`각성 상자에서도 Enter · Space 키로 받을 수 있어요`],
+    ['up', 'coinbox', tr`떠돌이 보물상자가 더 자주 나와요`],
+    ['fix', 'coin', tr`판이 끝나면 토벌 보상금 · 보물상자 돈 · 합계를 따로따로 보여 줘요`],
+    ['fix', 'syn', tr`도감을 읽기 쉽게 바꿨어요 — 짝꿍은 초록, 각성은 분홍!`],
     ['up', 'tears', tr`「와아… (울음)」이 멀리 있는 적과 가까이 온 적을 번갈아 맞혀요`],
     ['up', 'guitar', tr`하치와레의 기타 — 연주하는 동안 몸에 붙은 적을 살짝 밀쳐 내요. 더 자주, 더 세게!`],
     ['up', 'ramen', tr`라멘 국물을 적 발밑에 쏟아요`],
@@ -204,7 +207,7 @@ const ITEMS = {
 }
 
 // 떠돌이 보물상자 — 처음 자리(앵커)에서 d 만큼 멀어질 때마다 앵커를 옮기고 p 확률로 가는 쪽 앞에. 바닥에 하나만 · 앞 상자에서 gap 초 뒤부터 · life 초 뒤 사라진다
-const WANDER = { d: 1500, p: 0.08, gap: 90, life: 25 }
+const WANDER = { d: 1500, p: 0.14, gap: 90, life: 25 }
 // 떠돌이 보물상자에서 나오는 것 — [토벌 보상금(또는 'stone' 부활석), 확률 %]. 합 100. 500 말고는 200 을 넘지 않는다
 const LOOT = [['stone', 3], [500, 1], [10, 28], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
 
@@ -2953,45 +2956,67 @@ function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스�
       h('ul', { class: 'kid' }, list.map(([k, pic, s]) => h('li', {}, ic(pic), h('div', {}, h('mark', { style: `background:${TAG[k][1]}` }, TAG[k][0]), h('p', {}, s)))))])),
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title, 'main'))))
 }
+/** 도감 — 초등학생도 읽기 쉽게: 위에 바로 가기 단추, 줄마다 그림 하나 · 짧은 문장. 스킬 카드에는 짝꿍(초록) · 각성(분홍) 꼬리표를 따로 */
 function guide() {
   mode = 'guide'
   const li = (pic, name, note, extra) => h('li', {}, typeof pic === 'string' ? h('i', {}, pic) : pic, h('div', {}, h('b', {}, name), h('span', {}, note), extra && h('em', {}, extra)))
   const when = kind => [...PLAN.filter(p => p[1] === kind).map(p => `${fmt(p[0])}${p[2] ? tr`(중간)` : ''}`), ...(kind === 'siren' || kind === 'mermaid' ? [fmt(FINAL_T)] : [])].join(' · ')
-  show(h('div', { class: 'panel guide pick' },
-    h('p', { class: 'h' }, tr`토벌 도감`),
-    h('div', { class: 'scroll' },
-    h('h3', {}, tr`조작`),
-    h('p', {}, tr`이동: 방향키 · WASD — 휴대폰은 화면 아무 데나 누르고 끌기. 공격은 알아서 나가요. 일시정지: Esc · P · 오른쪽 위 버튼`),
-    h('h3', {}, tr`규칙`),
-    h('ul', { class: 'rules' },
-      h('li', {}, tr`적을 쓰러뜨리면 떨어지는 보석(경험치)을 주워 레벨을 올려요. 레벨이 오를 때마다 새 스킬 · 스킬 레벨 업 · 아이템 셋 중 하나.`),
-      h('li', {}, tr`스킬 · 아이템은 6칸씩, 스킬은 Lv 8 · 아이템은 Lv 5 까지. 아주 가끔(1%) 잭팟이 터지면 셋 다 가져요.`),
-      h('li', {}, tr`한 판에 두 번씩 — 리롤(카드 셋을 새로) · 스킵(이번엔 안 고르기) · 제외(카드 하나를 이번 판에서 빼기 — 가진 스킬은 못 빼요).`),
-      h('li', {}, tr`각성 — Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 각성의 별이 떨어져요. 먹으면 Lv 8 스킬 하나를 골라 각성(조금 세지고, 날아오는 것을 가끔 막아요). 각성 상자는 스킵 · 제외가 없고, 고를 스킬이 넷 이상이면 리롤(레벨 업 상자와 따로 두 번).`),
-      h('li', {}, tr`짝인 두 스킬을 다 가지면 시너지 — 둘 다 세져요.`),
-      h('li', {}, tr`업적 — 처음 화면 「업적」. 판이 끝날 때 쌓여서 동 · 은 · 금메달을 따요. 금메달 하나마다 토벌 보상금 +1%.`),
-      h('li', {}, tr`판이 끝나면 토벌 보상금(버틴 시간 · 처치 · 보스 · 클리어, 어려울수록 더) — 처음 화면 「상점」에서 체력 · 힘 같은 영구 강화를 조금씩 살 수 있어요. 다 사도 같은 아이템 한 레벨 정도예요.`),
-      h('li', {}, tr`부활석 — 상점에서 ${STONE.toLocaleString()}에 사 두면, 쓰러졌을 때 하나 써서 다시 일어날 수 있어요(체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 잠깐 무적 · 화면 안 일반 몬스터 토벌). 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지. 떠돌이 보물상자에서 주운 부활석(이번 판만)이 있으면 그것부터 쓰고, 그 판에는 상점 부활석을 못 써요.`),
-      h('li', {}, tr`난이도 — `, Object.entries(DIFF).map(([k, d], i) => [i ? ' / ' : '', ic(k), ` ${d.name}: ${d.note}`]), tr`. 기록은 난이도마다 따로.`),
-      h('li', {}, tr`10분부터 고블린 폭탄 · 돌격대 — 스킬로 못 막으니 보고 피하기. 보스는 기술 전에 멈춰서 깜빡여요.`),
-      h('li', {}, tr`${FINAL_T / 60}분에 세이렌과 인어 셋이 나와요. 세이렌을 쓰러뜨리면 토벌 성공!`),
-      h('li', {}, tr`${DARK_T / 60}분까지 세이렌을 못 쓰러뜨리면 검은 별똥별이 나타나요 — 쓰러뜨릴 수 없으니 ${END_T / 60}:00까지 도망치면 생존 클리어. 기록은 이 브라우저에만 저장돼요.`)),
-    h('h3', {}, tr`캐릭터`),
+  const sec = (id, pic, title) => h('h3', { class: 'sec', id: `dex-${id}` }, ic(pic), ` ${title}`)
+  const step = (pic, s, small) => h('li', {}, ic(pic), h('p', {}, s, small && h('small', {}, small)))   // 그림 하나 · 짧은 문장
+  const mate = id => h('div', { class: 'tag mate' }, h('i', {}, ic('syn'), tr` 짝꿍`), ic(mateOf(id)), ` ${WEAP[mateOf(id)].name}`, h('small', {}, ` → 「${synOf(id)[0]}」`))
+  const awk = id => h('div', { class: 'tag aw' }, h('i', {}, ic('awaken'), tr` 각성`), ` ${AW[id].name}`)
+  const NAV = [['play', 'chest', tr`놀이 방법`], ['chars', 'a_chiikawa', tr`캐릭터`], ['skills', 'sasu', tr`스킬`], ['syn', 'syn', tr`짝꿍 시너지`], ['awaken', 'awaken', tr`각성`], ['items', 'manju', tr`아이템`], ['foes', 'goblin', tr`토벌 대상`], ['boss', 'dekatsuyo', tr`보스`]]
+  const scroll = h('div', { class: 'scroll' },
+    sec('ctrl', 'slipper', tr`조작`),
+    h('ul', { class: 'steps' },
+      step('slipper', tr`방향키 · WASD로 움직여요. 휴대폰은 화면을 누른 채로 끌어요`),
+      step('sasu', tr`공격은 알아서 나가요!`),
+      step('clock', tr`Esc · P · 오른쪽 위 단추 — 잠깐 멈춰요`),
+      step('wind', tr`×2 단추 — 게임이 2배 빨라져요`)),
+    sec('play', 'chest', tr`놀이 방법`),
+    h('ul', { class: 'steps' },
+      step('wage', tr`적을 쓰러뜨리면 보석이 떨어져요. 주우면 경험치가 차고 레벨 업!`),
+      step('chest', tr`레벨 업 하면 카드 3장 중 1장을 골라요 — 새 스킬 · 스킬 레벨 업 · 아이템`),
+      step('pouch', tr`스킬 · 아이템은 6개씩 가질 수 있어요. 스킬은 Lv 8, 아이템은 Lv 5까지 올라가요`),
+      step('party', tr`아주 가끔(1%) 잭팟! 카드 3장을 모두 가져요`),
+      step('clover', tr`카드가 마음에 안 들면 — 리롤(새 카드) · 스킵(안 고르기) · 제외(이번 판에서 빼기). 한 판에 2번씩`),
+      step('syn', tr`짝꿍 스킬 2개를 모두 가지면 시너지! 둘 다 세져요`),
+      step('awaken', tr`Lv 8 스킬이 있을 때 보스를 쓰러뜨리면 각성의 별이 떨어져요. 먹으면 스킬 하나가 각성!`),
+      step('coinbox', tr`멀리 돌아다니면 가끔 떠돌이 보물상자가 나와요. 열면 보상금!`),
+      step('coin', tr`판이 끝나면 보상금을 받아요. 상점에서 조금씩 세게 만들 수 있어요`),
+      step('stone', tr`부활석이 있으면 쓰러져도 다시 일어나요`, tr`한 판에 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지`),
+      step('a_goblin', tr`업적 메달을 모아요. 금메달 하나마다 보상금 +1%`),
+      step('normal', tr`난이도 — 처음이라면 쉬움부터!`, Object.entries(DIFF).map(([k, d]) => h('span', { class: 'df' }, ic(k), ` ${d.name}: ${d.note}`))),
+      step('rusher', tr`10분부터 고블린 폭탄 · 돌격대가 와요. 스킬로 못 막으니 피해요!`),
+      step('dekatsuyo', tr`보스는 기술을 쓰기 전에 멈추고 깜빡여요. 그때 피해요!`),
+      step('a_siren', tr`${FINAL_T / 60}분에 세이렌이 나와요. 쓰러뜨리면 토벌 성공!`),
+      step('a_darkstar', tr`${DARK_T / 60}분까지 못 쓰러뜨리면 검은 별똥별이 와요. ${END_T / 60}:00까지 도망치면 클리어!`),
+      step('zoom', tr`기록은 이 브라우저에만 저장돼요`)),
+    sec('chars', 'a_chiikawa', tr`캐릭터`),
     h('ul', { class: 'list' }, CHARS.map(ch => li(portrait(ch.id), `${ch.name} — ${ch.trait}`, ch.note, [tr`시작 스킬: `, ic(ch.w), ` ${WEAP[ch.w].name}`]))),
-    h('h3', {}, tr`스킬 (최고 Lv 8)`),
-    h('ul', { class: 'list' }, Object.entries(WEAP).map(([id, w]) => li(ic(id), w.name, w.note, tr`짝: ${WEAP[mateOf(id)].name} — 「${synOf(id)[0]}」 · 각성 「${AW[id].name}」: ${upText(AW[id].up)} · ${AW[id].note}`))),
-    h('h3', {}, tr`시너지`),
-    h('ul', { class: 'list' }, SYN.map(s => li(ic('syn'), s[0], synText(s)))),
-    h('h3', {}, tr`아이템 (최고 Lv 5)`),
+    sec('skills', 'sasu', tr`스킬 (최고 Lv 8)`),
+    h('p', { class: 'legend' }, h('span', { class: 'tag mate' }, h('i', {}, ic('syn'), tr` 짝꿍`)), tr`함께 가지면 둘 다 세져요`, h('span', { class: 'tag aw' }, h('i', {}, ic('awaken'), tr` 각성`)), tr`Lv 8 + 보스 → 더 세져요`),
+    h('ul', { class: 'list' }, Object.keys(WEAP).map(id => h('li', {}, ic(id), h('div', {}, h('b', {}, WEAP[id].name), h('span', {}, WEAP[id].note), mate(id), awk(id))))),
+    sec('syn', 'syn', tr`짝꿍 시너지`),
+    h('p', { class: 'lead' }, tr`두 스킬을 함께 가지면 둘 다 세져요`),
+    h('ul', { class: 'list' }, SYN.map(s => { const [a, b] = Object.keys(s[1]); return h('li', { class: 'pair' }, h('div', { class: 'duo' }, ic(a), h('i', {}, '+'), ic(b)), h('div', {}, h('b', {}, `「${s[0]}」`), h('span', {}, `${WEAP[a].name} + ${WEAP[b].name}`), h('em', {}, synText(s)))) })),
+    sec('awaken', 'awaken', tr`각성`),
+    h('p', { class: 'lead' }, tr`Lv 8 스킬이 있을 때 보스(중간보스 빼고)를 쓰러뜨리면 각성의 별! 먹으면 고른 스킬이 각성해요 — 조금 세지고, 날아오는 공격을 막기도 해요`),
+    h('ul', { class: 'list' }, Object.keys(AW).map(id => h('li', { class: 'awk' }, ic(id), h('div', {}, h('b', {}, AW[id].name), h('span', {}, tr`${WEAP[id].name} Lv 8 → 각성`), h('em', {}, `${upText(AW[id].up)} · ${AW[id].note}`))))),
+    sec('items', 'manju', tr`아이템 (최고 Lv 5)`),
     h('ul', { class: 'list' }, Object.entries(PASS).map(([id, p]) => li(ic(id), p.name, tr`레벨마다 ${p.note}${p.max !== 5 ? tr` · 최고 Lv ${p.max}` : ''}`))),
-    h('h3', {}, tr`줍는 것`),
+    sec('pick', 'magnet', tr`줍는 것`),
     h('ul', { class: 'list' }, Object.entries(ITEMS).map(([id, p]) => li(ic(id), p.name, p.note))),
-    h('h3', {}, tr`도와주는 친구들 (선택은 못 해요 — 아이템을 먹으면 잠깐 나타나요)`),
+    sec('help', 'pajama', tr`도와주는 친구들 (선택은 못 해요 — 아이템을 먹으면 잠깐 나타나요)`),
     h('ul', { class: 'list' }, li(portrait('pj1'), tr`파자마 파티즈`, tr`잠옷 아이돌 그룹(초록 · 분홍 · 하양 · 보라). 꿀맛 페스티벌 티켓을 먹으면 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%`, [ic('pajama'), tr` 꿀맛 페스티벌 티켓`]), li(portrait('leafpair'), tr`한잎이 · 두잎이`, tr`늘 손을 잡고 다니는 섬 주민 둘(얼굴은 드러나지 않는다). 건전지를 먹으면 6초 동안 손을 잡고 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다`, [ic('battery'), tr` 건전지`])),
-    h('h3', {}, tr`토벌 대상`),
+    sec('foes', 'goblin', tr`토벌 대상`),
     h('ul', { class: 'list' }, Object.entries(FOES).filter(([id]) => !(id in BOSS)).map(([id, f]) => li(portrait(id), f.name, f.note))),
-    h('h3', {}, tr`보스`),
-    h('ul', { class: 'list' }, Object.entries(BOSS).map(([id, b]) => li(portrait(id), b.name, b.note, tr`나오는 때: ${when(id)}${b.st ? tr` · 상태이상: ${STATUS[b.st].name}(${STATUS[b.st].note})` : ''}`)), li(portrait('darkstar'), tr`검은 별똥별`, tr`쓰러뜨릴 수 없다 — 끝까지 쫓아오며(점점 빨라진다) 3초마다 별 조각을 사방으로 뿌린다. 30:00까지 도망치기`, tr`나오는 때: ${fmt(DARK_T)}(세이렌을 못 쓰러뜨렸을 때)`))),
+    sec('boss', 'dekatsuyo', tr`보스`),
+    h('ul', { class: 'list' }, Object.entries(BOSS).map(([id, b]) => li(portrait(id), b.name, b.note, tr`나오는 때: ${when(id)}${b.st ? tr` · 상태이상: ${STATUS[b.st].name}(${STATUS[b.st].note})` : ''}`)), li(portrait('darkstar'), tr`검은 별똥별`, tr`쓰러뜨릴 수 없다 — 끝까지 쫓아오며(점점 빨라진다) 3초마다 별 조각을 사방으로 뿌린다. 30:00까지 도망치기`, tr`나오는 때: ${fmt(DARK_T)}(세이렌을 못 쓰러뜨렸을 때)`)))
+  show(h('div', { class: 'panel guide pick dex' },
+    h('p', { class: 'h' }, tr`토벌 도감`),
+    h('div', { class: 'dex-nav' }, NAV.map(([id, pic, s]) => h('button', { type: 'button', onclick: () => scroll.querySelector(`#dex-${id}`).scrollIntoView({ behavior: 'smooth', block: 'start' }) }, ic(pic), ` ${s}`))),   // 바로 가기
+    scroll,
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title, 'main'))))
 }
 /** 지금 가진 스킬 · 아이템 — pick 을 주면 눌러서 자세히 볼 수 있는 단추로 */
@@ -3066,7 +3091,10 @@ function finish(win, quit = false) {
     h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? tr`검은 별똥별에게서 끝까지 도망쳤어요!` : tr`세이렌을 쫓아냈어요!`) : G.final ? tr`세이렌까지 왔어요! 조금만 더` : tr`세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
     h('p', { class: `lvl-badge ${G.diff}` }, ic(G.diff), ` ${G.D.name}`),
     h('div', { class: 'stats' }, stat(tr`버틴 시간`, fmt(G.t), rec), stat(tr`레벨`, G.lvl), stat(tr`처치`, G.kills.toLocaleString()), stat(tr`보스`, G.bosses)),
-    h('p', { class: 'coin' }, ic('coin'), tr` 토벌 보상금 +${pay.sum.toLocaleString()}`, h('small', {}, tr`${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''} — 모은 돈 ${save.coin.toLocaleString()}`)),
+    h('div', { class: 'coin pay' },   // 토벌 보상금 · 떠돌이 보물상자 · 합계를 줄마다
+      h('p', {}, ic('coin'), h('span', {}, tr`토벌 보상금`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''}`)), h('b', {}, `+${pay.base.toLocaleString()}`)),
+      h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 돌아다니면 가끔 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
+      h('p', { class: 'sum' }, h('span', {}, tr`합계`, h('small', {}, tr`모은 돈 ${save.coin.toLocaleString()}`)), h('b', {}, `+${pay.sum.toLocaleString()}`))),
     got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, tr`업적 달성!`), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? tr` — 보상금 +1%` : ''}`))),
     chips(), dmgTable(),
     h('div', { class: 'row' }, btn(tr`처음으로`, title), btn(tr`상점`, shop), btn(tr`캐릭터 바꾸기`, chars), btn(tr`다시 하기`, () => startGame(pickCi), 'main'))))
@@ -3076,8 +3104,7 @@ function bounty(win) {
   const parts = [[tr`버틴 시간`, G.t / 10], [tr`처치`, G.kills / 200], [tr`보스`, G.bosses * 15], [tr`클리어`, win ? 60 : 0]].map(([k, v]) => [k, Math.floor(v * G.D.coin)])
   const base = parts.reduce((a, p) => a + p[1], 0), g = golds(), bonus = Math.ceil(base * g / 100)   // 업적 금메달 하나마다 +1%(올림 — 금메달이 있으면 적어도 1)
   if (bonus) parts.push([tr`금메달 ${g}개 보너스`, bonus])
-  if (G.found) parts.push([tr`떠돌이 보물상자`, G.found])   // 상자에서 받은 것은 그대로(난이도 배수 · 금메달 보너스 없이)
-  return { parts, sum: base + bonus + G.found }
+  return { parts, base: base + bonus, found: G.found, sum: base + bonus + G.found }   // 떠돌이 보물상자에서 받은 것은 그대로(난이도 배수 · 금메달 보너스 없이) — 결과 화면에서 따로 한 줄
 }
 /** 판이 끝나면 업적 누적을 더하고, 새로 딴 메달 [id, 단계] 를 돌려준다 */
 function achieve(win, coin) {
