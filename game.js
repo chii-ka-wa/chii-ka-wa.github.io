@@ -17,14 +17,14 @@ const DARK_T = 29 * 60, END_T = 30 * 60   // 세이렌을 못 쓰러뜨리면 29
 
 // 캐릭터 — w 시작 스킬, mod 고유 특성
 const CHARS = [
-  { id: 'chiikawa', name: '치이카와', w: 'sasu', hp: 100, trait: '울보 근성', note: '체력이 절반 이하면 공격력 +30% — 레벨업마다 기준 체력 +1%(Lv 2면 51% 이하), Lv 50부터는 늘 · 경험치 +10%', mod: { clutch: 0.3, growth: 0.1 } },
+  { id: 'chiikawa', name: '치이카와', w: 'sasu', hp: 100, trait: '울보 근성', note: '체력이 절반 이하면 공격력 +30% — 레벨업마다 기준 체력 +1%(Lv 2면 51% 이하), Lv 50부터는 늘 · 경험치 +5%', mod: { clutch: 0.3, growth: 0.05 } },
   { id: 'hachiware', name: '하치와레', w: 'guitar', hp: 110, trait: '어떻게든 돼라!', note: '행운 +20% · 잭팟 확률 2배 · 리롤 · 스킵 · 제외 +1', mod: { luck: 0.2, jackpot: 1, boxes: 1 } },
   { id: 'usagi', name: '우사기', w: 'stick', hp: 100, trait: '야하!', note: '이동 속도 +20% · 공격력 +10%', mod: { move: 0.2, might: 0.1 } },
   { id: 'momonga', name: '모몽가', w: 'momo', hp: 90, trait: '내 거야!', note: '보스 · 정예에게 주는 피해 +30% · 이동 속도 +15%', mod: { bossX: 0.3, move: 0.15 } },
   { id: 'kurimanju', name: '쿠리만쥬', w: 'kanpai', hp: 130, trait: '캬아~', note: '받는 피해 -2 · 초당 체력 0.5 회복 · 경험치 줍는 거리 +30%', mod: { armor: 2, regen: 0.5, magnet: 0.3 } },
   { id: 'rakko', name: '랏코', w: 'sword', hp: 120, trait: '토벌 랭킹 1위', note: '치명타 확률 +15% · 치명타 피해 2.5배', mod: { crit: 0.15, critX: 0.5 } },
   { id: 'kani', name: '카니', w: 'book', hp: 110, trait: '헌책방 주인', note: '범위 +20% · 투사체 속도 +20%', mod: { area: 0.2, speed: 0.2 } },
-  { id: 'shisa', name: '시사', w: 'ramen', hp: 110, trait: '라멘집 수행 중', note: '경험치 +25% · 쿨타임 -5% · 지속 시간 +15%', mod: { growth: 0.25, cdr: 0.05, dur: 0.15 } },
+  { id: 'shisa', name: '시사', w: 'ramen', hp: 110, trait: '라멘집 수행 중', note: '경험치 +15% · 쿨타임 -5% · 지속 시간 +15%', mod: { growth: 0.15, cdr: 0.05, dur: 0.15 } },
 ]
 
 // 스킬 — cd 쿨타임(초) · dmg 피해 · n 개수 · area 크기 배수 · spd 속도 배수 · dur 지속(초) · pierce 꿰뚫는 수. ups[i] = 레벨 i+2 가 될 때 더하는 것(최고 Lv 8)
@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '경험치 너프 — 치이카와 +10% → +5% · 시사 +25% → +15%',
     'PC 마우스로 움직일 때 — 스틱 원이 마우스를 따라오지 않고 누른 자리에 고정돼요. 누른 자리에서 마우스 쪽으로 움직여요(휴대폰 터치는 그대로)',
     '2배속 — 게임 중 오른쪽 위 소리 단추 왼쪽의 ×2 단추를 누르면 2배 빠르게, 한 번 더 누르면 원래 속도로',
     '떠돌이 보물상자 — 한자리에 머물지 않고 멀리 돌아다니면 드물게 나타나요(25초 뒤 사라져요). 열면 토벌 보상금 10 ~ 200(클수록 드물게), 1% 확률로 500(화려하게!), 3% 확률로 이번 판에서만 쓰는 부활석. 주운 부활석이 있으면 그것부터 쓰고, 그 판에는 상점 부활석을 못 써요(섞어 쓰지 않기 · 한 판 횟수는 그대로)',
