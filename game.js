@@ -1599,12 +1599,6 @@ const ICO = {
   },
   syn: g => { for (const [x, y, R, c] of [[-2.5, 1.5, 9.5, '#ffd23f'], [7, -6.5, 4.6, '#ff9be0'], [7.5, 7, 3.4, '#9fd8ff']]) { starP(g, x, y, R, R * 0.34, 4); ink(g, c, 1.2) } },
   party,
-  cup: g => {
-    line2(g, '#fff', 1.6, () => { g.beginPath(); g.arc(7.2, 2.6, 3.6, -Math.PI / 2, Math.PI / 2) })
-    g.beginPath(); g.moveTo(-9, -3); g.lineTo(8.4, -3); g.lineTo(6.8, 8); g.quadraticCurveTo(6.3, 10, 4.3, 10); g.lineTo(-5, 10); g.quadraticCurveTo(-7, 10, -7.5, 8); g.closePath(); ink(g, '#fff', 1.5)
-    el(g, -0.3, -3, 8.6, 1.8); ink(g, '#8a4b23', 1.2)
-    g.lineCap = 'round'; g.lineWidth = 1.3; g.strokeStyle = '#b9aaa0'; for (const x of [-3, 2]) { g.beginPath(); g.moveTo(x, -6.5); g.quadraticCurveTo(x - 1.6, -8.5, x, -10.5); g.quadraticCurveTo(x + 1.6, -12, x, -12.5); g.stroke() }
-  },
 }
 /** 아이콘 그림(30 × 30, 가운데 기준) — 캔버스에는 put / drawImage, 메뉴에는 ic(id) */
 const icoSpr = (id, k = K) => sprite(30, 30, 15, 15, g => {
@@ -2855,7 +2849,7 @@ function title() {
     h('p', { class: 'fine' }, '비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ'),
     STATS.url && h('p', { class: 'fine' }, '게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)를 모아요 · ',
       h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? '다시 보내기' : '보내지 않기' } }, save.noStats ? '다시 보내기' : '보내지 않기')),
-    h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { class: 'kofi', href: 'https://ko-fi.com/godbono', target: '_blank', rel: 'noopener' }, ic('cup'), ' 후원'))))
+    h('p', { class: 'fine' }, '문의 ', h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
 function pickChar(i) {
