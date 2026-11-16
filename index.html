@@ -139,6 +139,7 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 }
 
 /* 레벨 업 상자 */
+.box .card:focus-visible { outline: 4px solid var(--pink); outline-offset: 3px }   /* 각성 상자 — Enter · Space 로 받을 카드 */
 .box-title { margin: 0; font-size: 28px; color: #fff; text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 0 4px 0 var(--ink) }
 .jack { margin: 4px 0 0; font-size: 34px; color: var(--gold); text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink); animation: shake .4s infinite alternate }
 @keyframes shake { from { transform: rotate(-3deg) scale(1) } to { transform: rotate(3deg) scale(1.08) } }

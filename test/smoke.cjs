@@ -288,7 +288,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const n0 = w.st.n; M.pick0(); out.aw = G.aw.has('guitar') && w.st.n === n0 + 1
       G.foes.forEach(f => { f.dead = true }); let hit = 0
       for (let k = 0; k < 200; k++) {
-        w.t = 0; w.on = 0; step(1); const o = G.shots.find(s => s.k === 'orb'); if (!o || Math.hypot(o.x - M.pl.x, o.y - M.pl.y) < 30) continue   // 음표가 몸 가까이 들어왔을 때는 빼고(탄이 몸에 먼저 맞는다)
+        w.t = 0; w.on = 0; step(1); const o = G.shots.find(s => s.k === 'orb'); if (!o) continue
         const b = { k: 'spike', x: o.x, y: o.y, vx: 0, vy: 0, t: 0, life: 9, dmg: 1, r: 5 }; G.eshots = [b]; step(1); hit += b.dead ? 1 : 0; G.eshots = []
       }
       out.block = hit / 200; out.parried = G.parried; return out
@@ -306,6 +306,15 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const end = await page.evaluate(() => ({ mode: window.__mjg.mode, kind: window.__mjg.G.endKind, h: document.querySelector('.result .h')?.textContent }))
     console.log('dark', seen, end)
     if (!seen || end.mode !== 'over' || end.kind !== 'time') errors.push(`[dark] 검은 별똥별 ${seen} · 끝 ${JSON.stringify(end)}`)
+  })
+
+  await run('awaken-key', { width: 1280, height: 800 }, async page => {   // 각성 상자 — 첫 카드가 골라져 있어 Enter · Space 로 받는다
+    for (const key of ['Enter', 'Space']) {
+      await page.evaluate(() => { const M = window.__mjg; M.startGame(1); const w = M.G.weapons[0]; w.lv = 8; w.st = M.wstat(w); M.G.queue.push('awaken'); M.pl.inv = 9; M.step(1 / 30) })
+      await page.waitForTimeout(600); await page.keyboard.press(key); await page.waitForTimeout(100)
+      const r = await page.evaluate(() => ({ mode: window.__mjg.mode, aw: [...window.__mjg.G.aw] }))
+      if (r.mode !== 'play' || r.aw[0] !== 'guitar') errors.push(`[awaken-key] ${key} ${JSON.stringify(r)}`)
+    }
   })
 
   // 언어 — 처음 화면 오른쪽 위에서 고르면 기억하고 다시 불러온다. 다른 말에서는 처음 화면 · 도감 · 패치노트 · 캐릭터 고르기 · 레벨 업 상자 · 일시정지에 한국어가 남지 않는다(언어 이름 「한국어」 빼고)

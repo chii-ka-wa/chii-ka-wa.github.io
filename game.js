@@ -58,7 +58,7 @@ const WEAP = {
   ura: { name: tr`우라!`, note: tr`기합을 계속 질러 둘레의 적에게 피해를 준다`, how: tr`내 둘레에 계속 피해`, cd: 0.45, dmg: 4, ups: [{ area: 0.1 }, { dmg: 1 }, { area: 0.1 }, { cd: -0.08 }, { dmg: 2 }, { area: 0.1 }, { dmg: 2 }] },
   weed: { name: tr`풀뽑기`, note: tr`풀뽑기 검정 5급의 솜씨 — 가까운 적 발밑의 풀을 뽑아 터뜨린다`, how: tr`적 발밑이 터짐`, cd: 2.6, dmg: 18, n: 2, ups: [{ n: 1 }, { dmg: 6 }, { area: 0.2 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 12 }] },
   tears: { name: tr`와아… (울음)`, note: tr`눈물이 높이 튀어 떨어진 자리를 적신다 — 멀리 있는 적과 가장 가까운 적을 번갈아`, how: tr`멀리 · 가까운 적에게 번갈아 물폭탄`, cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
-  guitar: { name: tr`하치와레의 기타`, note: tr`음표가 몸 둘레를 돌며 안팎으로 오가 적을 쳐 낸다 — 몸에 붙은 적도`, how: tr`음표가 내 둘레를 안팎으로 돎`, cd: 1.6, dmg: 12, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 4 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 5, dur: 1 }] },
+  guitar: { name: tr`하치와레의 기타`, note: tr`음표가 몸 둘레를 돌며 적을 쳐 낸다 — 연주하는 동안 몸에 붙은 적을 살짝 밀쳐 낸다`, how: tr`음표가 내 둘레를 돎 · 붙은 적 밀쳐 내기`, cd: 1.6, dmg: 12, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 4 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 5, dur: 1 }] },
   nantoka: { name: tr`어떻게든 돼라!`, note: tr`가까운 적부터 별이 번개처럼 꽂힌다`, how: tr`가까운 적에게 번개`, cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
   ramen: { name: tr`라멘 국물`, note: tr`가까운 적 발밑에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다`, how: tr`가까운 적 발밑 장판 · 느리게`, cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
   curry: { name: tr`극매운 카레`, note: tr`적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배`, how: tr`적이 몰린 곳에 큰 폭발`, cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
@@ -106,8 +106,9 @@ const PATCH = [
   ['2026-11-16', [
     ['new', 'globe', tr`이제 다른 나라 말로도 놀 수 있어요! 처음 화면 오른쪽 위에서 골라요 — 한국어 · 日本語 · English · 简体中文 · 繁體中文`],
     ['fix', 'party', tr`패치노트를 그림과 쉬운 말로 바꿨어요`],
+    ['fix', 'awaken', tr`각성 상자에서도 Enter · Space 키로 받을 수 있어요`],
     ['up', 'tears', tr`「와아… (울음)」이 멀리 있는 적과 가까이 온 적을 번갈아 맞혀요`],
-    ['up', 'guitar', tr`하치와레의 기타 — 음표가 몸 가까이까지 들어와서 붙은 적도 때려요. 더 자주, 더 세게!`],
+    ['up', 'guitar', tr`하치와레의 기타 — 연주하는 동안 몸에 붙은 적을 살짝 밀쳐 내요. 더 자주, 더 세게!`],
     ['up', 'ramen', tr`라멘 국물을 적 발밑에 쏟아요`],
     ['up', 'stick', tr`우사기의 토벌봉 — 가까운 적 쪽으로 휘둘러요. 더 빠르고 더 세졌어요!`],
     ['down', 'wage', tr`치이카와 · 시사가 받는 경험치가 조금 줄었어요`],
@@ -1979,9 +1980,11 @@ function weapons(dt) {
     }
     if (w.id === 'guitar') {   // 켜져 있는 동안 음표가 돈다
       w.ang += dt * 3.4 * st.spd * S.speed
-      if (w.on > 0) { if ((w.on -= dt) <= 0) w.t = st.cd * CD }
-      else if ((w.t -= dt) <= 0) {
-        const n = st.n + S.amount; w.on = st.dur * S.dur; w.fire = G.t
+      if (w.on > 0) {
+        if ((w.pt -= dt) <= 0) { w.pt = 0.8; near(pl.x, pl.y, 58 * A, e => { hurt(e, D * 0.5, pl.x, pl.y, 150) }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 58 * A, T: 0.3, col: '#ffc2e0' }) }   // 연주하는 동안 0.8초마다 몸에 붙은 적을 살짝 밀쳐 낸다(음표 원 안쪽은 음표가 못 닿으니)
+        if ((w.on -= dt) <= 0) w.t = st.cd * CD
+      } else if ((w.t -= dt) <= 0) {
+        const n = st.n + S.amount; w.on = st.dur * S.dur; w.fire = G.t; w.pt = 0
         for (let i = 0; i < n; i++) G.shots.push({ src: SRC, k: 'orb', w, i, n, R: 80 * A, r: 10 * Math.sqrt(A), dmg: D, life: w.on, hit: new Map(), x: pl.x, y: pl.y, t: 0 })
       }
       continue
@@ -2467,8 +2470,8 @@ function shots(dt) {
         break
       }
       case 'orb': {   // 기타 음표
-        const a = b.w.ang + b.i / b.n * TAU, R = b.R * (0.6 + 0.4 * Math.cos(b.t * 2.4))   // 돌면서 안쪽(0.2배)까지 들어왔다 나간다 — 몸에 붙은 적도 맞게
-        b.x = pl.x + Math.cos(a) * R; b.y = pl.y + Math.sin(a) * R * 0.85
+        const a = b.w.ang + b.i / b.n * TAU
+        b.x = pl.x + Math.cos(a) * b.R; b.y = pl.y + Math.sin(a) * b.R * 0.85
         if ((b.life -= dt) <= 0) { b.dead = true; break }
         parryIn(b.x, b.y, b.r + 4)
         near(b.x, b.y, b.r, e => { const t = b.hit.get(e); if (t === undefined || G.t - t > 0.45) { b.hit.set(e, G.t); hurt(e, b.dmg, pl.x, pl.y, 190) } })
@@ -2574,16 +2577,17 @@ function openBox() {
   function act(k) {
     if (!box.ready || BOX !== box) return
     if (k === 'take') { box.opts.forEach(take); return next() }
-    if (aw) { if (k !== 'rr' || !G.arr || awCan().length <= 3) return; G.arr--; box.opts = awOffers(); return sync() }
+    if (aw) { if (k !== 'rr' || !G.arr || awCan().length <= 3) return; G.arr--; box.opts = awOffers(); sync(); return aim() }
     if (!G[k]) return
     if (k === 'bans') { box.ban = !box.ban; return sync() }
     G[k]--
     if (k === 'skips') return next()
     box.opts = offers(); box.ban = false; sync()   // 리롤 — 셋 다 새로
   }
+  const aim = () => aw && cards.querySelector('.card')?.focus({ preventScroll: true })   // 각성 상자 — 첫 카드를 골라 두어 Enter · Space 로 받는다(Tab 으로 옮기기 · 숫자 키로 바로 고르기)
   box.pick = pick; box.act = act
   sync(); ui.replaceChildren(root); ui.hidden = false; ui.scrollTop = 0
-  setTimeout(() => { if (BOX === box) { box.ready = true; root.classList.add('ready') } }, 450)   // 움직이던 손가락이 바로 카드를 누르지 않게
+  setTimeout(() => { if (BOX === box) { box.ready = true; root.classList.add('ready'); aim() } }, 450)   // 움직이던 손가락이 바로 카드를 누르지 않게
 }
 function next() {
   BOX = null
