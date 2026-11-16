@@ -3094,7 +3094,7 @@ function finish(win, quit = false) {
     h('div', { class: 'coin pay' },   // 토벌 보상금 · 떠돌이 보물상자 · 합계를 줄마다
       h('p', {}, ic('coin'), h('span', {}, tr`토벌 보상금`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''}`)), h('b', {}, `+${pay.base.toLocaleString()}`)),
       h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 돌아다니면 가끔 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
-      h('p', { class: 'sum' }, h('span', {}, tr`합계`, h('small', {}, tr`모은 돈 ${save.coin.toLocaleString()}`)), h('b', {}, `+${pay.sum.toLocaleString()}`))),
+      h('p', { class: 'sum' }, h('span', {}, tr`합계`), h('b', {}, `+${pay.sum.toLocaleString()}`))),
     got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, tr`업적 달성!`), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? tr` — 보상금 +1%` : ''}`))),
     chips(), dmgTable(),
     h('div', { class: 'row' }, btn(tr`처음으로`, title), btn(tr`상점`, shop), btn(tr`캐릭터 바꾸기`, chars), btn(tr`다시 하기`, () => startGame(pickCi), 'main'))))

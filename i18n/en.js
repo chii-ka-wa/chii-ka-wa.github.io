@@ -559,7 +559,6 @@ export default {
   "조금 더 버텨 봐요": "Try to last a little longer",
   "멀리 돌아다니면 가끔 나와요": "Shows up when you wander far",
   "합계": "Total",
-  "모은 돈 {0}": "Your coins: {0}",
   "업적 달성!": "Achievement unlocked!",
   " — 보상금 +1%": " — bounty +1%",
   "처음으로": "Title",
