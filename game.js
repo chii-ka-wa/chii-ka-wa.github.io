@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    '2배속 — 게임 중 오른쪽 위 소리 단추 왼쪽의 ×2 단추를 누르면 2배 빠르게, 한 번 더 누르면 원래 속도로',
     '떠돌이 보물상자 — 한자리에 머물지 않고 멀리 돌아다니면 드물게 나타나요(25초 뒤 사라져요). 열면 토벌 보상금 10 ~ 200(클수록 드물게), 1% 확률로 500(화려하게!), 3% 확률로 이번 판에서만 쓰는 부활석. 주운 부활석이 있으면 그것부터 쓰고, 그 판에는 상점 부활석을 못 써요(섞어 쓰지 않기 · 한 판 횟수는 그대로)',
     '상점에 부활석(1,000) — 쓰러지면 「부활할까요?」 창이 떠서 하나 써서 다시 일어나요. 체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 1.2초 무적 · 화면 안 일반 몬스터를 모두 토벌(보스 빼고). 한 판에 쉬움 3 · 보통 2 · 어려움 1번까지',
     '20~25분 난이도 완화 · 25분부터 더 어렵게 — 보통 적 피가 20분 → 24분에 2.6배로 뛰던 것을 1.7배로(24분 기준 예전의 2/3), 대신 세이렌이 나오는 25분부터 가파르게 올라 27분 뒤로는 예전보다 단단해요(30분 1.3배). 닿으면 아픈 정도도 20~25분은 천천히, 25분부터 빠르게. 20분 뒤 고블린 폭탄 · 돌격대 간격 15~19초 → 20~26초, 20~25분 보스 넷 → 셋(요리사 괴물 21:30 → 22:00 · 중간보스 거대 키메라 23:00 → 23:30 · 24분 중간보스 데카츠요는 빠져요)',
@@ -1738,6 +1739,8 @@ cv.addEventListener('pointermove', e => {
 const lift = e => { if (e.pointerId === joy.id) { joy.on = false; joy.id = null; joy.x = joy.y = 0 } }
 cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift)
 pauseBtn.addEventListener('click', () => { pauseBtn.blur(); pause() })
+let spd = 1   // 게임 배속(1 · 2) — 오른쪽 위 ×2 단추로 켜고 끈다
+document.getElementById('spd').addEventListener('click', e => { spd = 3 - spd; e.currentTarget.setAttribute('aria-pressed', spd > 1); e.currentTarget.blur() })
 
 // ---------------------------------------------------------------- 한 판
 let mode = 'title', G = null, pl = null, S = null, shake = 0, pickCi = 0, SRC = null   // SRC — 지금 피해를 주는 스킬 · 친구(스킬별 피해 표)
@@ -2804,9 +2807,9 @@ function hud(c) {
   c.fillStyle = 'rgba(74,59,53,.45)'; c.fillRect(0, 0, W, 10)
   c.fillStyle = '#7fd3ff'; c.fillRect(0, 0, W * Math.min(1, G.xp / G.next), 10)
   txt(c, `Lv ${G.lvl}`, 34, 32, 17)
-  txt(c, fmt(G.t), W / 2, 38, 26)
-  const [nl, nc] = nextLine(); txt(c, nl, W / 2, 56, 12, nc)
-  txt(c, `처치 ${G.kills}`, W / 2, 73, 12)
+  const [nl, nc] = nextLine(); c.font = `12px ${FONT}`
+  const half = c.measureText(nl).width / 2 + 4, cx = Math.max(half, Math.min(W / 2, W - 172 - half))   // 좁은 화면 — 가운데 글자를 왼쪽으로 비켜 오른쪽 위 단추 셋(배속 · 소리 · 일시정지)과 안 겹치게
+  txt(c, fmt(G.t), cx, 38, 26); txt(c, nl, cx, 56, 12, nc); txt(c, `처치 ${G.kills}`, cx, 73, 12)
   const top = W < 700 ? 84 : 44   // 좁은 화면(휴대폰)은 스킬 줄을 타이머 · 다음 보스 · 처치 글자 아래로 — 안 겹치게
   let x = 10
   for (const w of G.weapons) { const p = Math.max(0, 1 - (G.t - (w.fire ?? -9)) / 0.25); if (p) { c.globalAlpha = p * 0.7; c.fillStyle = '#fff'; oval(c, x + 13, top + 13, 17, 17); c.fill(); c.globalAlpha = 1 } c.drawImage(SPR.E[w.id].c, x - 3 * p, top - 3 * p, 26 + 6 * p, 26 + 6 * p); txt(c, G.aw.has(w.id) ? '★' : String(w.lv), x + 22, top + 26, 11, G.aw.has(w.id) ? '#ff9be0' : w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
@@ -3085,7 +3088,7 @@ function frame(ts) {
   if (last) autoQ(ts - last)
   let dt = Math.min(0.05, last ? (ts - last) / 1000 : 0.016)
   last = ts; tnow += dt
-  if (mode === 'play' && G) { if (G.dying > 0) dt *= 0.3; step(dt) }
+  if (mode === 'play' && G) { if (G.dying > 0) dt *= 0.3; for (let i = 0; i < spd && mode === 'play'; i++) step(dt) }   // 2배속은 한 프레임에 두 번(한 번에 길게 돌리면 빠른 탄이 적을 지나친다)
   else if (!G) cam.x += dt * 24
   if (mode !== lastMode) { lastMode = mode; still = 2 }
   if (mode === 'play' || !G || still-- > 0) render()   // 상자 · 일시정지 · 결과 동안은 다시 그리지 않는다 — 메뉴 연출이 부드럽게
