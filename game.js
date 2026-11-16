@@ -82,6 +82,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 새 항목을 맨 위에 넣는다. 글 한 줄, 또는 시너지 수치 변경은 { syn, from, to }(전 → 후 표로 그린다). 처음 화면 「패치노트」에 NEW 가 뜬다(본 것은 save.seen — 날짜 + 항목 수라 같은 날 더해도 다시 뜬다)
 const PATCH = [
   ['2026-11-16', [
+    'PC 마우스로 움직일 때 — 스틱 원이 마우스를 따라오지 않고 누른 자리에 고정돼요. 누른 자리에서 마우스 쪽으로 움직여요(휴대폰 터치는 그대로)',
     '2배속 — 게임 중 오른쪽 위 소리 단추 왼쪽의 ×2 단추를 누르면 2배 빠르게, 한 번 더 누르면 원래 속도로',
     '떠돌이 보물상자 — 한자리에 머물지 않고 멀리 돌아다니면 드물게 나타나요(25초 뒤 사라져요). 열면 토벌 보상금 10 ~ 200(클수록 드물게), 1% 확률로 500(화려하게!), 3% 확률로 이번 판에서만 쓰는 부활석. 주운 부활석이 있으면 그것부터 쓰고, 그 판에는 상점 부활석을 못 써요(섞어 쓰지 않기 · 한 판 횟수는 그대로)',
     '상점에 부활석(1,000) — 쓰러지면 「부활할까요?」 창이 떠서 하나 써서 다시 일어나요. 체력 가득 · 레벨 업처럼 둘레를 밀쳐 내고 1.2초 무적 · 화면 안 일반 몬스터를 모두 토벌(보스 빼고). 한 판에 쉬움 3 · 보통 2 · 어려움 1번까지',
@@ -1721,7 +1722,7 @@ addEventListener('keyup', e => { const k = KEYS[e.code]; if (k) key[k] = 0 })
 const calm = () => { for (const k in key) key[k] = 0; joy.on = false; joy.id = null; joy.x = joy.y = 0 }
 addEventListener('blur', () => { calm(); pause() })
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause() })
-// 손가락 스틱 — 화면 아무 데나 누른 자리가 가운데. 멀리 끌면 원이 손가락을 따라온다
+// 손가락 스틱 — 화면 아무 데나 누른 자리가 가운데. 멀리 끌면 원이 손가락을 따라온다(마우스 · 펜은 누른 자리에 고정 — 따라오면 방향이 마음대로 안 잡힌다)
 cv.addEventListener('pointerdown', e => {
   if (mode !== 'play') return
   cv.setPointerCapture(e.pointerId)
@@ -1732,7 +1733,7 @@ cv.addEventListener('pointermove', e => {
   const R = 46
   let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy
   const d = Math.hypot(dx, dy)
-  if (d > R) { joy.ox += dx * (1 - R / d); joy.oy += dy * (1 - R / d); dx *= R / d; dy *= R / d }
+  if (d > R) { if (e.pointerType === 'touch') { joy.ox += dx * (1 - R / d); joy.oy += dy * (1 - R / d) } dx *= R / d; dy *= R / d }
   joy.px = joy.ox + dx; joy.py = joy.oy + dy
   joy.x = d > 6 ? dx / R : 0; joy.y = d > 6 ? dy / R : 0
 })
