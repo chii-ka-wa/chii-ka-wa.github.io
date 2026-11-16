@@ -7,7 +7,12 @@
 // 언어 — 처음 화면 오른쪽 위에서 고르면 이 브라우저(save.lang)에 기억하고 다시 불러온다. 한국어가 원문이고 다른 말은 i18n/<언어>.js(열쇠 = 한국어 원문)
 //   글은 모두 tr`…` 로 감싼다 — ${} 자리는 열쇠에서 {0} {1} …(번역에서 순서를 바꿀 수 있다). 번역이 없으면 한국어 그대로. 빠진 번역 찾기: node test/i18n.cjs
 const LANGS = [['ko', '한국어', 'kr'], ['ja', '日本語', 'jp'], ['en', 'English', 'us'], ['zh-CN', '简体中文', 'cn'], ['zh-TW', '繁體中文', 'tw']]   // 코드 · 그 말로 쓴 이름 · 국기
-const LANG = (() => { try { const l = JSON.parse(localStorage.getItem('mjg.v1'))?.lang; return LANGS.some(x => x[0] === l) ? l : 'ko' } catch { return 'ko' } })()
+const LANG = (() => {   // 주소에 ?lang=en 이 있으면(홍보 링크 chii-ka-wa.github.io/en/ 이 여기로 보낸다) 그 말로 정하고 기억, 없으면 기억한 말
+  const q = new URLSearchParams(location.search).get('lang')?.toLowerCase(), hit = LANGS.find(x => x[0].toLowerCase() === q)?.[0]
+  let s = {}; try { s = JSON.parse(localStorage.getItem('mjg.v1')) || {} } catch {}
+  if (hit) { s.lang = hit; try { localStorage.setItem('mjg.v1', JSON.stringify(s)) } catch {} history.replaceState(null, '', location.pathname + location.hash) }   // 주소에서는 지운다(언어 단추로 바꾼 뒤 다시 불러와도 고른 말이 이기게)
+  return hit || (LANGS.some(x => x[0] === s.lang) ? s.lang : 'ko')
+})()
 const TR = LANG === 'ko' ? null : await import(`./i18n/${LANG}.js`).then(m => m.default, () => null)
 function tr(s, ...v) {
   let k = s[0]; for (let i = 1; i < s.length; i++) k += `{${i - 1}}` + s[i]

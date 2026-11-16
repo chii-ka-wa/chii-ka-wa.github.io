@@ -323,6 +323,10 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const lang = await page.evaluate(() => [document.documentElement.lang, JSON.parse(localStorage.getItem('mjg.v1')).lang])
       if (lang[0] !== code || lang[1] !== code || Object.values(left).some(a => a.length)) errors.push(`[lang] ${code} ${JSON.stringify({ lang, left })}`)
     }
+    // 영어 홍보 링크 /en/ — 게임(/?lang=en)으로 넘어가 영어로 정하고 기억, 주소의 ?lang= 은 지운다
+    await page.evaluate(() => localStorage.clear()); await page.goto(URL + 'en/'); await page.waitForURL(u => !u.pathname.startsWith('/en')); await page.waitForTimeout(600)
+    const via = await page.evaluate(() => ({ lang: document.documentElement.lang, saved: JSON.parse(localStorage.getItem('mjg.v1') || '{}').lang, search: location.search, han: (document.querySelector('#ui').innerText.replace(/한국어/g, '').match(/[가-힣]+/g) || []).length }))
+    if (via.lang !== 'en' || via.saved !== 'en' || via.search || via.han) errors.push('[lang] /en/ ' + JSON.stringify(via))
   })
 
   await browser.close()
