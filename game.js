@@ -60,12 +60,12 @@ const WEAP = {
   tears: { name: tr`와아… (울음)`, note: tr`눈물이 높이 튀어 떨어진 자리를 적신다 — 멀리 있는 적과 가장 가까운 적을 번갈아`, how: tr`멀리 · 가까운 적에게 번갈아 물폭탄`, cd: 2.2, dmg: 22, ups: [{ n: 1 }, { area: 0.2 }, { dmg: 10 }, { n: 1 }, { cd: -0.4 }, { dmg: 12 }, { n: 1, area: 0.2 }] },
   guitar: { name: tr`하치와레의 기타`, note: tr`음표가 몸 둘레를 돌며 적을 쳐 낸다 — 연주하는 동안 몸에 붙은 적을 살짝 밀쳐 낸다`, how: tr`음표가 내 둘레를 돎 · 붙은 적 밀쳐 내기`, cd: 1.6, dmg: 12, n: 2, dur: 3.2, ups: [{ n: 1 }, { area: 0.15, spd: 0.25 }, { dmg: 4 }, { n: 1 }, { dur: 1 }, { n: 1 }, { dmg: 5, dur: 1 }] },
   nantoka: { name: tr`어떻게든 돼라!`, note: tr`가까운 적부터 별이 번개처럼 꽂힌다`, how: tr`가까운 적에게 번개`, cd: 2.8, dmg: 20, n: 2, ups: [{ n: 1 }, { dmg: 8 }, { area: 0.25 }, { n: 1 }, { cd: -0.5 }, { n: 1 }, { dmg: 14 }] },
-  ramen: { name: tr`라멘 국물`, note: tr`가까운 적 발밑에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다`, how: tr`가까운 적 발밑 장판 · 느리게`, cd: 4, dmg: 6, dur: 2.5, ups: [{ n: 1 }, { dmg: 2 }, { dur: 1 }, { area: 0.15 }, { n: 1 }, { dmg: 3 }, { dur: 1, area: 0.15 }] },
+  ramen: { name: tr`라멘 국물`, note: tr`가까운 적 발밑에 뜨거운 국물을 쏟아 밟은 적을 느리게 하고 데운다`, how: tr`가까운 적 발밑 장판 · 느리게`, cd: 3.5, dmg: 8, dur: 3, ups: [{ n: 1 }, { dmg: 2 }, { dur: 0.5 }, { area: 0.15 }, { n: 1 }, { dmg: 1 }, { dur: 0.5, area: 0.15 }] },   // 11-17 버프 — 초반 · 중반 세게(Lv 8 피해는 그대로 11)
   curry: { name: tr`극매운 카레`, note: tr`적이 몰린 곳에 카레 냄비 — 1초 뒤 매운 폭발. 인어 · 세이렌에게 1.5배`, how: tr`적이 몰린 곳에 큰 폭발`, cd: 3.2, dmg: 22, ups: [{ dmg: 7 }, { area: 0.15 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.15 }, { n: 1, dmg: 10 }] },
   pochette: { name: tr`포셰트 부메랑`, note: tr`던지면 되돌아오는 포셰트 — 오가며 계속 맞힌다`, how: tr`갔다 돌아오는 부메랑`, cd: 1.8, dmg: 10, ups: [{ dmg: 4 }, { n: 1 }, { area: 0.25 }, { dmg: 5 }, { n: 1 }, { spd: 0.3 }, { n: 1 }] },
   momo: { name: tr`내놔!`, note: tr`보스 · 정예 먼저, 없으면 가장 가까운 적에게 달려들어 낚아채는 큰 한 방 — 둘레도 조금 할퀸다`, how: tr`보스 · 가까운 적에게 큰 한 방`, cd: 1.9, dmg: 38, ups: [{ dmg: 14 }, { n: 1 }, { cd: -0.3 }, { dmg: 18 }, { n: 1 }, { cd: -0.3 }, { dmg: 30 }] },
-  kanpai: { name: tr`건배!`, note: tr`잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다`, how: tr`적 사이를 튕겨 다니기`, cd: 1.4, dmg: 18, pierce: 1, bounce: 4, ups: [{ bounce: 2 }, { dmg: 6 }, { n: 1 }, { bounce: 2 }, { dmg: 8 }, { cd: -0.3 }, { n: 1, bounce: 2, dmg: 8 }] },
-  sword: { name: tr`랏코 선생의 일섬`, note: tr`화면을 가로지르는 칼바람 — 줄 위의 적을 모두 벤다`, how: tr`화면을 가로지르는 베기`, cd: 2.4, dmg: 20, ups: [{ dmg: 7 }, { area: 0.25 }, { n: 1 }, { cd: -0.4 }, { dmg: 9 }, { area: 0.25 }, { n: 1, dmg: 10 }] },
+  kanpai: { name: tr`건배!`, note: tr`잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다`, how: tr`적 사이를 튕겨 다니기`, cd: 1.4, dmg: 15, pierce: 1, bounce: 2, ups: [{ bounce: 1 }, { dmg: 6 }, { n: 1 }, { bounce: 2 }, { dmg: 8 }, { cd: -0.2 }, { n: 1, bounce: 3, dmg: 8 }] },   // 11-17 너프 — 섞어 들면 피해의 30~45% 를 가져갔다
+  sword: { name: tr`랏코 선생의 일섬`, note: tr`화면을 가로지르는 칼바람 — 줄 위의 적을 모두 벤다`, how: tr`화면을 가로지르는 베기`, cd: 2.4, dmg: 20, ups: [{ dmg: 6 }, { area: 0.25 }, { n: 1 }, { cd: -0.3 }, { dmg: 7 }, { area: 0.25 }, { n: 1, dmg: 8 }] },   // 11-17 너프 — 후반(Lv 8)이 가장 셌다
 }
 const UP = { n: v => tr`개수 +${v}`, dmg: v => tr`피해 +${v}`, cd: v => tr`쿨타임 ${v}초`, area: v => tr`범위 +${Math.round(v * 100)}%`, spd: v => tr`속도 +${Math.round(v * 100)}%`, dur: v => tr`지속 +${v}초`, pierce: v => tr`관통 +${v}`, bounce: v => tr`튕김 +${v}` }
 // 시너지 — 짝인 두 스킬을 다 가지면 둘 다 세진다(wstat). 스킬마다 짝은 하나
@@ -103,6 +103,12 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 유치원 · 초등학생도 읽기 쉽게: 한 줄에 그림 하나(ic) · 꼬리표 하나 · 짧은 문장 하나. 새 항목을 맨 위에.
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
+  ['2026-11-17', [
+    ['fix', 'magnet', tr`자석을 먹으면 멀리 있는 경험치까지 정말 다 모아요`],
+    ['down', 'kanpai', tr`건배! — 잔이 덜 튕기고 조금 약해졌어요`],
+    ['down', 'sword', tr`랏코 선생의 일섬 — 레벨이 오를 때 조금 덜 세져요`],
+    ['up', 'ramen', tr`라멘 국물이 더 자주, 더 뜨겁게 끓고 밟은 적이 더 느려져요!`],
+  ]],
   ['2026-11-16', [
     ['new', 'shirt', tr`의상이 생겼어요! 상점 「의상」 탭에서 사요 — 한 번 사면 모든 캐릭터가 입어요`],
     ['new', 'hard', tr`어려움을 클리어하면 그 캐릭터의 특별한 업적 의상을 받아요`],
@@ -319,7 +325,7 @@ const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } c
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
 //   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
-const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — 넣기만 된다(RLS). url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
+const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — report_run 함수(검사 · 횟수 제한 · 시각은 서버)만 부를 수 있다. 표는 못 만진다. url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
 const statsOn = () => !!STATS.url && !save.noStats && location.hostname === STATS.host && !navigator.globalPrivacyControl && navigator.doNotTrack !== '1'
 if (statsOn()) {   // 방문 통계(Google 애널리틱스) — 익명 통계와 같은 규칙(이 주소에서만 · 보내지 않기 · 추적 거부면 안 불러온다)
   window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments) }
@@ -336,7 +342,7 @@ function statRow(result) {
 }
 function report(result) {
   if (!statsOn()) return
-  fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
+  fetch(`${STATS.url}/rest/v1/rpc/report_run`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
     headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } }).catch(() => {})
 }
 
@@ -2712,11 +2718,10 @@ function ouch(d, src) {
 
 // ---- 경험치 · 줍는 것
 function gem(x, y, v) {
-  if (G.gems.length >= 360) {   // 너무 많으면 가장 먼(두고 온) 것을 여기로 옮겨 합친다 — 경험치는 그대로
-    let far = G.gems[0], fd = -1
-    for (const g of G.gems) { const d = (g.x - pl.x) ** 2 + (g.y - pl.y) ** 2; if (d > fd) { fd = d; far = g } }
-    Object.assign(far, { x, y, v: far.v + v, pull: false, sp: 0 })
-    return
+  if (G.gems.length >= 360) {   // 너무 많으면 가장 먼(두고 온) 것을 여기로 옮겨 합친다 — 경험치는 그대로. 끌려오는 것(자석)은 빼고 — 옮기면 화면 안에 멈춰 버린다. 다 끌려오는 중이면 잠깐 360을 넘긴다
+    let far = null, fd = -1
+    for (const g of G.gems) { if (g.pull) continue; const d = (g.x - pl.x) ** 2 + (g.y - pl.y) ** 2; if (d > fd) { fd = d; far = g } }
+    if (far) { Object.assign(far, { x, y, v: far.v + v, sp: 0 }); return }
   }
   G.gems.push({ x: x + (rnd() - 0.5) * 8, y: y + (rnd() - 0.5) * 8, v, pull: false, sp: 0 })
 }
@@ -2953,7 +2958,7 @@ function shots(dt) {
         near(b.x, b.y, b.r, e => { const t = b.hit.get(e); if (t === undefined || G.t - t > 0.5) { b.hit.set(e, G.t); hurt(e, b.dmg, b.x - b.dx * Math.sign(b.v), b.y - b.dy * Math.sign(b.v), 70) } })
         break
       case 'zone':   // 라멘 국물 — 밟은 적을 느리게 하고 데운다
-        if ((b.tick -= dt) <= 0) { b.tick = 0.3; near(b.x, b.y, b.R, e => { hurt(e, b.dmg, b.x, b.y, 0); slow(e, 0.4, 0.6) }) }
+        if ((b.tick -= dt) <= 0) { b.tick = 0.3; near(b.x, b.y, b.R, e => { hurt(e, b.dmg, b.x, b.y, 0); slow(e, 0.4, 0.5) }) }
         parryIn(b.x, b.y, b.R)
         if (b.t > b.life) b.dead = true
         break

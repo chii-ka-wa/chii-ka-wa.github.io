@@ -20,7 +20,7 @@ from runs where result = 'dead' group by 1 order by 쓰러짐 desc;
 
 -- 5. 많이 쓴 스킬(끝났을 때 가진 것) — 레벨 9 는 각성(2026-11-15 판부터)
 select regexp_replace(w, '\d+$', '') as 스킬, count(*) as 판, round(avg(regexp_replace(w, '^\D+', '')::int), 1) as 평균_레벨
-from runs, unnest(string_to_array(weapons, ' ')) as w where w <> '' group by 1 order by 판 desc;
+from runs, unnest(string_to_array(weapons, ' ')) as w where w ~ '^[a-z]+[1-9]$' group by 1 order by 판 desc;
 
 -- 6. 날마다 판 수 · 휴대폰 비율(한국 날짜 기준)
 select (created_at at time zone 'Asia/Seoul')::date as 날짜, count(*) as 판, round(100.0 * count(*) filter (where touch) / count(*), 1) as 휴대폰_비율
@@ -43,5 +43,5 @@ with s(id, 이름, 시작) as (values
 select s.이름 as 스킬, count(r.id) as 판, count(x.m) as 고른_판, round(100.0 * count(x.m) / nullif(count(r.id), 0), 1) as 고른_비율,
        round(avg(case when x.m[1] = '9' then 8 else x.m[1]::int end), 1) as 평균_레벨, count(*) filter (where x.m[1] = '9') as 각성
 from s left join runs r on r.t >= 300 and r.weapons is not null and r.ch is distinct from s.시작
-       left join lateral (select regexp_match(r.weapons, '(?:^| )' || s.id || '(\d+)') as m) x on true
+       left join lateral (select regexp_match(r.weapons, '(?:^| )' || s.id || '([1-9])(?= |$)') as m) x on true
 group by s.이름 order by 고른_비율 desc nulls last;
