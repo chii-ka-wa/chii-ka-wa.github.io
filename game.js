@@ -320,7 +320,7 @@ const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } c
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
 //   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
-const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — 넣기만 된다(RLS). url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
+const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — report_run 함수(검사 · 횟수 제한 · 시각은 서버)만 부를 수 있다. 표는 못 만진다. url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
 const statsOn = () => !!STATS.url && !save.noStats && location.hostname === STATS.host && !navigator.globalPrivacyControl && navigator.doNotTrack !== '1'
 if (statsOn()) {   // 방문 통계(Google 애널리틱스) — 익명 통계와 같은 규칙(이 주소에서만 · 보내지 않기 · 추적 거부면 안 불러온다)
   window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments) }
@@ -337,7 +337,7 @@ function statRow(result) {
 }
 function report(result) {
   if (!statsOn()) return
-  fetch(`${STATS.url}/rest/v1/runs`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
+  fetch(`${STATS.url}/rest/v1/rpc/report_run`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
     headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } }).catch(() => {})
 }
 

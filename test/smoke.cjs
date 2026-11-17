@@ -103,6 +103,14 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (await page.evaluate(() => window.__mjg.mode) !== 'play') errors.push('[desktop] 쉬는 창에서 Space 로 계속하기 안 됨')
     const rage = await page.evaluate(() => { const M = window.__mjg, b = M.summon('dekatsuyo', true), s0 = b.spd; b.age = 61; M.step(1 / 30); const o = { rage: b.rage, spd: b.spd / s0 }; b.dead = true; return o })   // 보스를 오래 두면 화낸다
     if (!rage.rage || rage.spd < 1.4) errors.push('[desktop] 보스 화내기 ' + JSON.stringify(rage))
+    // 익명 통계 — 가짜 주소로 돌려 게임이 보내는 주소 · 머리말 · 내용을 확인(진짜 Supabase 에는 안 간다). keepalive 요청은 Playwright 의 route · request 이벤트에 가끔 안 잡혀서 fetch 를 감싸 받아 둔다
+    //   세이렌 전에 걸어 둔다 — 스킬이 세면 25~26분 사이에 세이렌을 쓰러뜨려 판이 먼저 끝나기도 한다(그러면 보낸 것을 못 잡았다)
+    await page.route('https://stats.invalid/**', rt => rt.fulfill({ status: 201, body: '' }))
+    await page.evaluate(() => {
+      Object.assign(window.__mjg.STATS, { url: 'https://stats.invalid', key: 'sb_publishable_test', host: location.hostname })
+      const f0 = window.fetch; window.__sent = []
+      window.fetch = (url, o = {}) => { if (String(url).startsWith('https://stats.invalid/')) window.__sent.push({ url: String(url), h: o.headers, body: JSON.parse(o.body) }); return f0(url, o) }
+    })
     const F = await page.evaluate(() => window.__mjg.FINAL_T)
     r = await sim(page, F + 5, { god: true, walk: true }); console.log('final+5s', r)
     await page.screenshot({ path: OUT + '7-siren.png' })
@@ -112,18 +120,11 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.screenshot({ path: OUT + '8-siren2.png' })
     // 남은 피를 줄여 클리어까지
     await page.evaluate(() => { const M = window.__mjg, F = M.G.final; for (const m of F.mermaids) m.hp = Math.min(m.hp, 1); F.siren.hp = Math.min(F.siren.hp, 50); F.siren.x = M.pl.x + 70; F.siren.y = M.pl.y })   // 세이렌을 옆으로 — 멀리 가 있어 클리어가 늦는 일이 없게
-    // 익명 통계 — 가짜 주소로 돌려 게임이 보내는 주소 · 머리말 · 내용을 확인(진짜 Supabase 에는 안 간다). keepalive 요청은 Playwright 의 route · request 이벤트에 가끔 안 잡혀서 fetch 를 감싸 받아 둔다
-    await page.route('https://stats.invalid/**', rt => rt.fulfill({ status: 201, body: '' }))
-    await page.evaluate(() => {
-      Object.assign(window.__mjg.STATS, { url: 'https://stats.invalid', key: 'sb_publishable_test', host: location.hostname })
-      const f0 = window.fetch; window.__sent = []
-      window.fetch = (url, o = {}) => { if (String(url).startsWith('https://stats.invalid/')) window.__sent.push({ url: String(url), h: o.headers, body: JSON.parse(o.body) }); return f0(url, o) }
-    })
     r = await sim(page, F + 200, { god: true }); console.log('clear', r)
     if (r.mode !== 'over') errors.push('[desktop] 세이렌을 쓰러뜨리지 못함 ' + JSON.stringify(r))
     const sent = await page.evaluate(() => window.__sent)
     const st = sent[0]; console.log('stat sent', sent.length, JSON.stringify(st?.body))
-    if (sent.length !== 1 || typeof st.body.up !== 'number' || !st.url.endsWith('/rest/v1/runs') || st.h.apikey !== 'sb_publishable_test' || st.body.result !== 'clear' || st.body.killer !== null || st.body.diff !== 'hard') errors.push('[desktop] 통계 보내기 ' + JSON.stringify(st))
+    if (sent.length !== 1 || typeof st.body.up !== 'number' || !st.url.endsWith('/rest/v1/rpc/report_run') || st.h.apikey !== 'sb_publishable_test' || st.body.result !== 'clear' || st.body.killer !== null || st.body.diff !== 'hard') errors.push('[desktop] 통계 보내기 ' + JSON.stringify(st))
     await page.evaluate(() => { window.__mjg.STATS.url = '' })
     await page.waitForTimeout(300)
     await page.screenshot({ path: OUT + '9-result.png' })
