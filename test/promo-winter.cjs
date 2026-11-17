@@ -37,7 +37,7 @@ async function music(b, name, id, dur) {
   await p.addInitScript(() => {   // 게임 루프는 멈추고 직접 한 프레임씩. 겨울 · 스킬 스킨 모두 켬 · 의상 · 무기 스킨(겨울)은 입은 채로
     window.requestAnimationFrame = () => 0
     const sk = ['sasu', 'book', 'pile', 'stick', 'yaha', 'ura', 'weed', 'tears', 'guitar', 'nantoka', 'ramen', 'curry', 'pochette', 'momo', 'kanpai', 'sword']
-    localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'normal', bgm: 0, sfx: 0, noStats: true, zoom: 0.85, theme: 'winter', owned: ['tako', ...sk.map(k => 'sk:' + k)], skin: Object.fromEntries(sk.map(k => [k, true])),
+    localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'normal', bgm: 0, sfx: 0, noStats: true, zoom: 1.4, theme: 'winter', owned: ['tako', ...sk.map(k => 'sk:' + k)], skin: Object.fromEntries(sk.map(k => [k, true])),
       wear: { chiikawa: 'tako', 'w:chiikawa': 's_chiikawa', rakko: 'fire', 'w:rakko': 's_rakko' }, wwin: ['chiikawa', 'rakko'], ach: { winter: 1 } }))
   })
   await p.goto(HOME); await p.waitForTimeout(900)
@@ -99,7 +99,8 @@ async function music(b, name, id, dur) {
   let fi = 0
   const shot = () => p.screenshot({ path: path.join(FR, `f${String(fi++).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92 })
   const card = async (kind, n) => { for (let f = 0; f < n; f++) { await p.evaluate(([k, f]) => window.__card(k, f), [kind, f]); await shot() } await p.evaluate(() => window.__card(null)) }
-  const play = async (n, a, s, on) => { await p.evaluate(([a, s]) => window.__cap(a, s), [a, s]); for (let i = 0; i < n; i++) { if (on) await p.evaluate(on, i); await p.evaluate(() => window.__frame()); await shot() } await p.evaluate(() => window.__cap('')) }
+  // 게임 장면 — 자막을 달고 n 프레임. 시작할 때 바닥에 쌓인 보석은 치운다
+  const play = async (n, a, s, on) => { await p.evaluate(([a, s]) => { window.__cap(a, s); window.__mjg.G.gems.length = 0 }, [a, s]); for (let i = 0; i < n; i++) { if (on) await p.evaluate(on, i); await p.evaluate(() => window.__frame()); await shot() } await p.evaluate(() => window.__cap('')) }
 
   await card('title', 75)                                                                                                     // 1 — 제목(2.5초)
   await p.evaluate(() => { window.__mjg.startGame(0); window.__ff(100) })
@@ -112,7 +113,7 @@ async function music(b, name, id, dur) {
   })
   await play(120, '가만히 있으면 꽁꽁!', '덜덜 · 눈이 소복이 · 움직이면 털어 내요', i => {                                            // 4 — 얼어붙기(4초)
     const M = window.__mjg, G = M.G, W = window
-    if (i === 0) { W.__still = 1; G.storm.on = 0.01; for (const e of G.foes) if (!e.boss) e.dead = true }
+    if (i === 0) { W.__still = 1; G.storm.on = 0.01; G.weapons.length = 0; G.shots.length = 0; for (const e of G.foes) if (!e.boss) e.dead = true }   // 내 공격이 얼굴을 가리지 않게 이 장면만 빼 둔다(다음 장면은 새 판)
     G.spawnT = 9; G.foes.forEach(e => { if (Math.hypot(e.x - M.pl.x, e.y - M.pl.y) < 220) e.dead = true })
     if (i < 100) M.pl.idleT = 1.5 + i * 0.11; else W.__still = 0   // 마지막 20프레임 — 걸어 나가며 눈을 털어 낸다
     M.pl.inv = 0; M.pl.hp = Math.max(M.pl.hp, 50)

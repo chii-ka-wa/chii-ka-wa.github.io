@@ -810,8 +810,7 @@ function kani(g, p) {
     fur, W: 25, H, mid: 0.42, thin: true, neck: 0.7, jw: 0.84,
     back: (g, p) => {
       for (const s of [-1, 1]) {
-        g.save(); g.translate(s * 6.8, y(0.06)); g.rotate(s * 0.35 + (p.foot || 0) * 0.1 - s * (p.bob || 0) * 0.06)   // 집게 머리띠 — 걸을 때 흔들린다
-        for (const [col, lw] of [[OUT, 2.1], [pink, 1]]) { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.moveTo(0, 3); g.lineTo(0, -1.4); g.stroke() }
+        g.save(); g.translate(s * 6.8, y(0.06) + 2.4); g.rotate(s * 0.35 + (p.foot || 0) * 0.1 - s * (p.bob || 0) * 0.06)   // 머리 위 집게 — 잇는 막대 없이 머리에 바로 붙어 있다(원작처럼) · 걸을 때 흔들린다(밑동은 머리 뒤로 숨는다)
         g.beginPath(); g.moveTo(0, -1.2); g.bezierCurveTo(-3.9, -2, -3.9, -7.6, -0.5, -8); g.lineTo(-0.2, -5); g.lineTo(0.7, -7.8); g.bezierCurveTo(3.9, -7.2, 3.7, -2, 0, -1.2); g.closePath(); g.fillStyle = pink; g.fill(); g.lineWidth = 0.7; g.strokeStyle = OUT; g.stroke()
         g.restore()
       }
