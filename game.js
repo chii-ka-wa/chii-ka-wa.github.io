@@ -104,16 +104,18 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-17', [
-    ['fix', 'magnet', tr`자석을 먹으면 멀리 있는 경험치까지 정말 다 모아요`],
-    ['down', 'kanpai', tr`건배! — 잔이 덜 튕기고 조금 약해졌어요`],
-    ['down', 'sword', tr`랏코 선생의 일섬 — 레벨이 오를 때 조금 덜 세져요`],
-    ['up', 'ramen', tr`라멘 국물이 더 자주, 더 뜨겁게 끓고 밟은 적이 더 느려져요!`],
-  ]],
-  ['2026-11-16', [
+    ['new', 'snow', tr`겨울이 왔어요! 눈이 내리고 토벌 대상들이 산타 모자를 썼어요 — 처음 화면 왼쪽 위에서 풀밭으로 바꿀 수 있어요`],
     ['new', 'shirt', tr`의상이 생겼어요! 상점 「의상」 탭에서 사요 — 한 번 사면 모든 캐릭터가 입어요`],
     ['new', 'hard', tr`어려움을 클리어하면 그 캐릭터의 특별한 업적 의상을 받아요`],
     ['new', 'sasu', tr`무기 스킨이 생겼어요! 손에 든 무기 모양이 바뀌어요`],
     ['new', 'awaken', tr`스킬 스킨이 생겼어요! 스킬 색이 바뀌고 반짝반짝 — 각성해 본 스킬은 그냥 받아요`],
+    ['fix', 'magnet', tr`자석을 먹으면 멀리 있는 경험치까지 정말 다 모아요`],
+    ['down', 'kanpai', tr`건배! — 잔이 덜 튕기고 조금 약해졌어요`],
+    ['down', 'sword', tr`랏코 선생의 일섬 — 레벨이 오를 때 조금 덜 세져요`],
+    ['up', 'ramen', tr`라멘 국물이 더 자주, 더 뜨겁게 끓고 밟은 적이 더 느려져요!`],
+    ['fix', 'zoom', tr`PC에서 Esc 키를 누르면 처음 화면으로 돌아가요(상점 · 도감 · 결과 화면 등)`],
+  ]],
+  ['2026-11-16', [
     ['new', 'globe', tr`이제 다른 나라 말로도 놀 수 있어요! 처음 화면 오른쪽 위에서 골라요 — 한국어 · 日本語 · English · 简体中文 · 繁體中文`],
     ['fix', 'party', tr`패치노트를 그림과 쉬운 말로 바꿨어요`],
     ['fix', 'awaken', tr`각성 상자에서도 Enter · Space 키로 받을 수 있어요`],
@@ -321,6 +323,7 @@ save.up ||= {}; save.coin = Math.max(0, save.coin | 0); save.stone = Math.max(0,
 const STONE = 1000   // 부활석 값(상점) — 쓰러졌을 때 하나 써서 다시 일어난다(판마다 DIFF.revive 번까지)
 save.ach ||= { clear: save.clears || 0 }
 save.owned ||= []; save.wear ||= {}; save.skin ||= {}   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
+save.theme ||= 'winter'   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
@@ -1411,7 +1414,42 @@ function sprite(w, h, ox, oy, paint, k = K) {
   const c = mk(w * k, h * k), g = c.getContext('2d'); g.scale(k, k); g.translate(ox, oy); g.lineJoin = g.lineCap = 'round'; paint(g)
   return { c, w, h, ox, oy }
 }
-const artSprite = (id, k = K, p = {}) => { const [w0, h0, paint] = ART[id], d = p.outfit || p.wskin ? 16 : 0, w = w0 + d, h = h0 + d; return sprite(w, h, w / 2, h - 3, g => paint(g, p), k) }   // 의상을 입으면 날개 · 고리가 잘리지 않게 둘레를 넓힌다
+const artSprite = (id, k = K, p = {}) => {   // p.outfit · p.wskin — 의상 날개 · 고리가 잘리지 않게 둘레를 넓힌다. p.xmas — 크리스마스 의상(XMAS)을 머리 위에(모자가 잘리지 않게 위로 칸을 늘린다)
+  const [w0, h0, paint] = ART[id], d = p.outfit || p.wskin ? 16 : 0, w = w0 + d, h = h0 + d, X = p.xmas && XMAS[id], pad = X ? Math.round(h0 * 0.35) : 0
+  return sprite(w, h + pad, w / 2, h - 3 + pad, g => { paint(g, p); if (X) xmas(g, ...X) }, k)
+}
+// 크리스마스 의상(겨울 테마) — [종류, 챙 가운데 x, y, 챙 너비, 기울기]. 그 그림 함수의 좌표(big 으로 키우기 전)라 보스도 같은 값. 늘어지는 끝은 보는 쪽(오른쪽) 반대로
+const XMAS = {
+  goblin: ['hat', 0, -20.8, 15, -0.08], rusher: ['hat', 0, -20.8, 15, -0.08], golden: ['hat', 1.8, -21.6, 21, 0.04], goblinKing: ['hat', 1.8, -21.6, 21, 0.04],
+  chimera: ['antler', 0, -19.4, 12], dekatsu: ['antler', 0, -19.4, 12], bigChimera: ['antler', 0, -19.4, 12],
+  spiker: ['hat', 2.8, -19.6, 11, -0.1], bug: ['hat', 0, -21, 13], beetle: ['hat', 0, -19.6, 13, -0.06], star: ['hat', -1.8, -18.4, 10, -0.22],
+  fugu: ['hat', 0, -18.4, 12, -0.1], octo: ['hat', 0, -19.2, 12, -0.1], parttimer: ['hat', 0, -24.4, 16, -0.06],
+  rps: ['hat', 0, -25.4, 14, -0.06], chef: ['holly', 3.4, -24.9, 10], dekatsuyo: ['hat', 0, -26, 14, -0.06], anoko: ['hat', 0, -28.8, 12, -0.06],
+  mermaid: ['hat', 0, -16.6, 10, -0.1], mermaid1: ['hat', 0, -16.6, 10, -0.1], mermaid2: ['hat', 0, -16.6, 10, -0.1], siren: ['hat', 0, -31, 16, -0.08], sirenAngry: ['hat', 0, -31, 16, -0.08],
+}
+function xmas(g, kind, x, y, w, a = 0) {   // 산타 모자 · 루돌프 뿔(가운데 호랑가시) · 호랑가시 잎과 열매 — 12 너비로 그려 w 에 맞춘다
+  const s = w / 12, lw = LW / s
+  const holly = (hx, hy, k) => {
+    for (const d of [-1, 1]) { el(g, hx + d * 2 * k, hy, 2.3 * k, 1.1 * k, -d * 0.35); ink(g, '#3f9a4a', lw) }
+    for (const [bx, by] of [[-0.7, -0.5], [0.7, -0.5], [0, 0.4]]) blob(g, hx + bx * k, hy + by * k, 0.85 * k, 0.85 * k, '#e2383c', lw * 0.8)
+  }
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s); g.lineJoin = g.lineCap = 'round'
+  if (kind === 'hat') {
+    g.scale(0.8, 0.8)   // 모자만 80% — 챙이 머리 위 그 자리에 붙은 채로 줄어든다
+    const C = new Path2D(); C.moveTo(-5, 0); C.quadraticCurveTo(-4.2, -7.5, -8.6, -9.4); C.quadraticCurveTo(-1.5, -13.4, 5, 0); C.closePath()
+    g.fillStyle = '#e8453c'; g.fill(C); g.save(); g.clip(C); g.fillStyle = 'rgba(255,255,255,.28)'; el(g, 0.8, -5.6, 1.3, 3.8, 0.45); g.fill(); g.restore()   // 빨간 모자 · 윤기
+    g.lineWidth = lw; g.strokeStyle = OUT; g.stroke(C)
+    blob(g, 0, 0, 6.4, 2, '#fff', lw); blob(g, -8.6, -9.4, 1.9, 1.9, '#fff', lw)   // 하얀 털 챙 · 방울
+  } else if (kind === 'antler') {
+    for (const [col, k] of [[OUT, 1.6 + lw * 2], ['#b07a4a', 1.6]]) {
+      g.strokeStyle = col; g.lineWidth = k; g.beginPath()
+      for (const d of [-1, 1]) { g.moveTo(d * 2.4, 0.4); g.quadraticCurveTo(d * 3, -4.6, d * 6.2, -8); g.moveTo(d * 3.1, -3.8); g.lineTo(d * 6.6, -4.2); g.moveTo(d * 4.4, -6.2); g.lineTo(d * 3.8, -9.4) }
+      g.stroke()
+    }
+    holly(0, 0.2, 0.8)
+  } else holly(0, 0, 1.2)
+  g.restore()
+}
 const charSprites = (id, outfit = outfitOf(wornId(id), id), wskin = WSKIN[wornW(id)]) => ({ walk: WALK.map(p => artSprite(id, K, { ...p, look: LOOK, outfit, wskin })), idle: [artSprite(id, K, { look: LOOK, outfit, wskin }), artSprite(id, K, { look: LOOK, blink: true, outfit, wskin })], hurt: artSprite(id, K, { look: LOOK, hurt: true, outfit, wskin }) })   // 입은 의상 · 무기 스킨까지
 function flip(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.scale(-1, 1); g.drawImage(s.c, -c.width, 0); return { ...s, c, ox: s.w - s.ox } }
 function white(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.drawImage(s.c, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); return { ...s, c } }
@@ -1641,6 +1679,13 @@ const ICO = {
     g.beginPath(); g.moveTo(-4, -9); g.quadraticCurveTo(0, -6.4, 4, -9); g.lineTo(10.5, -5.2); g.lineTo(7.6, 0.2); g.lineTo(5.4, -1.2); g.lineTo(5.4, 9.5); g.lineTo(-5.4, 9.5); g.lineTo(-5.4, -1.2); g.lineTo(-7.6, 0.2); g.lineTo(-10.5, -5.2); g.closePath(); ink(g, '#ffb3cf', 1.5)
     starP(g, 0, 2.4, 3.6, 1.6); ink(g, '#ffd23f', 1)
   },
+  snow: g => {   // 겨울 테마 — 하늘색 눈송이
+    for (const [col, lw] of [[OUT, 4.4], ['#bfe6ff', 2]]) {
+      g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath()
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 - Math.PI / 2, x = Math.cos(a), y = Math.sin(a); g.moveTo(0, 0); g.lineTo(x * 10, y * 10); for (const d of [-1, 1]) { g.moveTo(x * 5.6, y * 5.6); g.lineTo(x * 5.6 + Math.cos(a + d * 0.8) * 3.6, y * 5.6 + Math.sin(a + d * 0.8) * 3.6) } }
+      g.stroke()
+    }
+  },
   globe: g => {   // 다른 나라 말 — 하늘색 지구 · 초록 땅
     el(g, 0, 0, 10.5); ink(g, '#9fdcff', 1.5); g.save(); el(g, 0, 0, 10.5); g.clip(); g.fillStyle = '#8cd47e'
     el(g, -4, -3.5, 4.6, 3.4, 0.5); g.fill(); el(g, 4.6, 4.2, 3.8, 2.6, -0.4); g.fill(); el(g, 6, -6, 2, 1.4); g.fill(); g.restore()
@@ -1713,13 +1758,14 @@ function portrait(id, oid = CHARS.some(c => c.id === id) ? wornId(id) : null, wi
 
 const TILE = 256
 function seeded(s) { return () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
-function groundTile() {   // 풀밭 — 이어 붙여도 이음매가 안 보이게 가장자리는 아홉 칸에 같이 그린다
-  const c = mk(TILE * K, TILE * K), g = c.getContext('2d'), r = seeded(7)
-  g.scale(K, K); g.fillStyle = '#cdeaa8'; g.fillRect(0, 0, TILE, TILE)
+function groundTile() {   // 풀밭(겨울 테마면 눈밭) — 이어 붙여도 이음매가 안 보이게 가장자리는 아홉 칸에 같이 그린다
+  const c = mk(TILE * K, TILE * K), g = c.getContext('2d'), r = seeded(7), W = save.theme === 'winter'
+  g.scale(K, K); g.fillStyle = W ? '#e6eff8' : '#cdeaa8'; g.fillRect(0, 0, TILE, TILE)
   const wrap = fn => { for (const ox of [-TILE, 0, TILE]) for (const oy of [-TILE, 0, TILE]) fn(ox, oy) }
-  for (let i = 0; i < 16; i++) { const x = r() * TILE, y = r() * TILE, R = 14 + r() * 30, col = r() < 0.5 ? 'rgba(165,212,125,.5)' : 'rgba(228,246,196,.55)'; wrap((ox, oy) => { g.fillStyle = col; g.beginPath(); g.ellipse(x + ox, y + oy, R, R * 0.6, 0, 0, TAU); g.fill() }) }
-  g.strokeStyle = '#93c870'; g.lineWidth = 1.5; g.lineCap = 'round'
-  for (let i = 0; i < 70; i++) { const x = r() * TILE, y = r() * TILE; wrap((ox, oy) => { g.beginPath(); g.moveTo(x + ox - 3, y + oy); g.lineTo(x + ox - 4, y + oy - 5); g.moveTo(x + ox, y + oy); g.lineTo(x + ox, y + oy - 7); g.moveTo(x + ox + 3, y + oy); g.lineTo(x + ox + 4.5, y + oy - 5); g.stroke() }) }
+  for (let i = 0; i < 16; i++) { const x = r() * TILE, y = r() * TILE, R = 14 + r() * 30, col = r() < 0.5 ? (W ? 'rgba(200,218,240,.5)' : 'rgba(165,212,125,.5)') : (W ? 'rgba(255,255,255,.85)' : 'rgba(228,246,196,.55)'); wrap((ox, oy) => { g.fillStyle = col; g.beginPath(); g.ellipse(x + ox, y + oy, R, R * 0.6, 0, 0, TAU); g.fill() }) }
+  g.strokeStyle = W ? '#9dbf8e' : '#93c870'; g.lineWidth = 1.5; g.lineCap = 'round'
+  for (let i = 0; i < (W ? 10 : 70); i++) { const x = r() * TILE, y = r() * TILE; wrap((ox, oy) => { g.beginPath(); g.moveTo(x + ox - 3, y + oy); g.lineTo(x + ox - 4, y + oy - 5); g.moveTo(x + ox, y + oy); g.lineTo(x + ox, y + oy - 7); g.moveTo(x + ox + 3, y + oy); g.lineTo(x + ox + 4.5, y + oy - 5); g.stroke() }) }
+  if (W) { g.fillStyle = 'rgba(160,190,225,.6)'; for (let i = 0; i < 40; i++) { const x = r() * TILE, y = r() * TILE, R = 0.7 + r() * 1.1; wrap((ox, oy) => { g.beginPath(); g.arc(x + ox, y + oy, R, 0, TAU); g.fill() }) } return c }   // 눈밭 — 눈 밖으로 나온 풀 몇 포기 · 눈 알갱이
   for (let i = 0; i < 18; i++) {   // 흰 데이지(많이) · 분홍 · 노랑 · 보라 작은 꽃
     const x = r() * TILE, y = r() * TILE, daisy = r() < 0.6, col = pickOfR(r, ['#ffd1dc', '#fff1a1', '#d9c8ff'])
     wrap((ox, oy) => {
@@ -1733,7 +1779,7 @@ const pickOfR = (r, a) => a[r() * a.length | 0]
 
 let SPR = null, K = 2   // K = 그려 두는 그림의 단위당 픽셀 — 화면 배율에 맞춘다
 function sprites() {
-  const enemy = id => { const R = [artSprite(id, K, { foot: 1 }), artSprite(id, K, { foot: -1 })], L = R.map(flip); return { R, L, WR: R.map(white), WL: L.map(white) } }   // 걷기 두 장 · 왼쪽 · 맞았을 때 하양
+  const xm = save.theme === 'winter', enemy = id => { const R = [artSprite(id, K, { foot: 1, xmas: xm }), artSprite(id, K, { foot: -1, xmas: xm })], L = R.map(flip); return { R, L, WR: R.map(white), WL: L.map(white) } }   // 걷기 두 장 · 왼쪽 · 맞았을 때 하양
   SPR = { E: {}, sasu: {}, ground: groundTile() }
   for (const ch of CHARS) SPR[ch.id] = charSprites(ch.id)
   for (const id in FOES) if (id !== 'mermaid') SPR[id] = enemy(id)
@@ -1746,7 +1792,7 @@ function sprites() {
   for (const id of [...Object.keys(WEAP), ...Object.keys(PASS), ...Object.keys(ITEMS)]) SPR.E[id] = icoSpr(id)
   SPR.note = icoSpr('bgm')
   SPR.pinkNote = sprite(18, 20, 9, 10, g => { g.font = `18px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = OUT; g.strokeText('♪', 0, 0); g.fillStyle = '#ff7ad9'; g.fillText('♪', 0, 0) })
-  SPR.shadow = sprite(40, 14, 20, 7, g => { g.fillStyle = 'rgba(60,90,40,.28)'; g.beginPath(); g.ellipse(0, 0, 18, 6, 0, 0, TAU); g.fill() })
+  SPR.shadow = sprite(40, 14, 20, 7, g => { g.fillStyle = xm ? 'rgba(70,100,150,.22)' : 'rgba(60,90,40,.28)'; g.beginPath(); g.ellipse(0, 0, 18, 6, 0, 0, TAU); g.fill() })
   const gem = col => sprite(12, 14, 6, 7, g => { g.beginPath(); g.moveTo(0, -6); g.lineTo(5, 0); g.lineTo(0, 6); g.lineTo(-5, 0); g.closePath(); g.fillStyle = col; g.fill(); g.lineWidth = 1.2; g.strokeStyle = OUT; g.stroke(); g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.moveTo(0, -4); g.lineTo(2, -1); g.lineTo(0, 0); g.lineTo(-1.5, -1); g.fill() })
   SPR.gem = [gem('#7fd3ff'), gem('#8cf28a'), gem('#ff8fd0')]
 }
@@ -3112,7 +3158,18 @@ function render() {
   if (G) world(c, ox, oy)
   else parade(c, ox, oy)
   c.setTransform(DPR, 0, 0, DPR, 0, 0)
+  if (save.theme === 'winter') snow(c, ox, oy)
   if (G) hud(c)
+}
+function snow(c, ox, oy) {   // 겨울 테마 — 내리는 눈. 상태 없이 시간과 카메라로만(가까운 눈일수록 크고 빠르고 카메라를 더 따라 밀린다)
+  const w = cv.width / DPR + 20, h = cv.height / DPR + 20, k = SC / DPR, fr = v => v - Math.floor(v)
+  c.beginPath()
+  for (let i = 0, n = LQ ? 50 : 100; i < n; i++) {
+    const u = fr(Math.sin(i * 12.99) * 43758.5), v = fr(Math.sin(i * 78.23) * 24634.6), z = 0.4 + 0.6 * fr(Math.sin(i * 39.35) * 9631.7), r = 1.2 + z * 2.6
+    const x = fr((u * w + Math.sin(tnow * 0.8 + i) * 12 * z - ox * k * z) / w) * w - 10, y = fr((v * h + tnow * (18 + 34 * z) - oy * k * z) / h) * h - 10
+    c.moveTo(x + r, y); c.arc(x, y, r, 0, TAU)
+  }
+  c.fillStyle = '#fff'; c.fill(); c.lineWidth = 1; c.strokeStyle = 'rgba(100,135,190,.6)'; c.stroke()
 }
 function parade(c, ox, oy) {   // 처음 화면 — 일곱 명이 줄지어 풀밭을 걸어간다
   const gap = 46, span = VW + CHARS.length * gap + 120, y = oy + VH - 30
@@ -3374,10 +3431,18 @@ function langPick() {
   return h('details', { class: 'lang' }, h('summary', { 'aria-label': 'Language' }, ic(fl), ` ${name}`),
     h('div', {}, LANGS.map(([code, nm, f]) => h('button', { type: 'button', lang: code, class: code === LANG ? 'on' : '', onclick: () => { if (code !== LANG) { save.lang = code; persist(); location.reload() } } }, ic(f), ` ${nm}`))))
 }
+function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) · 풀밭(예전). 고르면 기억하고 바닥 · 적 그림만 다시 그린다
+  return h('div', { class: 'theme', role: 'radiogroup', 'aria-label': tr`테마` }, [['winter', 'snow', tr`겨울`], ['grass', 'clover', tr`풀밭`]].map(([k, pic, name]) =>
+    h('button', { type: 'button', role: 'radio', 'aria-checked': String(save.theme === k), class: save.theme === k ? 'on' : '', onclick: e => {
+      if (save.theme === k) return
+      save.theme = k; persist(); sprites()
+      for (const b of e.currentTarget.parentNode.children) { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)) }
+    } }, ic(pic), ` ${name}`)))
+}
 function title() {
   SND.play('field')
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
-  show(h('div', { class: 'panel home' }, langPick(),
+  show(h('div', { class: 'panel home' }, themePick(), langPick(),
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
