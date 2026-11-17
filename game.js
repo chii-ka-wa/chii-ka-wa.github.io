@@ -104,7 +104,12 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-17', [
+    ['up', 'coinbox', tr`떠돌이 보물상자 잭팟이 500에서 5,000으로 커졌어요!`],
     ['new', 'snow', tr`겨울이 왔어요! 눈이 내리고 토벌 대상들이 산타 모자를 썼어요 — 처음 화면 왼쪽 위에서 풀밭으로 바꿀 수 있어요`],
+    ['new', 'wind', tr`겨울 맵에 눈보라가 와요! 1분마다 반반 확률 — 쌓인 눈은 미끄럽고 받는 피해가 조금 늘어요(5초 넘게 계속 움직이면 몸에 열이 나서 괜찮아요)`],
+    ['new', 'snow', tr`겨울 맵에서 5초 넘게 가만히 있으면 몸이 꽁꽁 얼어 체력이 조금씩 줄어요 — 계속 움직여요!`],
+    ['new', 'hard', tr`새 업적 「눈보라를 이겨 냈다」 · 「겨울 토벌」 — 겨울 맵을 어려움으로 클리어하면 불꽃 옷을 받아요(눈보라에 끄떡없어요)`],
+    ['new', 'sasu', tr`겨울 무기 스킨이 생겼어요! 겨울 맵을 보통 이상으로 클리어하면 그 캐릭터의 겨울 무기를 받아요`],
     ['new', 'shirt', tr`의상이 생겼어요! 상점 「의상」 탭에서 사요 — 한 번 사면 모든 캐릭터가 입어요`],
     ['new', 'hard', tr`어려움을 클리어하면 그 캐릭터의 특별한 업적 의상을 받아요`],
     ['new', 'sasu', tr`무기 스킨이 생겼어요! 손에 든 무기 모양이 바뀌어요`],
@@ -214,14 +219,14 @@ const ITEMS = {
   pajama: { name: tr`꿀맛 페스티벌 티켓`, note: tr`파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%` },
   battery: { name: tr`건전지`, note: tr`한잎이 · 두잎이가 6초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다` },
   chest: { name: tr`보물상자`, note: tr`보스가 떨어뜨린다 — 잭팟 확률 50%` },
-  coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 돌아다니면 드물게 나타난다(25초 뒤 사라진다) — 토벌 보상금 10 ~ 500(클수록 드물고 500 은 1%), 3% 확률로 이번 판에서만 쓰는 부활석` },
+  coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 돌아다니면 드물게 나타난다(25초 뒤 사라진다) — 토벌 보상금 10 ~ 200(클수록 드물게), 1% 잭팟 5000, 3% 확률로 이번 판에서만 쓰는 부활석` },
   awaken: { name: tr`각성의 별`, note: tr`Lv 8 스킬이 있을 때 보스(중간보스 빼고)가 떨어뜨린다 — Lv 8 스킬 하나를 각성(조금 세지고 날아오는 것을 가끔 막는다)` },
 }
 
 // 떠돌이 보물상자 — 처음 자리(앵커)에서 d 만큼 멀어질 때마다 앵커를 옮기고 p 확률로 가는 쪽 앞에. 바닥에 하나만 · 앞 상자에서 gap 초 뒤부터 · life 초 뒤 사라진다
 const WANDER = { d: 1500, p: 0.14, gap: 90, life: 25 }
-// 떠돌이 보물상자에서 나오는 것 — [토벌 보상금(또는 'stone' 부활석), 확률 %]. 합 100. 500 말고는 200 을 넘지 않는다
-const LOOT = [['stone', 3], [500, 1], [10, 28], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
+// 떠돌이 보물상자에서 나오는 것 — [토벌 보상금(또는 'stone' 부활석), 확률 %]. 합 100. 잭팟(LOOT_JACK) 말고는 200 을 넘지 않는다
+const LOOT_JACK = 5000, LOOT = [['stone', 3], [LOOT_JACK, 1], [10, 28], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
 
 // 토벌 대상 — r 몸 반지름 · hp(시간이 갈수록 세진다) · spd 이동 · dmg 닿으면 · xp 떨어뜨리는 경험치 · col 터질 때 색
 const FOES = {
@@ -294,6 +299,8 @@ const ACH = {
   survive: { name: tr`끝까지 도망`, note: tr`검은 별똥별에게서 30분 생존한 판`, ico: 'a_darkstar', tiers: [1, 3, 10] },
   hard: { name: tr`진짜 토벌`, note: tr`어려움으로 클리어한 판`, ico: 'hard', tiers: [1, 3, 7] },
   nohit: { name: tr`스치지도 않았다`, note: tr`처음 5분을 한 번도 안 맞고 버틴 판`, ico: 'armor', tiers: [1, 3, 10] },
+  storm: { name: tr`눈보라를 이겨 냈다`, note: tr`겨울 맵에서 버텨 낸 눈보라`, ico: 'wind', tiers: [5, 30, 150] },
+  winter: { name: tr`겨울 토벌`, note: tr`겨울 맵에서 어려움으로 클리어한 판 — 처음이면 불꽃 옷`, ico: 'snow', tiers: [1, 3, 7] },
 }
 const TIER = ['', tr`동메달`, tr`은메달`, tr`금메달`]
 const achVal = id => id === 'runs' ? save.runs : id === 'awdex' ? (save.awSeen || []).length : id === 'friends' ? new Set(Object.entries(save.best).filter(([, b]) => b.clears).map(([k]) => k.split('.')[0])).size : save.ach[id] || 0
@@ -317,14 +324,34 @@ const bestKey = (id, d) => d === 'hard' ? id : `${id}.${d}`   // 어려움 기�
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
 const LS = 'mjg.v1'
 const save = { runs: 0, kills: 0, clears: 0, best: {} }   // best[캐릭터] = { t 가장 오래 버틴 초, kills, lvl, clears }
-try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
+// 저장 지키기 — 진짜 주소에서만(SECURE, 로컬 점검은 ?secure 로 켠다). 값진 칸(보상금 · 산 것 · 기록 …)에 서명(_s)을 붙여 저장하고 바로 전 저장도 따로 둔다(.bak).
+//   개발자 도구로 저장을 고치면 서명이 안 맞는다 → 바로 전 저장으로 되돌린다. 둘 다 고쳤으면 기록을 처음부터(설정만 남긴다).
+//   ※ 브라우저 게임이라 완벽히 막을 수는 없다 — 손쉬운 고치기를 막는 정도(서명 방법도 이 파일에 있다)
+const SECURE = location.hostname === 'chii-ka-wa.github.io' || /[?&]secure\b/.test(location.search)
+const FREE = new Set(['lang', 'theme', 'noStats', 'seen', 'diff', 'wear', 'skin', 'devCoin', '_s'])   // 고쳐도 상관없는 칸 — 설정 · 고른 것(입은 것은 가졌는지 따로 본다)
+const canon = v => v && typeof v === 'object' ? Array.isArray(v) ? `[${v.map(canon)}]` : `{${Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k]))}}` : JSON.stringify(v ?? null)
+const sign = o => { const t = canon(Object.fromEntries(Object.entries(o).filter(([k]) => !FREE.has(k)))) + '|mjg·7Q2'; let a = 0x811c9dc5, b = t.length ^ 0x5bd1e995; for (let i = 0; i < t.length; i++) { const c = t.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193); b = Math.imul(b ^ c, 0x5bd1e995); b ^= b >>> 13 } return (a >>> 0).toString(36) + (b >>> 0).toString(36) }
+const TAMPER = (() => {
+  const read = k => { try { return JSON.parse(localStorage.getItem(k)) } catch { return null } }, ok = o => o && o._s === sign(o), prefs = o => Object.fromEntries(Object.entries(o || {}).filter(([k]) => FREE.has(k) && k !== '_s'))
+  const cur = read(LS) || {}
+  if (!SECURE || ok(cur) || (!cur._s && !localStorage.getItem('mjg.k'))) { Object.assign(save, cur); return '' }   // 맞거나 · 서명 전 예전 저장(처음 한 번)
+  const bak = read(LS + '.bak')
+  if (ok(bak)) { Object.assign(save, bak, prefs(cur)); return 'bak' }   // 바로 전 저장으로
+  Object.assign(save, prefs(cur)); return 'reset'   // 둘 다 고쳤다 — 처음부터
+})()
 if (!DIFF[save.diff]) save.diff = 'normal'
 save.up ||= {}; save.coin = Math.max(0, save.coin | 0); save.stone = Math.max(0, save.stone | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금 · 가진 부활석
 const STONE = 1000   // 부활석 값(상점) — 쓰러졌을 때 하나 써서 다시 일어난다(판마다 DIFF.revive 번까지)
 save.ach ||= { clear: save.clears || 0 }
-save.owned ||= []; save.wear ||= {}; save.skin ||= {}   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
-save.theme ||= 'winter'   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
-const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
+save.owned ||= []; save.wear ||= {}; save.skin ||= {}; save.wwin ||= []   // wwin — 겨울 맵을 보통 이상으로 클리어한 캐릭터(겨울 무기 스킨)   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
+save.theme ||= 'winter'; const fieldSong = () => save.theme === 'winter' ? 'winter' : 'field'   // 처음 화면 · 토벌 배경음 — 겨울이면 겨울 곡   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
+const persist = () => { try { if (SECURE) { save._s = sign(save); localStorage.setItem('mjg.k', '1') } const j = JSON.stringify(save); localStorage.setItem(LS, j); if (SECURE) localStorage.setItem(LS + '.bak', j) } catch {} }   // 진짜 주소면 서명 · 바로 전 저장도
+if (TAMPER) persist()   // 되돌린 것을 바로 저장
+if (SECURE) {   // 개발자 도구 단축키 · 오른쪽 클릭 메뉴 막기(메뉴로 여는 것까지는 못 막는다) · 콘솔 경고
+  addEventListener('keydown', e => { const m = e.ctrlKey || e.metaKey; if (e.key === 'F12' || (m && (e.shiftKey || e.altKey) && ['KeyI', 'KeyJ', 'KeyC', 'KeyK'].includes(e.code)) || (m && e.code === 'KeyU')) { e.preventDefault(); e.stopImmediatePropagation() } }, true)
+  addEventListener('contextmenu', e => { if (!e.target.closest?.('a, input, textarea')) e.preventDefault() })
+  console.log('%c잠깐만요!', 'font-size:26px;font-weight:bold;color:#e8475f', '\n여기에 무언가를 붙여 넣으라는 말은 속임수일 수 있어요. 기록을 고치면 바로 전 저장으로 되돌아가요.\nAnyone asking you to paste something here may be tricking you. Edited saves are rolled back.')
+}
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
 //   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
@@ -363,10 +390,16 @@ const SND = (() => {
       74, 0, 79, 0, 78, 79, 81, 83, 86, 0, 84, 83, 81, 0, 78, 0, 79, 81, 83, 0, 76, 0, 79, 78, 76, 74, 1, 1, 1, 0, 0, 0,
       76, 0, 76, 79, 0, 76, 74, 72, 74, 0, 74, 78, 0, 81, 1, 0, 83, 81, 78, 74, 0, 71, 74, 78, 76, 1, 1, 79, 0, 83, 1, 0,
       84, 83, 81, 79, 0, 76, 79, 81, 81, 1, 78, 0, 81, 0, 86, 0, 83, 1, 1, 1, 86, 83, 79, 0, 81, 1, 78, 1, 0, 0, 0, 0] },
+    // 겨울 맵 — 느긋한 D장조(직접 지은 곡). field 와 같은 틀이라 캐릭터마다 자기 악기(KIT)로 같은 악보를 연주한다. bells — 썰매 방울 · 마디 머리 글로켄 · 부드러운 킥
+    winter: { bpm: 112, vol: 0.19, bells: true, chords: ['D', 'Bm', 'G', 'A', 'D', 'Bm', 'Em', 'A', 'G', 'A', 'F#m', 'Bm', 'G', 'A', 'D', 'D'], lead: [
+      81, 0, 78, 81, 86, 1, 85, 83, 81, 1, 78, 0, 74, 76, 78, 0, 79, 0, 83, 81, 79, 1, 76, 78, 76, 1, 1, 0, 73, 76, 81, 0,
+      81, 0, 78, 81, 86, 1, 88, 86, 83, 1, 81, 78, 74, 0, 78, 81, 79, 78, 76, 0, 79, 1, 83, 81, 81, 1, 1, 1, 0, 0, 0, 0,
+      83, 0, 83, 86, 0, 83, 81, 79, 81, 1, 76, 0, 81, 0, 85, 1, 85, 83, 81, 78, 0, 81, 78, 76, 78, 1, 74, 0, 71, 74, 78, 0,
+      79, 0, 83, 0, 86, 1, 83, 79, 81, 0, 85, 0, 88, 1, 85, 81, 86, 1, 85, 83, 81, 0, 78, 76, 74, 1, 1, 1, 0, 0, 0, 0] },
     // 최종보스 — 8분음표 한 칸(0 은 쉼), 베이스는 4분음표
     siren: { bpm: 136, lead: [69, 72, 76, 72, 74, 76, 77, 76, 76, 74, 72, 71, 69, 0, 64, 0, 69, 72, 76, 81, 79, 77, 76, 74, 72, 74, 71, 68, 69, 0, 0, 0], bass: [45, 45, 41, 41, 43, 43, 40, 40], vol: 0.17 },
   }
-  const CH = { G: [55, 67, 71, 74], D: [50, 62, 66, 69], Em: [52, 64, 67, 71], C: [48, 60, 64, 67], Bm: [47, 59, 62, 66] }   // [베이스, 화음 셋]
+  const CH = { G: [55, 67, 71, 74], D: [50, 62, 66, 69], Em: [52, 64, 67, 71], C: [48, 60, 64, 67], Bm: [47, 59, 62, 66], A: [45, 57, 61, 64], 'F#m': [42, 54, 57, 61] }   // [베이스, 화음 셋]
   // 악기 — 같은 곡(field)을 캐릭터 성격대로 다른 소리로. o: [[파형, 높이 배수, 어긋남(센트), 크기]] · v 크기 · cut [필터 처음, 끝]Hz · dec 닫히는 시간 · q 날카로움
   //   ring 울림(초) · atk 처음 · sus 길게 끌기 · vib 떨림(센트) · drive 찌그러뜨림 · oct 옥타브. dr: [킥, 박수 높이(Hz), 하이햇, 출렁임(작을수록 크게)]
   const CRUNCH = new Float32Array(256).map((_, i) => Math.tanh((i / 127.5 - 1) * 5))
@@ -426,9 +459,16 @@ const SND = (() => {
   }
   function electro(T, i, t, dt) {   // 16분음표 한 칸 — 4비트 킥(베이스 · 아르페지오가 출렁) · 박수 · 하이햇 · 옥타브 베이스 · 아르페지오 · 리드. 악기는 kit
     const s = i % 16, nb = T.chords.length, bar = (i >> 4) % nb, [root, ...tri] = CH[T.chords[bar]], v = T.vol, fill = bar === nb - 1 && s >= 8, [kk, clap, hh, dip] = kit.dr
-    if (s % 4 === 0) { tone(160, t, 0.16, 'sine', v * kk, mus, 42); pump.gain.setValueAtTime(dip, t); pump.gain.linearRampToValueAtTime(1, t + dt * 3) }
-    if (s === 4 || s === 12 || fill) hiss(t, fill ? 0.08 : 0.14, v * (fill ? 0.4 + (s - 8) * 0.07 : 0.9), clap, mus)   // 마지막 마디는 박수를 굴려 처음으로
-    hiss(t, s % 4 === 2 ? 0.09 : 0.03, v * hh * (s % 4 === 2 ? 0.35 : 0.14), 9000, mus)
+    const B = T.bells   // 겨울 — 킥은 부드럽게 · 박수 대신 썰매 방울 · 마디 머리에 글로켄
+    if (s % 4 === 0) { tone(160, t, 0.16, 'sine', v * kk * (B ? 0.7 : 1), mus, 42); pump.gain.setValueAtTime(B ? (1 + dip) / 2 : dip, t); pump.gain.linearRampToValueAtTime(1, t + dt * 3) }
+    if (B) {
+      if (s % 2 === 0) { hiss(t, 0.05, v * hh * (s % 4 ? 0.22 : 0.4), 11000, mus); hiss(t + dt * 0.35, 0.04, v * hh * 0.16, 12500, mus) }   // 짤랑 짤랑 — 8분음표마다 두 번
+      if (s === 4 || s === 12) hiss(t, 0.12, v * 0.38, 6500, mus)   // 뒷박 — 살짝 흔드는 방울
+      if (s === 0 && bar % 2 === 0) for (const [d, k] of [[24, 0.16], [31, 0.1]]) tone(mtof(root + d), t + (d === 31 ? dt : 0), 0.9, 'sine', v * k, mus)   // 반짝 — 글로켄
+    } else {
+      if (s === 4 || s === 12 || fill) hiss(t, fill ? 0.08 : 0.14, v * (fill ? 0.4 + (s - 8) * 0.07 : 0.9), clap, mus)   // 마지막 마디는 박수를 굴려 처음으로
+      hiss(t, s % 4 === 2 ? 0.09 : 0.03, v * hh * (s % 4 === 2 ? 0.35 : 0.14), 9000, mus)
+    }
     if (s % 2 === 0) inst(mtof(root + (s % 4 ? 12 : 0)), t, dt * 1.6, v * 0.8, pump, kit.bass)
     if (bar >= 4) inst(mtof(tri[s % 3] + ((s >> 2) % 2) * 12), t, dt * 0.9, v * 0.16, pump, kit.arp)   // 다섯째 마디부터
     if (s % 2) return
@@ -471,6 +511,12 @@ const SND = (() => {
     chest() { if (!ok('chest', 0.3)) return; const t = ac.currentTime; [79, 84, 88, 91, 96].forEach((n, i) => tone(mtof(n), t + i * 0.05, 0.25, 'sine', 0.14)) },
     hurt(id) { if (!ok('hurt', 0.25)) return; tone(160, ac.currentTime, 0.14, 'square', 0.14, sfx, 70); api.voice(id, 'ouch') },
     boss() { if (!ok('boss', 1)) return; const t = ac.currentTime; tone(110, t, 0.45, 'sawtooth', 0.14, sfx, 82, 6); tone(98, t + 0.4, 0.6, 'sawtooth', 0.14, sfx, 70, 8); tone(55, t, 1, 'sine', 0.2, sfx) },   // 보스 — 낮은 으르렁 소리
+    siren() {   // 세이렌 등장 — 낮은 울림 · 밀려오는 파도 · 하프 글리산도(가단조) · 떨리며 올라가는 「아아—」 노랫소리 두 목소리
+      if (!ok('siren', 3)) return; const t = ac.currentTime, V = { o: [['sine'], ['sine', 2, 0, 0.12], ['triangle', 1, 7, 0.25]], atk: 0.22, sus: 1, vib: 24 }
+      tone(55, t, 1.4, 'sine', 0.2, sfx, 38); hiss(t, 1.6, 0.14, 450); hiss(t + 0.35, 1.3, 0.09, 1300)
+      ;[57, 60, 64, 69, 72, 76, 81, 84].forEach((n, i) => tone(mtof(n), t + 0.12 + i * 0.06, 1.2, 'triangle', 0.07))
+      inst(mtof(76), t + 0.7, 0.55, 0.09, sfx, V); inst(mtof(81), t + 1.2, 1.4, 0.1, sfx, V); inst(mtof(72), t + 1.2, 1.4, 0.05, sfx, V)
+    },
     dark() { if (!ok('dark', 1)) return; const t = ac.currentTime; tone(70, t, 1.6, 'sawtooth', 0.16, sfx, 40, 3); hiss(t, 1.2, 0.18, 400) },
     end(win) { play(''); if (!ac || !save.sfx) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
   }
@@ -1416,11 +1462,11 @@ function sprite(w, h, ox, oy, paint, k = K) {
 }
 const artSprite = (id, k = K, p = {}) => {   // p.outfit · p.wskin — 의상 날개 · 고리가 잘리지 않게 둘레를 넓힌다. p.xmas — 크리스마스 의상(XMAS)을 머리 위에(모자가 잘리지 않게 위로 칸을 늘린다)
   const [w0, h0, paint] = ART[id], d = p.outfit || p.wskin ? 16 : 0, w = w0 + d, h = h0 + d, X = p.xmas && XMAS[id], pad = X ? Math.round(h0 * 0.35) : 0
-  return sprite(w, h + pad, w / 2, h - 3 + pad, g => { paint(g, p); if (X) xmas(g, ...X) }, k)
+  return sprite(w, h + pad, w / 2, h - 3 + pad, g => { paint(g, p); if (X) { const [kind, x, y, cw, a] = X; xmas(g, kind, x, y, cw * (BOSS[id.replace(/Angry$/, '')] && !id.startsWith('mermaid') ? 0.65 : 0.9), a) } }, k)   // 모자 크기 — 일반 몬스터 90% · 보스는 크게 그려지니 65%
 }
 // 크리스마스 의상(겨울 테마) — [종류, 챙 가운데 x, y, 챙 너비, 기울기]. 그 그림 함수의 좌표(big 으로 키우기 전)라 보스도 같은 값. 늘어지는 끝은 보는 쪽(오른쪽) 반대로
 const XMAS = {
-  goblin: ['hat', 0, -20.8, 15, -0.08], rusher: ['hat', 0, -20.8, 15, -0.08], golden: ['hat', 1.8, -21.6, 21, 0.04], goblinKing: ['hat', 1.8, -21.6, 21, 0.04],
+  goblin: ['hat', 0, -20.8, 15, -0.08], rusher: ['hat', 0, -20.8, 15, -0.08], golden: ['hat', -4.6, -28.2, 8.5, -0.5], goblinKing: ['hat', -4.6, -28.2, 12, -0.5],   // 황금 고블린 · 고블린 대장 — 왕관 맨 뒤(보는 쪽 반대) 뾰족한 끝에 작은 모자를 뒤로 기울여 걸친다
   chimera: ['antler', 0, -19.4, 12], dekatsu: ['antler', 0, -19.4, 12], bigChimera: ['antler', 0, -19.4, 12],
   spiker: ['hat', 2.8, -19.6, 11, -0.1], bug: ['hat', 0, -21, 13], beetle: ['hat', 0, -19.6, 13, -0.06], star: ['hat', -1.8, -18.4, 10, -0.22],
   fugu: ['hat', 0, -18.4, 12, -0.1], octo: ['hat', 0, -19.2, 12, -0.1], parttimer: ['hat', 0, -24.4, 16, -0.06],
@@ -1455,6 +1501,31 @@ function flip(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); 
 function white(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.drawImage(s.c, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); return { ...s, c } }
 const put = (c, s, x, y, k = 1) => c.drawImage(s.c, x - s.ox * k, y - s.oy * k, s.w * k, s.h * k)
 // ---- 아이콘 — 이모지 대신 직접 그린 그림(기기마다 다르게 보이지 않게). 24 × 24 칸 가운데가 (0, 0). 문자열이면 그 캐릭터 그림을 줄여서
+const FLAG = {   // 국기 그림(테두리 없이 22 × 15) — 언어 고르기 단추(ICO) · 머리띠 수건(동그랗게 오려서)
+  kr: g => {
+    g.fillStyle = '#fff'; g.fillRect(-11, -7.5, 22, 15)
+    g.save(); g.rotate(0.59); g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(0, 0, 3.9, Math.PI, 0); g.fill(); g.fillStyle = '#0047a0'; g.beginPath(); g.arc(0, 0, 3.9, 0, Math.PI); g.fill()
+    g.fillStyle = '#cd2e3a'; el(g, -1.95, 0, 1.95); g.fill(); g.fillStyle = '#0047a0'; el(g, 1.95, 0, 1.95); g.fill(); g.restore()
+    g.lineWidth = 0.9; g.strokeStyle = '#222'
+    for (const [x, y] of [[-7.4, -4.6], [7.4, -4.6], [-7.4, 4.6], [7.4, 4.6]]) { g.save(); g.translate(x, y); g.rotate(Math.atan2(y, x) + Math.PI / 2); for (const o of [-1.1, 0, 1.1]) { g.beginPath(); g.moveTo(-1.6, o); g.lineTo(1.6, o); g.stroke() } g.restore() }
+  },
+  jp: g => { g.fillStyle = '#fff'; g.fillRect(-11, -7.5, 22, 15); g.fillStyle = '#e60026'; el(g, 0, 0, 4.6); g.fill()
+  },
+  us: g => {
+    for (let i = 0; i < 7; i++) { g.fillStyle = i % 2 ? '#fff' : '#d22f3c'; g.fillRect(-11, -7.5 + i * 15 / 7, 22, 15 / 7 + 0.1) }
+    g.fillStyle = '#3c3b6e'; g.fillRect(-11, -7.5, 10, 8.6); g.fillStyle = '#fff'
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { el(g, -9 + x * 3, -5.6 + y * 2.4, 0.55); g.fill() }
+  },
+  cn: g => {
+    g.fillStyle = '#de2910'; g.fillRect(-11, -7.5, 22, 15); g.fillStyle = '#ffde00'; starP(g, -6.6, -3.2, 2.8, 1.1); g.fill()
+    for (const [x, y] of [[-3.2, -5.8], [-1.8, -3.9], [-1.8, -1.5], [-3.2, 0.4]]) { starP(g, x, y, 0.95, 0.38); g.fill() }
+  },
+  tw: g => {
+    g.fillStyle = '#fe0000'; g.fillRect(-11, -7.5, 22, 15); g.fillStyle = '#000095'; g.fillRect(-11, -7.5, 11, 7.5)
+    g.fillStyle = '#fff'; starP(g, -5.5, -3.75, 2.9, 1.6, 12); g.fill(); g.fillStyle = '#000095'; el(g, -5.5, -3.75, 1.55); g.fill(); g.fillStyle = '#fff'; el(g, -5.5, -3.75, 1.2); g.fill()
+  },
+}
+const FLAG_MID = { kr: [0, 0], jp: [0, 0], us: [-3, -1.2], cn: [-4.4, -2.6], tw: [-3.6, -2.4] }   // 동그랗게 오릴 때 가운데 — 그 나라 국기다운 곳(태극 · 붉은 해 · 별 · 큰 별 · 흰 해)
 const flag = (g, paint) => { g.save(); g.beginPath(); g.roundRect(-11, -7.5, 22, 15, 2.5); g.clip(); paint(); g.restore(); g.beginPath(); g.roundRect(-11, -7.5, 22, 15, 2.5); g.lineWidth = 1.4; g.strokeStyle = OUT; g.stroke() }   // 국기 — 둥근 네모 안에 그리고 테두리
 const ink = (g, fill, lw = 1.4) => { if (fill) { g.fillStyle = fill; g.fill() } g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }
 const el = (g, x, y, rx, ry = rx, rot = 0) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, TAU) }
@@ -1693,27 +1764,15 @@ const ICO = {
     el(g, 0, 0, 10.5); g.lineWidth = 1.5; g.strokeStyle = OUT; g.stroke()
   },
   // 언어 고르기 국기(LANGS 의 셋째 칸) — 22 × 15 둥근 네모
-  kr: g => flag(g, () => {
-    g.fillStyle = '#fff'; g.fillRect(-11, -7.5, 22, 15)
-    g.save(); g.rotate(0.59); g.fillStyle = '#cd2e3a'; g.beginPath(); g.arc(0, 0, 3.9, Math.PI, 0); g.fill(); g.fillStyle = '#0047a0'; g.beginPath(); g.arc(0, 0, 3.9, 0, Math.PI); g.fill()
-    g.fillStyle = '#cd2e3a'; el(g, -1.95, 0, 1.95); g.fill(); g.fillStyle = '#0047a0'; el(g, 1.95, 0, 1.95); g.fill(); g.restore()
-    g.lineWidth = 0.9; g.strokeStyle = '#222'
-    for (const [x, y] of [[-7.4, -4.6], [7.4, -4.6], [-7.4, 4.6], [7.4, 4.6]]) { g.save(); g.translate(x, y); g.rotate(Math.atan2(y, x) + Math.PI / 2); for (const o of [-1.1, 0, 1.1]) { g.beginPath(); g.moveTo(-1.6, o); g.lineTo(1.6, o); g.stroke() } g.restore() }
-  }),
-  jp: g => flag(g, () => { g.fillStyle = '#fff'; g.fillRect(-11, -7.5, 22, 15); g.fillStyle = '#e60026'; el(g, 0, 0, 4.6); g.fill() }),
-  us: g => flag(g, () => {
-    for (let i = 0; i < 7; i++) { g.fillStyle = i % 2 ? '#fff' : '#d22f3c'; g.fillRect(-11, -7.5 + i * 15 / 7, 22, 15 / 7 + 0.1) }
-    g.fillStyle = '#3c3b6e'; g.fillRect(-11, -7.5, 10, 8.6); g.fillStyle = '#fff'
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { el(g, -9 + x * 3, -5.6 + y * 2.4, 0.55); g.fill() }
-  }),
-  cn: g => flag(g, () => {
-    g.fillStyle = '#de2910'; g.fillRect(-11, -7.5, 22, 15); g.fillStyle = '#ffde00'; starP(g, -6.6, -3.2, 2.8, 1.1); g.fill()
-    for (const [x, y] of [[-3.2, -5.8], [-1.8, -3.9], [-1.8, -1.5], [-3.2, 0.4]]) { starP(g, x, y, 0.95, 0.38); g.fill() }
-  }),
-  tw: g => flag(g, () => {
-    g.fillStyle = '#fe0000'; g.fillRect(-11, -7.5, 22, 15); g.fillStyle = '#000095'; g.fillRect(-11, -7.5, 11, 7.5)
-    g.fillStyle = '#fff'; starP(g, -5.5, -3.75, 2.9, 1.6, 12); g.fill(); g.fillStyle = '#000095'; el(g, -5.5, -3.75, 1.55); g.fill(); g.fillStyle = '#fff'; el(g, -5.5, -3.75, 1.2); g.fill()
-  }),
+  kr: g => flag(g, () => FLAG.kr(g)),
+
+  jp: g => flag(g, () => FLAG.jp(g)),
+  us: g => flag(g, () => FLAG.us(g)),
+
+  cn: g => flag(g, () => FLAG.cn(g)),
+
+  tw: g => flag(g, () => FLAG.tw(g)),
+
   syn: g => { for (const [x, y, R, c] of [[-2.5, 1.5, 9.5, '#ffd23f'], [7, -6.5, 4.6, '#ff9be0'], [7.5, 7, 3.4, '#9fd8ff']]) { starP(g, x, y, R, R * 0.34, 4); ink(g, c, 1.2) } },
   party,
 }
@@ -1763,8 +1822,9 @@ function groundTile() {   // 풀밭(겨울 테마면 눈밭) — 이어 붙여�
   g.scale(K, K); g.fillStyle = W ? '#e6eff8' : '#cdeaa8'; g.fillRect(0, 0, TILE, TILE)
   const wrap = fn => { for (const ox of [-TILE, 0, TILE]) for (const oy of [-TILE, 0, TILE]) fn(ox, oy) }
   for (let i = 0; i < 16; i++) { const x = r() * TILE, y = r() * TILE, R = 14 + r() * 30, col = r() < 0.5 ? (W ? 'rgba(200,218,240,.5)' : 'rgba(165,212,125,.5)') : (W ? 'rgba(255,255,255,.85)' : 'rgba(228,246,196,.55)'); wrap((ox, oy) => { g.fillStyle = col; g.beginPath(); g.ellipse(x + ox, y + oy, R, R * 0.6, 0, 0, TAU); g.fill() }) }
+  if (W) for (let i = 0; i < 3; i++) { const x = 30 + r() * (TILE - 60), y = 40 + r() * (TILE - 60), k = 0.42 + r() * 0.14, sc = pickOfR(r, ['#e2383c', '#3f9a4a', '#5f8fd8']); wrap((ox, oy) => snowman(g, x + ox, y + oy, k, sc)) }   // 겨울 — 풀 대신 눈사람
   g.strokeStyle = W ? '#9dbf8e' : '#93c870'; g.lineWidth = 1.5; g.lineCap = 'round'
-  for (let i = 0; i < (W ? 10 : 70); i++) { const x = r() * TILE, y = r() * TILE; wrap((ox, oy) => { g.beginPath(); g.moveTo(x + ox - 3, y + oy); g.lineTo(x + ox - 4, y + oy - 5); g.moveTo(x + ox, y + oy); g.lineTo(x + ox, y + oy - 7); g.moveTo(x + ox + 3, y + oy); g.lineTo(x + ox + 4.5, y + oy - 5); g.stroke() }) }
+  for (let i = 0; i < (W ? 0 : 70); i++) { const x = r() * TILE, y = r() * TILE; wrap((ox, oy) => { g.beginPath(); g.moveTo(x + ox - 3, y + oy); g.lineTo(x + ox - 4, y + oy - 5); g.moveTo(x + ox, y + oy); g.lineTo(x + ox, y + oy - 7); g.moveTo(x + ox + 3, y + oy); g.lineTo(x + ox + 4.5, y + oy - 5); g.stroke() }) }
   if (W) { g.fillStyle = 'rgba(160,190,225,.6)'; for (let i = 0; i < 40; i++) { const x = r() * TILE, y = r() * TILE, R = 0.7 + r() * 1.1; wrap((ox, oy) => { g.beginPath(); g.arc(x + ox, y + oy, R, 0, TAU); g.fill() }) } return c }   // 눈밭 — 눈 밖으로 나온 풀 몇 포기 · 눈 알갱이
   for (let i = 0; i < 18; i++) {   // 흰 데이지(많이) · 분홍 · 노랑 · 보라 작은 꽃
     const x = r() * TILE, y = r() * TILE, daisy = r() < 0.6, col = pickOfR(r, ['#ffd1dc', '#fff1a1', '#d9c8ff'])
@@ -1776,6 +1836,18 @@ function groundTile() {   // 풀밭(겨울 테마면 눈밭) — 이어 붙여�
   return c
 }
 const pickOfR = (r, a) => a[r() * a.length | 0]
+function snowman(g, x, y, k, scarf) {   // 겨울 바닥의 눈사람 — 그림자 · 나뭇가지 팔 · 목도리 · 숯 눈 · 당근 코 · 단추
+  g.save(); g.translate(x, y); g.scale(k, k); g.lineCap = g.lineJoin = 'round'
+  g.fillStyle = 'rgba(110,145,195,.25)'; g.beginPath(); g.ellipse(1.5, 0.5, 10, 3.2, 0, 0, TAU); g.fill()
+  g.strokeStyle = '#7a5434'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(-5, -10); g.lineTo(-10.5, -14); g.moveTo(-8.6, -12.6); g.lineTo(-9.6, -15.4); g.moveTo(5, -10); g.lineTo(10.5, -13.5); g.stroke()
+  g.fillStyle = '#ffffff'; g.strokeStyle = 'rgba(95,115,150,.85)'; g.lineWidth = 1.3   // 배경이니 테두리를 옅게(적과 헷갈리지 않게)
+  g.beginPath(); g.arc(0, -5.6, 6.4, 0, TAU); g.fill(); g.stroke(); g.beginPath(); g.arc(0, -14.6, 4.5, 0, TAU); g.fill(); g.stroke()
+  g.fillStyle = 'rgba(160,195,235,.45)'; g.beginPath(); g.arc(1.2, -4.4, 4.6, 0.1, Math.PI * 0.95); g.fill()   // 아래쪽 푸른 그늘
+  g.fillStyle = scarf; g.beginPath(); g.roundRect(-4.6, -11.2, 9.2, 2.3, 1.1); g.fill(); g.stroke(); g.beginPath(); g.roundRect(1.6, -10.4, 2.3, 4.4, 1); g.fill(); g.stroke()   // 목도리
+  g.fillStyle = '#4a5468'; for (const ex of [-1.5, 1.5]) { g.beginPath(); g.arc(ex, -15.4, 0.6, 0, TAU); g.fill() } for (const by of [-6.6, -3.8]) { g.beginPath(); g.arc(0, by, 0.6, 0, TAU); g.fill() }
+  g.fillStyle = '#ff8a2a'; g.beginPath(); g.moveTo(0.2, -14.6); g.lineTo(3.6, -13.9); g.lineTo(0.2, -13.6); g.closePath(); g.fill()   // 당근 코
+  g.restore()
+}
 
 let SPR = null, K = 2   // K = 그려 두는 그림의 단위당 픽셀 — 화면 배율에 맞춘다
 function sprites() {
@@ -1800,7 +1872,7 @@ function sprites() {
 // ---------------------------------------------------------------- 의상 — 꾸미기만(능력치는 그대로). 캐릭터마다 셋: 저가(상점 · 수수한 그림) · 고가(상점 · 원작 의상 + 이펙트) · 업적(어려움 클리어 · 원작 의상 + 화려한 이펙트)
 //   그림은 mochi() 가 몸을 그리는 차례에 끼워 그린다 — back(몸 뒤 · 망토) · body(몸 안에 오려 그림 · 옷) · head(얼굴 뒤에 · 모자). q = 몸 크기(W · H · hw · t 머리 끝 · y(f) 위에서 f 만큼 · mid 머리와 몸 경계 · P 몸 테두리)
 //   save.owned = 산 의상 id, save.wear[캐릭터] = 입은 의상 id(없으면 기본). 업적 의상은 그 캐릭터로 어려움을 클리어하면(save.best[id].clears)
-const OUTFIT_COST = { cheap: 5000, rich: 50000 }
+const OUTFIT_COST = { cheap: 5000, rich: 50000 }   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 20,000)
 const crude = (g, fill, lw = 1.15) => { g.fillStyle = fill; g.fill(); g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }   // 저가 — 칠만 하고 굵은 선(수수하게)
 const inHead = (g, q, fn) => { g.save(); g.clip(q.P); fn(); g.restore() }   // 머리 · 몸 테두리 안에만
 // 고가 · 업적 의상 그리기 도우미
@@ -1921,12 +1993,23 @@ const KINDS = {   // 같은 종류는 한 번 사면 모든 캐릭터가 입는�
   knit: { tier: 'cheap', name: tr`털모자`, note: tr`커다란 방울이 달린 털모자`, of: ch => ({ earsOver: true, head: (g, q) => beanie(g, q, ...LOOKS[ch][3]) }) },
   fairy: { tier: 'rich', name: tr`요정`, note: tr`나무 인형의 마법으로 요정이 됐을 때 — 꽃 모자 · 투명한 날개`, of: ch => { const t = TONE[ch]; return { fx: { k: ['spark', 'petal'], col: [t[1], '#ffffff', t[0]], rate: 5 }, ...fairy(t[0], t[1], t[2]) } } },
 }
+const flameTop = (g, q) => {   // 불꽃 옷 — 후드 꼭대기에 일렁이는 불꽃 셋
+  for (const [x, k, col] of [[-4.2, 0.65, '#ffb347'], [4.2, 0.65, '#ffb347'], [0, 1, '#ff6a2a']]) {
+    g.save(); g.translate(x, q.t + 1.6); g.scale(k, k); g.beginPath(); g.moveTo(0, -9); g.quadraticCurveTo(5.6, -3, 3.4, 1.6); g.quadraticCurveTo(0, 3.6, -3.4, 1.6); g.quadraticCurveTo(-5.6, -3, 0, -9); g.closePath(); ink(g, col, LW / k)
+    g.beginPath(); g.moveTo(0, -4.4); g.quadraticCurveTo(2.4, -1, 1.4, 1.2); g.quadraticCurveTo(0, 2, -1.4, 1.2); g.quadraticCurveTo(-2.4, -1, 0, -4.4); g.fillStyle = '#ffe36e'; g.fill(); g.restore()
+  }
+}
+function roundFlag(g, x, y, r) {   // 머리띠 수건 — 고른 말의 나라 국기를 동그랗게 오려 붙인다
+  const f = LANGS.find(l => l[0] === LANG)[2], [mx, my] = FLAG_MID[f], k = r / 7
+  g.save(); g.beginPath(); g.arc(x, y, r, 0, TAU); g.clip(); g.translate(x, y); g.scale(k, k); g.translate(-mx, -my); FLAG[f](g); g.restore()
+  g.beginPath(); g.arc(x, y, r, 0, TAU); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke()
+}
 const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 캐릭터), 업적 = 캐릭터마다(ch)
   // 일반 — 집에 있는 것으로 대충 만든 것(이펙트 없음)
   paper: { tier: 'cheap', name: tr`신문지 모자`, note: tr`신문지를 접어 만든 배 모양 모자`, earsOver: true,
     head: (g, q) => { const b = q.y(0.1); g.beginPath(); g.moveTo(-9.4, b); g.lineTo(-6.4, b - 6.4); g.lineTo(0, b - 8.6); g.lineTo(6.4, b - 6.4); g.lineTo(9.4, b); g.closePath(); crude(g, '#efefea'); g.strokeStyle = '#9a9a90'; g.lineWidth = 0.55; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-4.6, b - 2 - i * 1.6); g.lineTo(4.6, b - 2 - i * 1.6); g.stroke() } } },
-  towel: { tier: 'cheap', name: tr`머리띠 수건`, note: tr`흰 수건에 빨간 동그라미를 그린 머리띠`,
-    head: (g, q) => { const y0 = q.y(0.18); inHead(g, q, () => { g.beginPath(); g.rect(-15, y0 - 1.8, 30, 3.6); crude(g, '#ffffff', 0.8); blob(g, 0, y0, 1.6, 1.6, '#e8473b', 0.6) })
+  towel: { tier: 'cheap', name: tr`머리띠 수건`, note: tr`흰 수건 가운데에 동그란 국기를 그린 머리띠(고른 말의 나라)`,
+    head: (g, q) => { const y0 = q.y(0.18); inHead(g, q, () => { g.beginPath(); g.rect(-15, y0 - 1.8, 30, 3.6); crude(g, '#ffffff', 0.8) }); roundFlag(g, 0, y0, 2.1)
       g.beginPath(); g.moveTo(-q.hw + 0.6, y0); g.lineTo(-q.hw - 3, y0 + 1.4); g.lineTo(-q.hw - 2.4, y0 + 3.2); g.closePath(); crude(g, '#ffffff', 0.9) } },
   box: { tier: 'cheap', name: tr`골판지 갑옷`, note: tr`택배 상자를 잘라 만든 갑옷 — 테이프가 보여요`,
     body: (g, q) => { const y0 = q.neck - 0.4; g.beginPath(); g.rect(-15, y0, 30, 20); crude(g, '#c9a06b', 0.8); g.fillStyle = '#e9d9b0'; g.fillRect(-1.3, y0, 2.6, 20); g.strokeStyle = 'rgba(61,48,43,.55)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-8, y0 + 2); g.lineTo(-4.5, y0 + 3.2); g.moveTo(5, y0 + 4.4); g.lineTo(8.4, y0 + 3.2); g.stroke() } },
@@ -1947,15 +2030,15 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       for (let i = 0; i < 6; i++) blob(g, bx - 4 + i * 1.6, by - 2.2 - Math.sin(i / 5 * Math.PI) * 2.8, 1.6, 1.4, '#f6efcf', 0.45); blob(g, bx + 1.4, by - 5.6, 1.4, 1.2, '#f6efcf', 0.45)   // 숙주 산더미
       g.beginPath(); g.moveTo(bx - 5.8, by - 1.4); g.lineTo(bx + 5.8, by - 1.4); g.quadraticCurveTo(bx + 5.2, by + 3.4, bx, by + 3.6); g.quadraticCurveTo(bx - 5.2, by + 3.4, bx - 5.8, by - 1.4); ink(g, '#fff', LW); g.strokeStyle = '#e8473b'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(bx - 5, by - 0.3); g.lineTo(bx + 5, by - 0.3); g.stroke()   // 라멘 그릇
     } },
-  crab: { tier: 'rich', name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
+  crab: { tier: 'rich', cost: 20000, name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
     fx: { k: ['spark'], col: ['#ff9bb0', '#ffd0d8', '#ffffff'], rate: 5 },
     head: (g, q) => { g.strokeStyle = OUT; g.lineWidth = 1.6; g.beginPath(); g.arc(0, q.y(0.2), 9.4, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); g.strokeStyle = '#f08a9a'; g.lineWidth = 0.8; g.stroke(); for (const s of [-1, 1]) pincer(g, s * 4.2, q.t - 1.2, s, '#f08a9a', '#f7b0ba') } },
-  chestnut: { tier: 'rich', name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
+  chestnut: { tier: 'rich', cost: 20000, name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
     fx: { k: ['nut', 'leaf'], col: ['#b5673b', '#d9a441', '#86c565'], rate: 3, fall: true },
     head: (g, q) => { const b = q.y(0.3); inHead(g, q, () => { g.beginPath(); g.moveTo(-16, b + 1); g.quadraticCurveTo(0, b - 3.6, 16, b + 1); g.lineTo(16, q.t - 4); g.lineTo(-16, q.t - 4); g.closePath(); g.fillStyle = '#d98b5f'; g.fill(); g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(-4.6, q.y(0.1), 3.4, 1.6, -0.4, 0, TAU); g.fill() })
       g.lineWidth = 0.8; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-q.hw + 0.4, b + 0.6); g.quadraticCurveTo(0, b - 3.6, q.hw - 0.4, b + 0.6); g.stroke()
       g.beginPath(); g.moveTo(-2.4, q.t + 0.6); g.quadraticCurveTo(0, q.t - 4.6, 2.4, q.t + 0.6); g.closePath(); ink(g, '#c27548', LW) } },
-  daifuku: { tier: 'rich', name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
+  daifuku: { tier: 'rich', cost: 20000, name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
     fx: { k: ['dot'], col: ['#ffffff', '#fff6ec', '#ffe3e3'], rate: 6 },
     body: (g, q) => { g.fillStyle = '#f6f0e4'; g.fillRect(-20, q.neck - 0.4, 40, 40); g.fillStyle = '#fff'; for (const [x, k] of [[-6, 0.3], [4, 0.45], [-2, 0.75], [7, 0.8]]) { g.beginPath(); g.arc(x, q.neck + (-1 - q.neck) * k, 0.7, 0, TAU); g.fill() } },
     head: (g, q) => { const b = q.y(0.13); g.beginPath(); g.moveTo(-q.hw - 1.2, b); g.quadraticCurveTo(-q.hw - 1.4, q.t - 3.6, 0, q.t - 3.8); g.quadraticCurveTo(q.hw + 1.4, q.t - 3.6, q.hw + 1.2, b); g.quadraticCurveTo(0, b + 2.4, -q.hw - 1.2, b); ink(g, '#f6f0e4', LW)
@@ -1963,9 +2046,9 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       g.fillStyle = '#ffe36e'; for (const [x, y] of [[-1.6, -7.6], [1.4, -7.2], [-0.4, -5.6], [1.8, -5.4], [-2, -5.8]]) { g.beginPath(); g.arc(x, q.t + y, 0.35, 0, TAU); g.fill() }
       for (const s of [-1, 0, 1]) { g.beginPath(); g.ellipse(s * 1.6, q.t - 9.8, 1.7, 0.8, s * 0.6, 0, TAU); ink(g, '#5da34a', 0.5) } } },
   // 고급 — 생일 · 핼러윈 만화의 원작 의상(반짝임만, 발밑 빛은 업적에)
-  cinder: { tier: 'rich', name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
+  cinder: { tier: 'rich', cost: 20000, name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
     of: ch => { const t = TONE[ch]; return { fx: { k: ['spark', 'note', 'heart'], col: [t[1], '#ffffff', t[0], '#fff3a1'], rate: 5 }, ...gown(t[0], t[1], ['chiikawa', 'usagi', 'momonga', 'kani'].includes(ch) ? 'heart' : 'star', t[2]) } } },
-  prince: { tier: 'rich', name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
+  prince: { tier: 'rich', cost: 20000, name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
     fx: { k: ['spark', 'star'], col: ['#ff9be0', '#9fd8ff', '#fff3a1', '#b6f0c2'], rate: 5 },
     body: (g, q) => { suit(g, q, '#ffffff'); g.fillStyle = '#2e2e48'; g.fillRect(-0.9, q.neck - 0.4, 1.8, 30); for (let i = 0; i < 3; i++) blob(g, 2.2, q.neck + 1.4 + i * 2, 0.7, 0.7, '#e2b33c', 0.4) },
     head: (g, q) => { hoodRing(g, q, '#5a3a28'); g.fillStyle = '#5a3a28'; g.beginPath(); for (let i = -3; i <= 3; i++) { const x = i * 2.4 + q.look; g.moveTo(x - 1.4, q.y(0.21)); g.quadraticCurveTo(x, q.y(0.29), x + 1.4, q.y(0.21)) } g.fill()
@@ -1997,10 +2080,13 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       for (const s of [-1, 1]) { g.beginPath(); g.ellipse(s * 1.6, q.t - 2.2, 2, 0.9, s * -0.6, 0, TAU); ink(g, '#7cb66a', 0.5) } g.strokeStyle = '#5e9a4b'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(0, q.t + 0.6); g.lineTo(0, q.t - 1.8); g.stroke() } },
   white: { tier: 'rich', name: tr`하얀 천사`, note: tr`핼러윈 만화의 하얀 천사 — 하얀 깃털 날개 · 폭신한 고리`,
     fx: { k: ['feather', 'spark'], col: ['#ffffff', '#fff6d6', '#e6e6ff'], rate: 5, fall: true }, ...angel('#ffffff', '#ffffff', '#fff8e8', true) },
+  // 업적 — 겨울 맵을 어려움으로 클리어하면(캐릭터 상관없이 · 모두 입는다). 꾸미기에 더해 눈보라에도 받는 피해가 늘지 않는다(G.fire)
+  fire: { tier: 'ach', name: tr`불꽃 옷`, note: tr`몸이 따끈따끈한 불꽃 옷 — 눈보라를 만나도 받는 피해가 늘지 않아요`, won: () => (save.ach.winter || 0) > 0, lock: ['snow', tr` 겨울 어려움 클리어`],
+    fx: { k: ['flame', 'spark', 'flame'], col: ['#ff7a2f', '#ffd23f', '#fff3a1'], rate: 13, aura: 'rgba(255,150,60,.9)' }, ...hoodSuit({ col: '#ff8a3d', belly: '#ffd96b', top: flameTop }) },
 }
 const TIER_ORD = { cheap: 0, rich: 1, ach: 2 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier])   // 일반 → 고급 → 업적
 const achWon = id => (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 어려움 클리어(어려움 기록은 열쇠가 캐릭터 id)
-const owns = oid => OUTFIT[oid].tier === 'ach' ? achWon(OUTFIT[oid].ch) : save.owned.includes(oid)
+const owns = oid => { const o = OUTFIT[oid]; return o.tier === 'ach' ? (o.won ? o.won() : achWon(o.ch)) : save.owned.includes(oid) }   // 업적 — 그 캐릭터 어려움 클리어(won 이 있으면 그 조건)
 const wornId = id => { const o = save.wear[id], k = o && OUTFIT[o]; return k && (!k.ch || k.ch === id) && owns(o) ? o : null }
 const LOOK_OF = {}, outfitOf = (oid, ch) => { const o = oid && OUTFIT[oid]; return !o ? undefined : o.of ? (LOOK_OF[oid + ':' + ch] ||= { ...o, ...o.of(ch) }) : o }   // 그 캐릭터가 입은 모습(종류는 캐릭터마다 색 · 장식)
 const TIER_NAME = { cheap: tr`일반`, rich: tr`고급`, ach: tr`업적` }
@@ -2020,11 +2106,12 @@ function cfxAura(c, fx, x, y, t) {   // 업적 의상 — 발밑에서 은은하
 }
 function cfxDraw(c, F) {
   for (const q of F.list) {
-    c.globalAlpha = Math.max(0, Math.min(1, (1 - q.t / q.T) * 2, q.t * 6)); c.save(); c.translate(q.x, q.y); c.rotate(q.k === 'note' || q.k === 'steam' ? 0 : q.k === 'leaf' || q.k === 'feather' ? Math.sin(q.rot) * 0.8 : q.rot); c.scale(q.s, q.s); c.fillStyle = c.strokeStyle = q.col
+    c.globalAlpha = Math.max(0, Math.min(1, (1 - q.t / q.T) * 2, q.t * 6)); c.save(); c.translate(q.x, q.y); c.rotate(q.k === 'note' || q.k === 'steam' || q.k === 'flame' ? 0 : q.k === 'leaf' || q.k === 'feather' ? Math.sin(q.rot) * 0.8 : q.rot); c.scale(q.s, q.s); c.fillStyle = c.strokeStyle = q.col
     switch (q.k) {
       case 'spark': starP(c, 0, 0, 3.4, 0.9, 4); c.fill(); break
       case 'star': starP(c, 0, 0, 3, 1.3); c.fill(); break
       case 'heart': c.beginPath(); c.moveTo(0, 2.4); c.bezierCurveTo(-3.6, -0.2, -2.4, -3.4, 0, -1.4); c.bezierCurveTo(2.4, -3.4, 3.6, -0.2, 0, 2.4); c.fill(); break
+      case 'flame': c.beginPath(); c.moveTo(0, -3.4); c.quadraticCurveTo(2.4, -0.6, 1.4, 1.4); c.quadraticCurveTo(0, 2.4, -1.4, 1.4); c.quadraticCurveTo(-2.4, -0.6, 0, -3.4); c.fill(); break
       case 'note': c.beginPath(); c.ellipse(-0.8, 1.6, 1.5, 1.1, -0.4, 0, TAU); c.fill(); c.fillRect(0.4, -3, 0.7, 4.6); c.fillRect(0.4, -3, 2.2, 0.8); break
       case 'petal': c.beginPath(); c.ellipse(0, 0, 2.6, 1.2, 0, 0, TAU); c.fill(); break
       case 'leaf': c.beginPath(); c.ellipse(0, 0, 3, 1.5, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(61,48,43,.35)'; c.lineWidth = 0.35; c.beginPath(); c.moveTo(-2.6, 0); c.lineTo(2.6, 0); c.stroke(); break
@@ -2054,12 +2141,13 @@ function dressPreview(id, oid, wid) {
 /** 스킬 스킨 미리 보기 — 왼쪽 원래 · 오른쪽 스킨. 같은 스킬 그림이 날아가 펑 터진다(스킨은 물든 그림 · 지나간 자리 · 터진 자리 반짝이) */
 function skinPreview(id) {
   const k = SKIN[id], S = 2, W = 300, H = 130, c = mk(W, H), s0 = icoSpr(id, 4), s1 = tinted(s0, k.col), F = { list: [], acc: 0 }
-  c.className = 'wr-pv sk-pv'; let t = 0, boom = -1
+  c.className = 'wr-pv sk-pv'; let t = 0, boom = -1; const T = []   // T — 스킨 쪽 꼬리
   c._tick = dt => {
     t += dt; const n = t / 1.6 | 0, u = t % 1.6 / 1.6, fly = Math.min(1, u / 0.6), g = c.getContext('2d')
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(70,90,50,.15)'; g.fillRect(W / 2 - 1, 10, 2, H - 20); g.setTransform(S, 0, 0, S, 0, 0)
     for (const skin of [false, true]) {
       const ox = skin ? W / S / 2 : 0, x = ox + 16 + fly * 34, y = 37 - Math.sin(fly * Math.PI) * 12
+      if (skin) { if (u < 0.6) { T.push(x, y); if (T.length > 18) T.splice(0, 2); if (T.length > 5) ribbon(g, T, k) } else T.length = 0 }
       if (u < 0.6) { const s = skin ? s1 : s0; g.save(); g.translate(x, y); g.rotate(fly * TAU); g.drawImage(s.c, -s.ox * 0.9, -s.oy * 0.9, s.w * 0.9, s.h * 0.9); g.restore(); if (skin && rnd() < dt * 25) skPuff(x, y, k, 1, F.list) }
       else { const v = (u - 0.6) / 0.4; g.globalAlpha = 1 - v; g.fillStyle = skin ? k.col2 : 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(ox + 50, 37, 4 + v * 17, 0, TAU); g.fill(); g.strokeStyle = skin ? k.col : 'rgba(120,110,100,.6)'; g.lineWidth = 3 * (1 - v) + 0.6; g.stroke(); g.globalAlpha = 1 }
     }
@@ -2093,12 +2181,13 @@ function shop(tab = 'up', ci = 0) {
           h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? tr`다 샀어요` : [ic('coin'), ` ${cost}`]))
       })],
     outfit: ch => [null, ...OUTFITS_OF(ch.id)].map(oid => { const o = oid && OUTFIT[oid], on = wornId(ch.id) === oid, own = !o || owns(oid), fx = outfitOf(oid, ch.id)?.fx
-      const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && [ic('hard'), tr` 어려움 클리어`], o && OUTFIT_COST[o.tier], () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
+      const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && (o.lock ? [ic(o.lock[0]), o.lock[1]] : [ic('hard'), tr` 어려움 클리어`]), o && (o.cost ?? OUTFIT_COST[o.tier]), () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
       return item(`wr-${o ? o.tier : 'base'}${on ? ' on' : ''}`, portrait(ch.id, oid, wornW(ch.id)), o ? o.name : tr`기본`, o && TIER_NAME[o.tier], o?.tier, o ? o.note : tr`평소 모습`, fx && (o.tier === 'ach' ? tr`이펙트: 아주 화려하게 반짝반짝!` : tr`이펙트: 반짝반짝`),
-        own && o?.tier !== 'ach' ? h('div', { class: 'acts' }, act, h('button', { type: 'button', class: 'btn buy all', onclick: () => wearAll(oid) }, tr`모두 입기`)) : act, oid) }),
+        own && !o?.ch ? h('div', { class: 'acts' }, act, h('button', { type: 'button', class: 'btn buy all', onclick: () => wearAll(oid) }, tr`모두 입기`)) : act, oid) }),
     weapon: ch => [null, ...WSKINS_OF(ch.id)].map(wid => { const w = wid && WSKIN[wid], on = wornW(ch.id) === wid
-      return item(`wr-${w ? (w.tier === 'ach' ? 'ach' : 'rich') : 'base'}${on ? ' on' : ''}`, portrait(ch.id, wornId(ch.id), wid), w ? w.name : tr`기본 무기`, w && (w.tier === 'ach' ? tr`업적` : tr`상점`), w && (w.tier === 'ach' ? 'ach' : 'rich'), w ? w.note : tr`원래 들고 있던 무기`, null,
-        btnState(on, !w || ownsW(wid), () => put('w:' + ch.id, wid), w?.tier === 'ach' && [ic('normal'), tr` 보통 클리어`], WSKIN_COST, () => { save.owned.push(wid); put('w:' + ch.id, wid) }, w?.name), wid) }),
+      const kind = w ? (w.tier === 'shop' ? 'rich' : w.tier) : 'base'   // 줄 색 — 상점(노랑) · 업적(분홍) · 겨울(하늘)
+      return item(`wr-${kind}${on ? ' on' : ''}`, portrait(ch.id, wornId(ch.id), wid), w ? w.name : tr`기본 무기`, w && (w.tier === 'ach' ? tr`업적` : w.tier === 'winter' ? tr`겨울` : tr`상점`), kind, w ? w.note : tr`원래 들고 있던 무기`, null,
+        btnState(on, !w || ownsW(wid), () => put('w:' + ch.id, wid), w?.tier === 'ach' ? [ic('normal'), tr` 보통 클리어`] : w?.tier === 'winter' && [ic('snow'), tr` 겨울 보통 클리어`], WSKIN_COST, () => { save.owned.push(wid); put('w:' + ch.id, wid) }, w?.name), wid) }),
     skill: () => Object.keys(SKIN).map(id => { const k = SKIN[id], own = ownsS(id), on = skOn(id)
       const act = on ? h('button', { type: 'button', class: 'btn buy on', onclick: () => { save.skin[id] = false; persist(); draw() } }, tr`끄기`) : own ? h('button', { type: 'button', class: 'btn buy', onclick: () => { save.skin[id] = true; persist(); draw() } }, tr`켜기`) : buy(SKIN_COST, () => { save.owned.push('sk:' + id); save.skin[id] = true }, k.name)
       return item(`wr-sk${on ? ' on' : ''}`, h('span', { class: 'sw', style: `--a:${k.col};--b:${k.col2}` }, ic(id)), k.name, WEAP[id].name, 'sk', k.note, !own && tr`각성해 본 스킬은 그냥 받아요`, act, id) }),
@@ -2118,8 +2207,8 @@ function shop(tab = 'up', ci = 0) {
     }
     list.replaceChildren(...rows[tab](ch))
     note.textContent = tab === 'up' ? tr`판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요. 부활석은 쓰면 없어져요`
-      : tab === 'outfit' ? tr`의상은 꾸미기만 해요 — 능력치는 그대로예요. 일반 · 고급 의상은 한 번 사면 모든 캐릭터가 입을 수 있어요(「모두 입기」로 한꺼번에). 업적 의상은 그 캐릭터로 어려움을 클리어하면 받아요`
-      : tab === 'weapon' ? tr`무기 스킨은 손에 든 무기 모양만 바꿔요. 하나는 상점에서, 하나는 그 캐릭터로 보통 이상을 클리어하면 받아요`
+      : tab === 'outfit' ? tr`의상은 꾸미기만 해요 — 능력치는 그대로예요(불꽃 옷만 눈보라에도 받는 피해가 늘지 않아요). 일반 · 고급 의상은 한 번 사면 모든 캐릭터가 입을 수 있어요(「모두 입기」로 한꺼번에). 업적 의상은 그 캐릭터로 어려움을 클리어하면 받아요`
+      : tab === 'weapon' ? tr`무기 스킨은 손에 든 무기 모양만 바꿔요. 하나는 상점에서, 하나는 그 캐릭터로 보통 이상을 클리어하면, 하나는 그 캐릭터로 겨울 맵을 보통 이상 클리어하면 받아요`
       : tr`스킬 스킨은 그 스킬의 색과 반짝이만 바꿔요 — 세기는 그대로예요. 상점에서 사거나, 그 스킬을 한 번 각성해 보면 그냥 받아요`
   }
   draw()
@@ -2141,11 +2230,13 @@ function stickSkin(g, x, y, col, stripe, ends, bolt) {   // 토벌봉 모양 막
   for (const e of [-5, 17]) { blob(g, e, 0, 1.4, 1.4, ends, 0.6); if (bolt) { const s = Math.sign(e); g.strokeStyle = '#ffd23f'; g.lineWidth = 0.8; g.lineCap = 'round'; g.beginPath(); g.moveTo(e + s * 0.6, -1.4); g.lineTo(e + s * 2.4, -3); g.lineTo(e + s * 1.6, -1.2); g.lineTo(e + s * 3.6, -2.6); g.stroke() } }
   g.restore()
 }
-function wand(g, x, y, col, top, topCol) {   // 끝에 하트 · 보석이 달린 지팡이
+const flake = (g, x, y, r, col = '#fff') => { g.save(); g.translate(x, y); g.lineCap = 'round'; for (const [c, lw] of [[OUT, r * 0.55], [col, r * 0.24]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3 + Math.PI / 6; g.moveTo(Math.cos(a) * r, Math.sin(a) * r); g.lineTo(-Math.cos(a) * r, -Math.sin(a) * r) } g.stroke() } g.restore() }   // 눈꽃 — 여섯 갈래
+function wand(g, x, y, col, top, topCol) {   // 끝에 하트 · 보석 · 눈꽃이 달린 지팡이
   g.save(); g.translate(x, y); g.rotate(-1.25)
   for (const [c, lw] of [[OUT, 2.4], [col, 1.2]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(-1.5, 0); g.lineTo(10, 0); g.stroke() }
   g.translate(12, 0); g.rotate(1.25)
   if (top === 'heart') { heartP(g, 0, 0, 2.6); ink(g, topCol, 0.7) }
+  else if (top === 'flake') flake(g, 0, 0, 3.2, topCol)
   else { g.beginPath(); g.moveTo(0, -3.4); g.lineTo(2.6, 0); g.lineTo(0, 3); g.lineTo(-2.6, 0); g.closePath(); ink(g, topCol, 0.7); g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.moveTo(0, -2.4); g.lineTo(1.1, -0.4); g.lineTo(-0.6, -0.4); g.fill() }
   g.restore()
 }
@@ -2168,9 +2259,9 @@ function ladle(g, x, y, col, shine) {   // 라멘 국자
   g.beginPath(); g.ellipse(13.2, 0.8, 2.8, 2.2, 0.3, 0, TAU); ink(g, col, 0.7); if (shine) { g.fillStyle = '#fff'; starP(g, 12.4, 0, 0.9, 0.3, 4); g.fill() }
   g.restore()
 }
-function tome(g, col, mark, magic) {   // 카니 책 자리 · 방향 그대로(왼손 · 하얀 책장이 오른쪽)
+function tome(g, col, mark, magic, snow) {   // 카니 책 자리 · 방향 그대로(왼손 · 하얀 책장이 오른쪽). snow — 표지에 별 대신 눈꽃
   g.save(); g.translate(-11.4, -5); g.rotate(-0.15); g.fillStyle = col; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6)
-  starP(g, -0.45, 0, 1.25, 0.5); ink(g, mark, 0.35)
+  if (snow) flake(g, -0.45, 0, 1.35, mark); else { starP(g, -0.45, 0, 1.25, 0.5); ink(g, mark, 0.35) }
   if (magic) { g.fillStyle = '#fff6a8'; for (const [a, b] of [[-3.2, -3.8], [2.6, -4.2]]) { starP(g, a, b, 0.9, 0.3, 4); g.fill() } }
   g.restore()
 }
@@ -2194,11 +2285,21 @@ const WSKIN = {
   w_kani: { ch: 'kani', tier: 'shop', name: tr`그림책`, note: tr`별 그림이 있는 노란 그림책`, front: g => tome(g, '#ffe36e', '#e8473b') },
   v_kani: { ch: 'kani', tier: 'ach', name: tr`마법서`, note: tr`금빛 별이 박힌 보라 마법서`, front: g => tome(g, '#7a5cc8', '#ffd23f', true) },
 }
+Object.assign(WSKIN, {   // 겨울 — 그 캐릭터로 겨울 맵을 보통 이상 클리어하면(save.wwin)
+  s_chiikawa: { ch: 'chiikawa', tier: 'winter', name: tr`눈꽃 사스마타`, note: tr`끝에 눈꽃이 달린 하늘색 사스마타`, hold: (g, x, y) => { sasuHold('#bfe6ff')(g, x, y); g.save(); g.translate(x, y); g.rotate(-1.2); flake(g, 14.6, 0, 3, '#ffffff'); g.restore() } },
+  s_hachiware: { ch: 'hachiware', tier: 'winter', name: tr`호랑가시 기타`, note: tr`눈처럼 하얀 몸통에 호랑가시 장식`, hold: guitarHold('#f7f7f2', '#3f8a4a', g => { for (const d of [-1, 1]) { g.beginPath(); g.ellipse(-1.8 + d * 1.5, -0.5, 1.5, 0.7, -d * 0.45, 0, TAU); ink(g, '#3f9a4a', 0.35) } for (const [a, b] of [[-2.2, 0.3], [-1.3, 0.4]]) blob(g, a, b, 0.6, 0.6, '#e2383c', 0.3) }) },
+  s_usagi: { ch: 'usagi', tier: 'winter', name: tr`고드름 봉`, note: tr`꽁꽁 언 하늘빛 고드름 토벌봉`, hold: (g, x, y) => stickSkin(g, x, y, '#e2f4ff', '#9fd8ff', '#ffffff') },
+  s_momonga: { ch: 'momonga', tier: 'winter', name: tr`눈꽃 지팡이`, note: tr`끝에 커다란 눈꽃이 반짝이는 지팡이`, hold: (g, x, y) => wand(g, x, y, '#e6f4ff', 'flake', '#bfe6ff') },
+  s_kurimanju: { ch: 'kurimanju', tier: 'winter', name: tr`코코아 잔`, note: tr`마시멜로가 동동 뜬 따끈한 코코아`, front: g => cup(g, '#e2383c', '#fffaf0', true) },
+  s_rakko: { ch: 'rakko', tier: 'winter', name: tr`고드름 검`, note: tr`하늘빛으로 얼어붙은 칼날 · 눈꽃 손잡이`, hold: (g, x, y) => { blade(g, x, y, '#f2fbff', '#9fd8ff'); g.save(); g.translate(x, y); g.rotate(-1.35); flake(g, 8.6, 0, 2.2, '#bfe6ff'); g.restore() } },
+  s_shisa: { ch: 'shisa', tier: 'winter', name: tr`눈덩이 국자`, note: tr`동그란 눈덩이를 퍼 담은 국자`, hold: (g, x, y) => { ladle(g, x, y, '#bfe6ff'); g.save(); g.translate(x, y); g.rotate(-1.2); blob(g, 13.2, -0.4, 2.3, 2.1, '#ffffff', 0.6); g.restore() } },
+  s_kani: { ch: 'kani', tier: 'winter', name: tr`겨울 동화책`, note: tr`남색 표지에 눈꽃이 그려진 동화책`, front: g => tome(g, '#2f4a8a', '#ffffff', false, true) },
+})
 const WSPOT = { chiikawa: [15, -21, 13], hachiware: [10, -9, 13], usagi: [12, -14, 13], momonga: [14, -15, 11], kurimanju: [12.7, -8, 7], rakko: [14, -16, 13], shisa: [15, -14, 13], kani: [-11.6, -5.4, 7] }   // 반짝일 자리 [x, y, 퍼짐] — 든 무기 둘레
-for (const w of Object.values(WSKIN)) w.fx = w.tier === 'ach' ? { k: ['spark', 'spark', 'star'], col: ['#ffffff', '#ffd23f', '#fff6a8'], rate: 7, spot: WSPOT[w.ch] } : { k: ['spark'], col: ['#ffffff', '#fff6a8'], rate: 3.5, spot: WSPOT[w.ch] }   // 무기 스킨 반짝이 — 업적은 더 자주 · 금빛 별
+for (const w of Object.values(WSKIN)) w.fx = w.tier === 'winter' ? { k: ['spark', 'spark', 'dot'], col: ['#ffffff', '#bfe6ff', '#9fd8ff'], rate: 6, spot: WSPOT[w.ch] } : w.tier === 'ach' ? { k: ['spark', 'spark', 'star'], col: ['#ffffff', '#ffd23f', '#fff6a8'], rate: 7, spot: WSPOT[w.ch] } : { k: ['spark'], col: ['#ffffff', '#fff6a8'], rate: 3.5, spot: WSPOT[w.ch] }   // 무기 스킨 반짝이 — 업적은 더 자주 · 금빛 별
 const WSKINS_OF = id => Object.keys(WSKIN).filter(k => WSKIN[k].ch === id)
 const normalWon = id => (save.best[`${id}.normal`]?.clears || 0) + (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 보통 · 어려움 클리어
-const ownsW = wid => WSKIN[wid].tier === 'ach' ? normalWon(WSKIN[wid].ch) : save.owned.includes(wid)
+const ownsW = wid => { const w = WSKIN[wid]; return w.tier === 'ach' ? normalWon(w.ch) : w.tier === 'winter' ? save.wwin.includes(w.ch) : save.owned.includes(wid) }   // 상점 · 업적(보통 이상 클리어) · 겨울(겨울 맵 보통 이상 클리어)
 const wornW = id => { const w = save.wear['w:' + id]; return w && WSKIN[w] && ownsW(w) ? w : null }
 // 스킬 스킨 — col 큰 색 · col2 둘째 색 · trail 지나간 자리 반짝이(cfxDraw 모양)
 const SKIN = {
@@ -2228,9 +2329,39 @@ function tinted(s, col) {
   return m.get(col)
 }
 const skPut = (src, s) => { const k = G.sk[src]; return k ? tinted(s, k.col) : s }   // 그 스킬에 스킨을 켰으면 물든 그림
+const SKZONE = new Set(['zone', 'drop', 'pot'])   // 바닥에 깔리는 스킬(라멘 국물 · 풀뽑기 · 카레)
+function skTrail(b, k, dt) {   // 스킬 스킨 — 날아가는 것은 지나간 자리(9곳)를 남겨 꼬리로 그리고 반짝이를 흘린다. 바닥 스킬은 장판 안 여기저기서 반짝이가 피어오른다
+  if (SKZONE.has(b.k)) { if (rnd() < dt * Math.min(9, 3 + (b.R || 40) / 15)) { const a = rnd() * TAU, r = Math.sqrt(rnd()) * (b.R || 40); skPuff(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r * 0.8 - 4, k) } return }
+  if (b.k === 'pile' || b.k === 'ring') { if (rnd() < dt * 8) skPuff(b.x, b.y - 10, k); return }
+  if (LQ < 2) { const T = b.tr ||= []; T.push(b.x, b.y - (b.k === 'orb' || b.k === 'boom' ? 14 : 12)); if (T.length > 18) T.splice(0, 2) }   // 아주 느려진 기기는 꼬리를 뺀다
+  if (rnd() < dt * 14) skPuff(b.x, b.y - 12, k)
+}
+function skBurst(o, k) {   // 스킬 스킨 — 그어진 길(일섬 · 번개 · 휘두르기 · 손)을 따라, 터진 자리는 둘레에 반짝이
+  const at = (x, y) => skPuff(x, y, k, 1)
+  if (o.k === 'beam') { const n = Math.min(SRC === 'sword' ? 20 : 12, 3 + o.L / 45 | 0); for (let i = 0; i <= n; i++) at(o.x + Math.cos(o.a) * o.L * i / n, o.y + Math.sin(o.a) * o.L * i / n) }
+  else if (o.k === 'bolt' && o.pts) for (const [x, y] of o.pts) at(x, y)
+  else if (o.k === 'swing') for (let i = -3; i <= 3; i++) at(o.x + o.ex * i / 3, o.y + o.ey * i / 3)
+  else if (o.k === 'grab') for (let i = 0; i <= 5; i++) at(o.x0 + (o.x - o.x0) * i / 5, o.y0 + (o.y - o.y0) * i / 5)
+  else skPuff(o.x ?? pl.x, o.y ?? pl.y, k, 8)
+}
+function sakura(c, x, y, r, rot, col) {   // 벚꽃 — 끝이 살짝 패인 꽃잎 다섯 · 노란 꽃술
+  c.fillStyle = col; c.strokeStyle = 'rgba(214,90,140,.7)'; c.lineWidth = 0.8
+  for (let i = 0; i < 5; i++) { const a = rot + i * TAU / 5; c.save(); c.translate(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5); c.rotate(a + Math.PI / 2); c.beginPath(); c.moveTo(0, r * 0.5); c.quadraticCurveTo(r * 0.6, 0, r * 0.2, -r * 0.52); c.lineTo(0, -r * 0.34); c.lineTo(-r * 0.2, -r * 0.52); c.quadraticCurveTo(-r * 0.6, 0, 0, r * 0.5); c.fill(); c.stroke(); c.restore() }
+  c.fillStyle = '#fff3a1'; oval(c, x, y, r * 0.24, r * 0.24); c.fill()
+}
+function ribbon(c, T, k) {   // 스킬 스킨 꼬리 — 뒤로 갈수록 가늘고 옅게(세 토막) · 가운데 밝은 줄
+  const n = T.length / 2, line = (from, w, a, col) => { c.globalAlpha = a; c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(T[from * 2], T[from * 2 + 1]); for (let i = from + 1; i < n; i++) c.lineTo(T[i * 2], T[i * 2 + 1]); c.stroke() }
+  c.lineCap = c.lineJoin = 'round'; line(0, 5, 0.22, k.col); line(n / 3 | 0, 9, 0.4, k.col); line(2 * n / 3 | 0, 13, 0.6, k.col); line(n / 2 | 0, 3.5, 0.9, k.col2); c.globalAlpha = 1
+}
+function skZone(c, x, y, R, k, t, a = 1) {   // 스킬 스킨 장판 — 둘레에 은은한 빛 · 천천히 도는 점선 고리 · 테두리를 도는 별 셋(반짝이는 shots 에서)
+  c.globalAlpha = 0.22 * a; c.fillStyle = k.col2; oval(c, x, y, R * 1.12, R * 0.9); c.fill()
+  c.globalAlpha = 0.85 * a; c.strokeStyle = k.col2; c.lineWidth = 2.5; c.setLineDash([10, 8]); c.lineDashOffset = -t * 30; oval(c, x, y, R * 0.88, R * 0.7); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0
+  for (let i = 0; i < 3; i++) { const q = t * 1.6 + i * TAU / 3, r = 3.4 + Math.sin(t * 6 + i) * 1.2; c.globalAlpha = a; c.fillStyle = '#fff'; starP(c, x + Math.cos(q) * R, y + Math.sin(q) * R * 0.8, r * 1.6, r * 0.5, 4); c.fill(); c.strokeStyle = k.col; c.lineWidth = 1; c.stroke() }
+  c.globalAlpha = 1
+}
 function skPuff(x, y, k, n = 1, L = G.sfx.list) {   // 스킬 스킨 반짝이 — 지나간 자리 · 터진 자리
   for (let i = 0; i < n; i++) L.push({ k: pickOf(k.trail.k), col: pickOf(k.trail.col), x: x + (rnd() - 0.5) * 12, y: y + (rnd() - 0.5) * 10, vx: (rnd() - 0.5) * 30, vy: -10 - rnd() * 20, t: 0, T: 0.5 + rnd() * 0.4, s: 0.9 + rnd() * 0.6, rot: rnd() * TAU })
-  if (L.length > 260) L.splice(0, L.length - 260)
+  if (L.length > 170) L.splice(0, L.length - 170)   // 반짝이는 많아도 170개까지(느려지지 않게)
 }
 
 // ---------------------------------------------------------------- 화면 · 입력
@@ -2304,25 +2435,27 @@ const cam = { x: 0, y: 0 }
 const need = lv => Math.round((1 + 0.2 * Math.min(1, (lv - 1) / 15)) * (lv < 20 ? 5 + (lv - 1) * 7 : 138 + (lv - 20) * 12 + (lv - 20) ** 2))   // 다음 레벨까지 경험치
 
 function newGame(ch) {
-  pl = { x: 0, y: 0, r: 12, hp: 1, inv: 0, hurtT: 0, slowT: 0, face: [1, 0], fx: 1, jump: 0, moving: false }
+  pl = { x: 0, y: 0, r: 12, hp: 1, inv: 0, hurtT: 0, slowT: 0, face: [1, 0], fx: 1, jump: 0, moving: false, vx: 0, vy: 0, idleT: 0, iced: false }   // vx · vy — 지금 속도(눈 위에서 미끄러질 때), idleT — 가만히 있은 시간(겨울엔 얼어붙는다)
   const b = 2 + (ch.mod.boxes || 0)
   G = {
     ch, diff: save.diff, D: DIFF[save.diff], t: 0, foes: [], shots: [], eshots: [], gems: [], items: [], fx: [], parts: [], nums: [], haz: [], help: [], weapons: [], passives: {},
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
+    winter: save.theme === 'winter', storm: { next: STORM.every, warned: false, on: 0, k: 0, hot: 0, warm: false, piles: [], spawn: 0, fade: 0 }, storms: 0, tip: null, slip: false,   // 겨울 맵 — 눈보라 · 버텨 낸 눈보라 · 작은 안내 · 눈 위에서 미끄러지는 중
     aw: new Set(), arr: b, parried: 0, revives: 0, anchor: [0, 0], lastBox: -99, found: 0, runStones: 0, gotRunStone: false,   // … · 떠돌이 보물상자(앵커 · 마지막 때 · 받은 보상금) · 주운 부활석(이번 판만)
       // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
   }
   S = null; addWeapon(ch.w); stats(); pl.hp = S.maxHp
   G.cfx = { list: [], acc: 0 }; G.ofx = outfitOf(wornId(ch.id), ch.id)?.fx   // 의상 이펙트
+  G.fire = wornId(ch.id) === 'fire'   // 불꽃 옷 — 눈보라에도 받는 피해가 늘지 않는다
   G.wfx = { list: [], acc: 0 }; G.wsx = WSKIN[wornW(ch.id)]?.fx   // 무기 스킨 반짝이
   G.sfx = { list: [], acc: 0 }; G.sk = Object.fromEntries(Object.keys(SKIN).filter(skOn).map(id => [id, SKIN[id]]))   // 켠 스킬 스킨
   cam.x = cam.y = 0; shake = 0; calm()
   say(tr`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
 function startGame(i) { if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
-  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field', false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
+  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -2390,10 +2523,11 @@ const alive = e => e && !e.dead ? e : null
 const visible = () => G.foes.filter(e => !e.dead && !e.rush && onScreen(e))
 const slow = (e, T, k) => { if (e.boss) return; if (e.slow <= 0 || k <= e.sk) { e.sk = k; e.slow = Math.max(e.slow, T) } }   // T 초 동안 속도 k 배(보스는 안 걸린다)
 const SKFX = new Set(['boom', 'bolt', 'beam', 'grab', 'swing'])
-const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, src: SRC, ...o }); const k = SRC && SKFX.has(o.k) && G.sk[SRC]; if (k) skPuff(o.x ?? pl.x, o.y ?? pl.y, k, 5) }   // 스킬 스킨 — 터진 자리에 반짝이
+const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, src: SRC, ...o }); const k = SRC && SKFX.has(o.k) && G.sk[SRC]; if (k) skBurst(o, k) }   // 스킬 스킨 — 터진 자리에 반짝이
 const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < 360) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
 const num = (x, y, v, kind) => { if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
 const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
+const tip = (s, col = '#fff', T = 2.8) => { G.tip = { s, t: 0, T, col } }   // 작은 안내 — 가운데 글자 아래(눈보라 등)
 /** 각성 스킬(SRC)이 날아오는 것 b 를 AW.p 확률로 막는다 — 탄 하나에 스킬마다 한 번만 굴린다. 막으면 true */
 function parry(b) {
   if (b.dead || !G.aw.has(SRC) || (b.tried ||= new Set()).has(SRC)) return false
@@ -2532,7 +2666,7 @@ function summon(kind, mid = false) {
   const e = spawn(kind), B = BOSS[kind]
   if (mid) { e.mid = true; e.max *= 0.4; e.hp = e.max; e.r *= 0.8; e.sc = 0.8; e.xp = Math.round(e.xp * 0.3) }
   Object.assign(e, { castT: G.t + 6 + rnd() * 4, patT: 2.5 + rnd(), pat: 0 })
-  bubble(e, B.line, '#fff'); SND.boss()
+  bubble(e, B.line, '#fff'); kind === 'siren' ? SND.siren() : SND.boss()   // 세이렌은 따로 — 파도 · 하프 · 노랫소리
   say(mid ? tr`중간보스 — ${B.name}` : tr`${B.name} 등장!`, 2.2, mid ? '#ffb35e' : '#ff6b6b'); shake = Math.max(shake, mid ? 4 : 8)
   return e
 }
@@ -2756,11 +2890,12 @@ function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return;
 function ouch(d, src) {
   if (pl.inv > 0 || G.dying || G.won) return
   G.hit0 ??= G.t   // 처음 맞은 때(업적 「스치지도 않았다」)
-  d = Math.max(1, Math.round(d * G.D.dmg - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
+  d = Math.max(1, Math.round(d * G.D.dmg * (stormHurts() ? STORM.hurt : 1) - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
   shove(80, 380)   // 맞으면 0.8초 무적 + 둘레를 밀쳐 빠져나갈 틈
   num(pl.x, pl.y - 48, d, 'hurt')
-  if (pl.hp <= 0) { pl.hp = 0; G.dying = 1.2; G.killer = killerName(src); say(tr`와아…`, 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }
+  if (pl.hp <= 0) fall(src)
 }
+function fall(src) { pl.hp = 0; G.dying = 1.2; G.killer = killerName(src); say(tr`와아…`, 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }   // 쓰러짐 — 맞아서 · 얼어서
 
 // ---- 경험치 · 줍는 것
 function gem(x, y, v) {
@@ -2791,10 +2926,10 @@ const USE = {
     SND.chest()
     if (v === 'stone') { G.runStones++; G.gotRunStone = true; return say(tr`부활석 획득! (이번 판만)`, 2.8, '#9fe3ff') }
     G.found += v
-    if (v < 500) return say(tr`보물상자 — 보상금 +${v}`, 1.8, '#ffd23f')
-    SND.level(); shake = 10; fx({ k: 'white', T: 0.5 }); fx({ k: 'pillar', T: 1 }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 240, T: 0.9, col: '#ffd23f' }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 150, T: 0.6, col: '#ff9be0' })   // 500 — 화려하게
+    if (v < LOOT_JACK) return say(tr`보물상자 — 보상금 +${v}`, 1.8, '#ffd23f')
+    SND.level(); shake = 10; fx({ k: 'white', T: 0.5 }); fx({ k: 'pillar', T: 1 }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 240, T: 0.9, col: '#ffd23f' }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 150, T: 0.6, col: '#ff9be0' })   // 잭팟 — 화려하게
     for (let i = 0; i < 48; i++) { const a = rnd() * TAU, sp = 120 + rnd() * 260; part(pl.x, pl.y - 20, Math.cos(a) * sp, Math.sin(a) * sp - 160, ['#ffd23f', '#ff9be0', '#ffffff', '#9fe3ff'][i % 4], 0.9 + rnd() * 0.5, 2.5 + rnd() * 2.5) }
-    say(tr`대박!! 보상금 +500!`, 3.2, '#ffd23f')
+    say(tr`대박!! 보상금 +${v.toLocaleString()}!`, 3.2, '#ffd23f')
   },
   pajama: () => summonHelp('pajama'),
   battery: () => summonHelp('leaf'),
@@ -2874,13 +3009,18 @@ function step(dt) {
   let mx = key.r - key.l + joy.x, my = key.d - key.u + joy.y
   const m = Math.hypot(mx, my)
   pl.moving = m > 0.12 && !dead
+  let vx = 0, vy = 0
   if (pl.moving) {
     pl.face = [mx / m, my / m]
     if (m > 1) { mx /= m; my /= m }
     if (Math.abs(mx) > 0.2) pl.fx = mx > 0 ? 1 : -1
     const sp = 150 * S.move * (sick('charm') ? 0.6 : 1) * (pl.slowT > 0 ? 0.65 : 1)   // 매혹 · 기름 그물
-    pl.x += mx * sp * dt; pl.y += my * sp * dt
+    vx = mx * sp; vy = my * sp
   }
+  G.slip = !dead && onIce()   // 눈보라에 쌓인 눈 위 — 손을 늦게 먹고, 손을 떼도 주르륵 미끄러진다
+  if (G.slip) { const a = Math.min(1, dt * 1.6); pl.vx += (vx - pl.vx) * a; pl.vy += (vy - pl.vy) * a } else { pl.vx = vx; pl.vy = vy }
+  pl.x += pl.vx * dt; pl.y += pl.vy * dt
+  if (G.winter) winter(dt, dead)
   const siren = alive(G.final?.siren)
   if (siren && sick('charm') && !dead) { const [dx, dy] = toward(siren); pl.x += dx * 55 * dt; pl.y += dy * 55 * dt }   // 매혹 — 세이렌 쪽으로 끌려간다
   if (!dead && !G.won && Math.hypot(pl.x - G.anchor[0], pl.y - G.anchor[1]) > WANDER.d) {   // 떠돌이 보물상자 — 멀리 돌아다닐 때만(제자리 · 작은 원으로 맴돌면 안 나온다)
@@ -2933,6 +3073,7 @@ function step(dt) {
   }
   for (const n of G.nums) { n.t += dt; if (n.t > 0.7) n.dead = true }
   if (G.banner && (G.banner.t += dt) > G.banner.T) G.banner = null
+  if (G.tip && (G.tip.t += dt) > G.tip.T) G.tip = null
   shake = Math.max(0, shake - dt * 30)
   for (const a of [G.foes, G.shots, G.eshots, G.gems, G.items, G.parts, G.fx, G.nums, G.haz]) prune(a)
   sortY(G.foes)
@@ -2945,7 +3086,7 @@ function sortY(a) { for (let i = 1; i < a.length; i++) { const e = a[i]; let j =
 function shots(dt) {
   for (const b of G.shots) {
     b.t += dt; SRC = b.src
-    if (G.sk[b.src] && rnd() < dt * 12) skPuff(b.x, b.y - 10, G.sk[b.src])   // 스킬 스킨 — 지나간 자리 반짝이
+    if (G.sk[b.src]) skTrail(b, G.sk[b.src], dt)   // 스킬 스킨 — 날아가는 것은 꼬리 · 반짝이, 바닥 스킬은 장판 안에서 반짝이
     switch (b.k) {
       case 'ball':   // 사스마타(꿰뚫는다) · 건배(옆 적에게 튕겨 간다)
         b.x += b.vx * dt; b.y += b.vy * dt
@@ -3161,33 +3302,91 @@ function render() {
   if (save.theme === 'winter') snow(c, ox, oy)
   if (G) hud(c)
 }
-function snow(c, ox, oy) {   // 겨울 테마 — 내리는 눈. 상태 없이 시간과 카메라로만(가까운 눈일수록 크고 빠르고 카메라를 더 따라 밀린다)
-  const w = cv.width / DPR + 20, h = cv.height / DPR + 20, k = SC / DPR, fr = v => v - Math.floor(v)
+// ---------------------------------------------------------------- 겨울 맵 — 눈보라 · 얼어붙기
+//   눈보라: STORM.every 초마다 STORM.p 확률. 오기 STORM.warn 초 전엔 오든 안 오든 「곧 눈보라가 와요!」. 오면 STORM.dur 초 — 눈이 거세지고 바닥에 쌓인 눈(밟으면 미끄럽다),
+//   받는 피해 × STORM.hurt(불꽃 옷이면 그대로 · STORM.warm 초 넘게 계속 움직이면 몸에 열이 나서 그대로). 그치면 쌓인 눈은 녹는다
+//   얼어붙기: ICE.after 초 넘게 가만히 있으면 최대 체력 × ICE.drain 씩 1초마다 줄고(무적일 땐 안 줄어든다) 몸이 눈에 덮인다
+const STORM = { every: 60, p: 0.5, warn: 5, dur: 15, hurt: 1.2, warm: 5, piles: 16 }, ICE = { after: 5, drain: 0.015 }
+const stormHurts = () => G.storm.on > 0 && !G.storm.warm && !G.fire
+const onIce = () => G.storm.piles.some(p => { const dx = (pl.x - p.x) / p.r, dy = (pl.y - p.y) / (p.r * 0.6); return dx * dx + dy * dy < 1 })
+function winter(dt, dead) {
+  const W = G.storm
+  W.k += ((W.on > 0 ? 1 : 0) - W.k) * Math.min(1, dt * 1.5)   // 눈보라 세기(그림)
+  for (const p of W.piles) p.t += dt
+  if (W.fade > 0 && (W.fade -= dt) <= 0) W.piles = []
+  if (dead || G.won) return
+  if (!W.warned && G.t >= W.next - STORM.warn) { W.warned = true; tip(tr`곧 눈보라가 와요!`, '#bfe6ff') }
+  if (G.t >= W.next) {
+    W.next += STORM.every; W.warned = false
+    if (rnd() < STORM.p) { Object.assign(W, { on: STORM.dur, hot: 0, warm: false, piles: [], spawn: 0, fade: 0 }); tip(G.fire ? tr`눈보라가 몰아쳐요! 불꽃 옷 덕분에 받는 피해는 그대로예요` : tr`눈보라가 몰아쳐요! 받는 피해가 조금 늘어나요`, G.fire ? '#ffb36b' : '#ff9b9b') }
+    else tip(tr`눈보라가 그냥 지나갔어요`, '#d6f0ff')
+  }
+  if (W.on > 0) {
+    W.on -= dt
+    if ((W.spawn -= dt) <= 0 && W.piles.length < STORM.piles) { W.spawn = 0.45; const a = rnd() * TAU, d = 40 + rnd() * Math.min(VW, VH) * 0.5; W.piles.push({ x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d * 0.8, r: 26 + rnd() * 22, t: 0 }) }
+    if (!G.fire && !W.warm) { W.hot = pl.moving ? W.hot + dt : 0; if (W.hot >= STORM.warm) { W.warm = true; tip(tr`몸에 열이 나서 받는 피해가 원래대로 줄었어요!`, '#ffb36b') } }
+    if (W.on <= 0) { W.on = 0; W.fade = 0.6; G.storms++; tip(tr`눈보라가 그쳤어요 — 쌓인 눈도 녹아요`, '#d6f0ff') }
+  }
+  if (pl.moving) { if (pl.idleT > 2) for (let i = 0, n = Math.min(14, 4 + pl.idleT * 1.5 | 0); i < n; i++) G.cfx.list.push({ k: i % 3 ? 'bubble' : 'spark', col: i % 3 ? '#9fc4ea' : '#ffffff', x: pl.x + (rnd() - 0.5) * 22, y: pl.y - 4 - rnd() * 24, vx: (rnd() - 0.5) * 110, vy: -20 - rnd() * 60, t: 0, T: 0.35 + rnd() * 0.3, s: 0.8 + rnd() * 0.6, rot: rnd() * TAU }); pl.idleT = 0; pl.iced = false }   // 움직이면 쌓인 눈을 털어 낸다(눈 조각이 튄다)
+  else pl.idleT += dt
+  if (pl.idleT >= ICE.after && Math.floor(G.t / 1.6) !== pl.shiver) {   // 부르르 할 때마다 머리 위 눈이 조금 떨어진다
+    pl.shiver = Math.floor(G.t / 1.6)
+    for (let i = 0; i < 3; i++) G.cfx.list.push({ k: 'bubble', col: '#9fc4ea', x: pl.x + (rnd() - 0.5) * 16, y: pl.y - 26 - rnd() * 4, vx: (rnd() - 0.5) * 40, vy: 25 + rnd() * 30, t: 0, T: 0.45 + rnd() * 0.2, s: 0.8 + rnd() * 0.5, rot: 0 })
+  }
+  if (pl.idleT >= ICE.after && pl.inv <= 0) {
+    if (!pl.iced) { pl.iced = true; tip(tr`몸이 얼어붙고 있어요! 움직여요!`, '#9fd8ff') }
+    pl.hp -= S.maxHp * ICE.drain * dt; if (pl.hp <= 0) fall(tr`꽁꽁 얼어붙음`)
+  }
+}
+function piles(c) {   // 눈보라에 쌓인 눈 — 밟으면 미끄럽다. 그칠 때는 0.6초 동안 녹아 없어진다
+  const W = G.storm, fade = W.fade > 0 ? W.fade / 0.6 : 1
+  for (const p of W.piles) {
+    const g = Math.min(1, p.t * 2), r = p.r * (0.6 + 0.4 * g)
+    c.globalAlpha = g * fade * 0.35; c.fillStyle = '#7fa6d6'; oval(c, p.x + r * 0.06, p.y + r * 0.16, r * 1.04, r * 0.5); c.fill()   // 아래 그림자 — 소복하게 솟아 보이게
+    c.globalAlpha = g * fade; c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(p.x, p.y, r, r * 0.55, 0, Math.PI, 0); c.quadraticCurveTo(p.x + r * 0.4, p.y + r * 0.34, p.x, p.y + r * 0.3); c.quadraticCurveTo(p.x - r * 0.4, p.y + r * 0.34, p.x - r, p.y); c.fill()
+    c.strokeStyle = 'rgba(120,160,210,.8)'; c.lineWidth = 1.6; c.stroke()
+    c.fillStyle = 'rgba(190,220,250,.55)'; c.beginPath(); c.ellipse(p.x, p.y + r * 0.08, r * 0.82, r * 0.2, 0, 0, Math.PI); c.fill()   // 아래쪽 푸른 기
+    c.fillStyle = '#eaf6ff'; oval(c, p.x - r * 0.34, p.y - r * 0.26, r * 0.22, r * 0.08); c.fill()   // 반짝
+  }
+  c.globalAlpha = 1
+}
+let snowX = 0, snowY = 0, snowLast = 0
+function snow(c, ox, oy) {   // 겨울 테마 — 내리는 눈(옆바람에 비스듬히). 눈보라면 훨씬 많고 빠르게 · 눈발 줄 · 하얀 안개. 위치는 시간 · 카메라로만(흐른 양만 쌓아 두어 세기가 바뀌어도 튀지 않는다)
+  const w = cv.width / DPR + 20, h = cv.height / DPR + 20, k = SC / DPR, fr = v => v - Math.floor(v), st = G?.winter ? G.storm.k : 0, dt = Math.min(0.1, Math.max(0, tnow - snowLast))
+  snowLast = tnow; snowX += dt * (16 + 150 * st); snowY += dt * (1 + 1.7 * st)
+  const n = Math.round((LQ ? 65 : 130) * (1 + 1.4 * st)), P = []
   c.beginPath()
-  for (let i = 0, n = LQ ? 50 : 100; i < n; i++) {
+  for (let i = 0; i < n; i++) {
     const u = fr(Math.sin(i * 12.99) * 43758.5), v = fr(Math.sin(i * 78.23) * 24634.6), z = 0.4 + 0.6 * fr(Math.sin(i * 39.35) * 9631.7), r = 1.2 + z * 2.6
-    const x = fr((u * w + Math.sin(tnow * 0.8 + i) * 12 * z - ox * k * z) / w) * w - 10, y = fr((v * h + tnow * (18 + 34 * z) - oy * k * z) / h) * h - 10
-    c.moveTo(x + r, y); c.arc(x, y, r, 0, TAU)
+    const pz = k * (1 + 0.1 * z), x = fr((u * w + Math.sin(tnow * 0.9 + i) * 14 * z + snowX * z - ox * pz) / w) * w - 10, y = fr((v * h + snowY * (20 + 38 * z) - oy * pz) / h) * h - 10   // 눈은 바닥 바로 위 — 바닥과 같이(가까운 눈은 10% 더) 밀린다. 바닥보다 덜 밀리면 걸을 때 바닥에 비해 눈이 거꾸로 날아가 보인다
+    c.moveTo(x + r, y); c.arc(x, y, r, 0, TAU); if (st > 0.05 && i % 2) P.push(x, y, z)
   }
   c.fillStyle = '#fff'; c.fill(); c.lineWidth = 1; c.strokeStyle = 'rgba(100,135,190,.6)'; c.stroke()
+  if (st > 0.05) {
+    c.beginPath(); for (let i = 0; i < P.length; i += 3) { const L = (10 + 18 * P[i + 2]) * st; c.moveTo(P[i], P[i + 1]); c.lineTo(P[i] - L * 0.8, P[i + 1] - L * 0.55) }
+    c.strokeStyle = `rgba(255,255,255,${0.75 * st})`; c.lineWidth = 1.4; c.lineCap = 'round'; c.stroke()
+    c.fillStyle = `rgba(232,243,255,${0.2 * st})`; c.fillRect(0, 0, w, h)   // 하얀 안개
+  }
 }
 function parade(c, ox, oy) {   // 처음 화면 — 일곱 명이 줄지어 풀밭을 걸어간다
   const gap = 46, span = VW + CHARS.length * gap + 120, y = oy + VH - 30
   CHARS.forEach((ch, i) => { const x = ox - 60 + ((tnow * 34 - i * gap) % span + span) % span, C = SPR[ch.id]; put(c, SPR.shadow, x, y, 0.8); put(c, C.walk[(tnow * 8 + i * 1.5 | 0) % 4], x, y) })
 }
 function world(c, ox, oy) {
+  if (G.winter && G.storm.piles.length) piles(c)   // 바닥에 쌓인 눈
   if (G.final) { c.fillStyle = `rgba(80,150,230,${Math.min(0.18, (G.t - FINAL_T) / 25)})`; c.fillRect(ox, oy, VW, VH) }   // 세이렌이 오면 바다 빛
   // 바닥 — 라멘 국물 · 우라! · 경고 원 · 돌진 길 · 풀뽑기 표시 · 카레 냄비
   for (const b of G.shots) if (b.k === 'zone') {
     const a = Math.min(1, (b.life - b.t) * 2)
     const k = G.sk.ramen; c.globalAlpha = 0.42 * a; c.fillStyle = k?.col || '#f5d36a'; oval(c, b.x, b.y, b.R, b.R * 0.8); c.fill()
-    c.globalAlpha = 0.8 * a; c.strokeStyle = k?.col2 || '#c9a03a'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 0.6 * a; put(c, SPR.E.ramen, b.x, b.y)
+    c.globalAlpha = 0.8 * a; c.strokeStyle = k?.col2 || '#c9a03a'; c.lineWidth = 2; c.stroke(); if (k) skZone(c, b.x, b.y, b.R, k, b.t, a); c.globalAlpha = 0.6 * a; put(c, SPR.E.ramen, b.x, b.y)
     c.fillStyle = '#fff6d8'; for (let i = 0; i < 3; i++) { const q = (b.t * 0.7 + i / 3) % 1; c.globalAlpha = (1 - q) * 0.7 * a; oval(c, b.x + Math.sin(i * 2.1 + b.t * 2) * b.R * 0.4, b.y - q * 30, 3 + q * 4, 3 + q * 4); c.fill() }
     c.globalAlpha = 1
   }
   for (const w of G.weapons) if (w.id === 'ura' && w.R) {
     const k = G.sk.ura; c.globalAlpha = 0.12 + w.pulse * 1.2; c.fillStyle = k?.col || '#ffd23f'; oval(c, pl.x, pl.y, w.R, w.R * 0.8); c.fill()
     c.globalAlpha = 0.5; c.strokeStyle = k?.col2 || '#ffb400'; c.lineWidth = 2; c.setLineDash([6, 6]); c.stroke(); c.setLineDash([]); c.globalAlpha = 1
+    if (k) { skZone(c, pl.x, pl.y, w.R, k, G.t, 0.8); if (rnd() < 0.1) { const q = rnd() * TAU, r = Math.sqrt(rnd()) * w.R; skPuff(pl.x + Math.cos(q) * r, pl.y + Math.sin(q) * r * 0.8 - 4, k) } }   // 우라! 기합 장판
   }
   for (const z of G.haz) {
     if (z.k === 'rush') {   // 붉은 띠 · 초록 빈 줄
@@ -3212,8 +3411,8 @@ function world(c, ox, oy) {
       c.strokeStyle = 'rgba(110,170,60,.25)'; c.lineWidth = 1.5; c.setLineDash([3, 5]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([])
       c.save(); c.translate(b.x, b.y); if (b.fall) c.rotate(Math.min(1, (b.t - b.fall) / 0.25) * 0.8); put(c, skPut('pile', SPR.pile), 0, 0); c.restore(); c.globalAlpha = 1
     }
-    else if (b.k === 'drop') { const u = b.t / b.T, k = G.sk.weed; c.strokeStyle = k?.col || '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = k?.col || 'rgba(110,190,80,.35)'; if (k) c.globalAlpha = 0.35; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill(); c.globalAlpha = 1 }
-    else if (b.k === 'pot') { const u = b.t / b.T, k = G.sk.curry; c.strokeStyle = k?.col || 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = k ? k.col2 + '33' : 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = k?.col2 || '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
+    else if (b.k === 'drop') { const u = b.t / b.T, k = G.sk.weed; if (k) skZone(c, b.x, b.y, b.R, k, b.t); c.strokeStyle = k?.col || '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = k?.col || 'rgba(110,190,80,.35)'; if (k) c.globalAlpha = 0.35; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill(); c.globalAlpha = 1 }
+    else if (b.k === 'pot') { const u = b.t / b.T, k = G.sk.curry; if (k) skZone(c, b.x, b.y, b.R, k, b.t); c.strokeStyle = k?.col || 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = k ? k.col2 + '33' : 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = k?.col2 || '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
   }
   // 보석 · 줍는 것
   for (const g of G.gems) put(c, SPR.gem[g.v >= 20 ? 2 : g.v >= 3 ? 1 : 0], g.x, g.y)
@@ -3242,6 +3441,7 @@ function world(c, ox, oy) {
   }
   // 날아가는 것
   for (const b of G.shots) {
+    if (b.tr?.length > 5 && G.sk[b.src]) ribbon(c, b.tr, G.sk[b.src])   // 스킬 스킨 꼬리
     if (b.k === 'ball' && b.look === 'note') put(c, SPR.note, b.x, b.y - 14 + Math.sin(b.t * 18) * 2, 0.75)
     else if (b.k === 'ball' && b.look === 'page') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx) + Math.sin(b.t * 16) * 0.35); c.scale(b.sc, b.sc * (0.45 + 0.55 * Math.abs(Math.cos(b.t * 13)))); put(c, skPut('book', SPR.page), 0, 0, 1.25); c.restore() }   // 팔랑이는 책장
     else if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, skPut('kanpai', SPR.E.kanpai), 0, 0, 0.8); c.restore() }
@@ -3308,46 +3508,111 @@ function drawFoe(c, e) {
 const FIRE = new Set(['volley', 'notes', 'papers'])   // 날아오는 것을 쏘는 보스 기술
 function drawMe(c) {
   const C = SPR[G.ch.id], j = pl.jump > 0 ? Math.sin(pl.jump / 0.3 * Math.PI) * 26 : 0, walking = pl.moving && !G.dying
-  const s = G.dying || pl.hurtT > 0 ? C.hurt : walking ? C.walk[(G.t * 9 * Math.sqrt(S.move) | 0) % 4] : C.idle[G.t % 3.4 < 0.14 ? 1 : 0]   // 아프면 > < · 걸으면 네 장 · 서 있으면 가끔 깜빡
+  const it = G.winter && !G.dying ? pl.idleT : 0, cold = Math.max(0, Math.min(1, (it - 1.5) / 3.5)), ice = Math.max(0, Math.min(1, (it - 2) / 6))   // 겨울 — 가만히 있으면 덜덜 떨며 입김(cold), 발밑부터 파랗게 얼고 눈이 쌓인다(ice)
+  const iced = it >= ICE.after, burst = iced && G.t % 1.6 < 0.5, heap = Math.max(0, Math.min(1, (it - 2.6) / 10))   // 꽁꽁 — 눈이 쌓이면 1.6초마다 부르르(쌓일수록 세게)
+  const dx = Math.sin(G.t * 52) * (iced ? (burst ? 1.3 + heap : 0.3) : 0.8 * cold)   // 떨림 — 몸과 머리 위 눈이 같이 흔들린다
+  const s = G.dying || pl.hurtT > 0 || G.slip || burst ? C.hurt : walking ? C.walk[(G.t * 9 * Math.sqrt(S.move) | 0) % 4] : C.idle[G.t % 3.4 < 0.14 ? 1 : 0]   // 아프면 > < · 걸으면 네 장 · 서 있으면 가끔 깜빡
   const br = walking ? 0 : Math.sin(G.t * 3) * 0.025   // 서 있으면 숨 쉬듯
   cfxAura(c, G.ofx, pl.x, pl.y, G.t)   // 업적 의상 — 발밑 빛
   if (pl.inv > 0) c.globalAlpha = 0.6   // 무적 — 깜빡이지 않고 반투명
-  c.save(); c.translate(pl.x, pl.y - j)
+  c.save(); c.translate(pl.x + dx, pl.y - j)
   if (G.dying) c.rotate(Math.min(1, (1.2 - G.dying) * 2) * 1.4 * pl.fx)
   c.scale(pl.fx * (1 + br * 0.6), 1 - br)
-  c.drawImage(s.c, -s.ox, -s.oy, s.w, s.h); c.restore(); c.globalAlpha = 1
+  c.drawImage(s.c, -s.ox, -s.oy, s.w, s.h)
+  if (ice) frostOn(c, s, ice)
+  c.restore(); c.globalAlpha = 1
+  if (cold || ice) frostAround(c, s, it, cold, ice, dx, burst)
   cfxDraw(c, G.cfx); cfxDraw(c, G.wfx)   // 의상 이펙트 — 몸 둘레에 떠오르는 모양 · 무기 반짝이
   if (sick('charm')) txt(c, '♥', pl.x + Math.sin(G.t * 6) * 8, pl.y - 50, 16, '#ff6fd0')
+}
+const FROST = mk(8, 8)   // 얼어붙기 그림판 — 한 장을 다시 쓴다
+const FLAKES = [[-9, -4], [8, -5], [-10, -12], [10, -11], [-6, -22], [6, -23], [0, -4], [-9, -18], [9, -18], [0, -26], [-4, -2], [4, -2]]   // 몸에 달라붙는 눈송이 자리(발밑 0 기준 · 얼굴은 비켜서 · 그림 안에만 찍힌다)
+function headTop(s) {   // 그림 가운데 줄의 가장 위 칠해진 곳(발밑 기준 단위) — 머리 위에 눈을 얹을 자리. 그림마다 한 번
+  if (s.top != null) return s.top
+  const x = Math.round(s.ox * s.c.width / s.w), d = s.c.getContext('2d').getImageData(x, 0, 1, s.c.height).data
+  let y = 0; while (y < s.c.height - 1 && d[y * 4 + 3] < 128) y++
+  return s.top = y * s.h / s.c.height - s.oy
+}
+function frostOn(c, s, ice) {   // 몸 위 — 발밑부터 차오르는 푸른 서리 · 하나둘 달라붙는 눈송이(둘 다 몸 그림 안에서만)
+  const F = FROST, sc = s.c.width / s.w
+  if (F.width !== s.c.width || F.height !== s.c.height) { F.width = s.c.width; F.height = s.c.height }
+  const g = F.getContext('2d'); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, F.width, F.height); g.drawImage(s.c, 0, 0); g.globalCompositeOperation = 'source-atop'
+  const lv = s.oy - 34 * ice, gr = g.createLinearGradient(0, lv * sc, 0, (lv + 8) * sc)
+  gr.addColorStop(0, 'rgba(150,205,255,0)'); gr.addColorStop(1, 'rgba(150,205,255,.5)'); g.fillStyle = gr; g.fillRect(0, 0, F.width, F.height)
+  g.fillStyle = '#fbfdff'; g.strokeStyle = 'rgba(110,150,205,.5)'; g.lineWidth = 0.4 * sc
+  FLAKES.forEach(([x, y], i) => { const k = Math.min(1, (ice - i / FLAKES.length * 0.85) * 4); if (k > 0) { g.beginPath(); g.arc((s.ox + x) * sc, (s.oy + y) * sc, (0.5 + 0.7 * k) * sc, 0, TAU); g.fill(); g.stroke() } })
+  c.drawImage(F, -s.ox, -s.oy, s.w, s.h)
+}
+function frostAround(c, s, it, cold, ice, dx = 0, burst = false) {   // 몸 밖 — 하얀 입김 · 발밑에 소복이 쌓이는 눈 · 머리 위 눈(몸과 같이 흔들린다) · 부르르 떨림 표시 · 꽁꽁 얼면 반짝
+  const x = pl.x, y = pl.y, f = pl.fx
+  const lumps = P => { c.lineWidth = 1.6; c.strokeStyle = 'rgba(110,150,205,.8)'; for (const [px, py, r] of P) { oval(c, px, py, r, r); c.stroke() } c.fillStyle = '#fbfdff'; for (const [px, py, r] of P) { oval(c, px, py, r, r); c.fill() } }   // 겹친 동그라미 — 테두리를 먼저 다 긋고 속을 칠해 울퉁불퉁한 눈 덩이 하나로
+  if (cold > 0.15) {
+    c.fillStyle = '#ffffff'; c.strokeStyle = 'rgba(120,160,210,.55)'; c.lineWidth = 1
+    for (let i = 0; i < 2; i++) { const p = (G.t * 0.8 + i * 0.5) % 1; c.globalAlpha = (1 - p) * 0.55 * cold; oval(c, x + f * (11 + 9 * p), y - 13 - 8 * p, 0.9 + 2 * p, 0.8 + 1.6 * p); c.fill(); c.stroke() }   // 입 옆에서 피어올라 흩어진다
+    c.globalAlpha = 1
+  }
+  if (ice) { const P = []; for (let i = -4; i <= 4; i++) { const r = (1.4 + 3.6 * ice) * (0.75 + 0.25 * Math.sin(i * 1.9 + 1)); P.push([x + i * 3.2, y - r * 0.35, r]) } lumps(P) }
+  const cap = Math.max(0, Math.min(1, (it - 2.6) / 10))   // 머리 위 눈 — 처음엔 살짝, 오래 서 있을수록 두툼하게(10초에 걸쳐)
+  if (cap) snowCap(c, x + dx, y + headTop(s), cap, f)
+  if (burst) { c.strokeStyle = 'rgba(90,120,170,.85)'; c.lineWidth = 1.4; c.lineCap = 'round'; for (const k of [-1, 1]) for (const r of [7, 10.5]) { c.beginPath(); c.arc(x + dx + k * 6, y - 13, r, k > 0 ? -0.55 : Math.PI - 0.55, k > 0 ? 0.55 : Math.PI + 0.55); c.stroke() } }   // 부르르 — 양옆에 (( ))
+  if (it >= ICE.after) for (const [dx, dy, ph] of [[-8, -20, 0], [7, -9, 0.6]]) { const a = Math.max(0, Math.sin((G.t + ph) * 4)); if (a > 0.2) { c.globalAlpha = a; c.fillStyle = '#ffffff'; c.strokeStyle = 'rgba(110,150,205,.7)'; c.lineWidth = 0.8; starP(c, x + dx * f, y + dy, 3 * a, 0.8, 4); c.fill(); c.stroke(); c.globalAlpha = 1 } }
+}
+function snowCap(c, x, top, a, f) {   // 머리 위에 쌓이는 눈 — 동글동글한 눈 덩이가 머리 꼭대기를 따라 한 줄, 쌓일수록 그 위로 줄이 늘어 소복한 무더기가 된다(아래는 푸르스름)
+  const yb = u => top + 1.4 + (u / 10) ** 2 * 6, P = new Path2D(), L = []
+  const rows = [[0, 1, 0], [0.3, 0.68, 1], [0.58, 0.38, 2], [0.84, 0, 3]]   // [나타나는 때, 너비 비율, 줄]
+  const wB = 5 + 6 * Math.min(1, a * 1.5), rb = 1.5 + 1.3 * a
+  for (const [th, k, n] of rows) {
+    const p = Math.max(0, Math.min(1, (a - th) / 0.22)); if (!p) continue
+    const w = wB * k, m = Math.max(1, Math.round(w / 2.3) * 2 + (k ? 1 : 0))
+    for (let i = 0; i < m; i++) { const u = m > 1 ? -w + 2 * w * i / (m - 1) : 0, r = rb * (0.85 + 0.25 * Math.abs(Math.sin(i * 2.1 + n))) * p * (n ? 1.05 : 1); L.push([x + u * f, yb(u) - rb * 0.35 - n * rb * 1.05 * p, r]) }
+  }
+  for (const [px, py, r] of L) { P.moveTo(px + r, py); P.arc(px, py, r, 0, TAU) }
+  c.lineWidth = 1.4; c.strokeStyle = 'rgba(110,150,205,.85)'; for (const [px, py, r] of L) { oval(c, px, py, r, r); c.stroke() }   // 테두리를 먼저 다 긋고
+  c.fillStyle = '#fbfdff'; c.fill(P)   // 속을 칠해 하나의 무더기로
+  c.save(); c.clip(P); c.fillStyle = 'rgba(165,200,240,.5)'; c.beginPath(); for (let i = 0; i <= 12; i++) { const u = -wB - 2 + (2 * wB + 4) * i / 12; i ? c.lineTo(x + u, yb(u) - 1.2) : c.moveTo(x + u, yb(u) - 1.2) } c.lineTo(x + wB + 4, top + 12); c.lineTo(x - wB - 4, top + 12); c.closePath(); c.fill(); c.restore()   // 머리에 닿은 아래쪽은 푸르스름하게
 }
 function effect(c, f, ox, oy) {
   const u = Math.min(1, f.t / f.T)
   switch (f.k) {
     case 'ring': c.globalAlpha = 1 - u; c.strokeStyle = f.col; c.lineWidth = 4; oval(c, f.x, f.y, f.R * u, f.R * u * 0.8); c.stroke(); break
-    case 'boom': c.globalAlpha = (1 - u) * 0.75; c.fillStyle = G.sk[f.src]?.col || f.col; oval(c, f.x, f.y - 4, f.R * (0.5 + 0.5 * u), f.R * (0.5 + 0.5 * u) * 0.8); c.fill(); c.globalAlpha = 1 - u; c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); break
+    case 'boom': c.globalAlpha = (1 - u) * 0.75; c.fillStyle = G.sk[f.src]?.col || f.col; oval(c, f.x, f.y - 4, f.R * (0.5 + 0.5 * u), f.R * (0.5 + 0.5 * u) * 0.8); c.fill(); c.globalAlpha = 1 - u; c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); if (G.sk[f.src]) { c.strokeStyle = G.sk[f.src].col2; c.lineWidth = 3; oval(c, f.x, f.y - 4, f.R * (0.7 + 0.6 * u), f.R * (0.7 + 0.6 * u) * 0.8); c.stroke() } break   // 스킨 — 바깥으로 퍼지는 고리 하나 더
     case 'flash': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = f.col; oval(c, f.x, f.y, f.R, f.R); c.fill(); c.globalCompositeOperation = 'source-over'; break
     case 'white': c.globalAlpha = (1 - u) * 0.8; c.fillStyle = '#fff'; c.fillRect(ox, oy, VW, VH); break
     case 'text': c.globalAlpha = 1 - Math.max(0, u - 0.6) / 0.4; txt(c, f.s, f.x, f.y - u * 18, 17, f.col); break
     case 'bolt': {   // 어떻게든 돼라! — 노란 별 번개
       c.globalAlpha = 1 - u; c.lineJoin = 'round'
-      const k = G.sk[f.src]; for (const [col, lw] of [[k?.col || '#ffb400', 7], [k?.col2 || '#fff7b0', 3]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); f.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke() }
+      const k = G.sk[f.src]; for (const [col, lw] of k ? [[k.col + '55', 18], [k.col, 8], [k.col2, 3.5]] : [['#ffb400', 7], ['#fff7b0', 3]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); f.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke() }
       star(c, f.x, f.y - 14, 12 * (1 + u * 0.5), k?.col || '#ffe066'); break
     }
     case 'beam': {   // 랏코 선생의 일섬
       const x1 = f.x + Math.cos(f.a) * f.L, y1 = f.y + Math.sin(f.a) * f.L
       c.globalAlpha = 1 - u; c.lineCap = 'round'
-      for (const [col, k] of [[G.sk[f.src] ? G.sk[f.src].col + '99' : 'rgba(127,200,255,.6)', 2], ['#fff', 0.8]]) { c.strokeStyle = col; c.lineWidth = f.W * k * (1 - u * 0.6); c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(x1, y1); c.stroke() }
+      const sk = G.sk[f.src]
+      for (const [col, k, al] of sk ? [[sk.col, 3.6, 0.28], [sk.col + '99', 2.2, 1], [sk.col2, 1.3, 1], ['#fff', 0.6, 1]] : [['rgba(127,200,255,.6)', 2, 1], ['#fff', 0.8, 1]]) { c.globalAlpha = (1 - u) * al; c.strokeStyle = col; c.lineWidth = f.W * k * (1 - u * 0.6); c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(x1, y1); c.stroke() }   // 스킨이면 넓은 빛 · 두 겹 색
+      if (sk && f.src === 'sword') {   // 벚꽃 일섬 — 칼끝이 화면을 가르며 달려가고(빛나는 끝 · 하얀 칼자국), 지나간 자리에 초승달 칼자국 셋 · 벚꽃이 피어 양옆으로 흩날린다
+        const p = Math.min(1, u / 0.45), dx = Math.cos(f.a), dy = Math.sin(f.a), nx = -dy, ny = dx, hx = f.x + dx * f.L * p, hy = f.y + dy * f.L * p
+        c.globalAlpha = 1 - u * 0.5; c.strokeStyle = '#fff'; c.lineWidth = f.W * 0.9; c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(hx, hy); c.stroke()
+        if (p < 1) { c.globalAlpha = 0.5; c.fillStyle = sk.col; oval(c, hx, hy, f.W * 2.4, f.W * 2.4); c.fill(); c.globalAlpha = 1; c.fillStyle = '#fff'; oval(c, hx, hy, f.W * 1.1, f.W * 1.1); c.fill() }
+        for (const q of [0.24, 0.5, 0.76]) {
+          if (q > p) continue; const R = f.W * 2.6, cx = f.x + dx * (f.L * q - R * 0.7), cy = f.y + dy * (f.L * q - R * 0.7)
+          c.beginPath(); c.arc(cx, cy, R, f.a - 1.05, f.a + 1.05); c.globalAlpha = (1 - u) * 0.85; c.strokeStyle = sk.col; c.lineWidth = 7 * (1 - u) + 1; c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2.6 * (1 - u) + 0.6; c.stroke()
+        }
+        for (let i = 0; i < 6; i++) { const q = (i + 0.5) / 6; if (q > p) continue; const side = i % 2 ? 1 : -1, d = f.W * (1.3 + u * 3.4); c.globalAlpha = 1 - u; sakura(c, f.x + dx * f.L * q + nx * side * d, f.y + dy * f.L * q + ny * side * d, 6 + 5 * Math.min(1, u * 4), f.a + i + u * 3, i % 3 ? '#ffc2d9' : '#ff9bc0') }
+        c.globalAlpha = 1
+      }
       break
     }
     case 'grab': {   // 내놔! — 쭉 뻗은 손
       c.globalAlpha = 1 - u; c.lineCap = 'round'
-      const gk = G.sk[f.src]; for (const [col, lw] of [[OUT, 7], [gk?.col || '#fff', 4]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x, f.y); c.stroke() }
+      const gk = G.sk[f.src]; for (const [col, lw] of gk ? [[gk.col + '55', 16], [OUT, 7], [gk.col, 4]] : [[OUT, 7], ['#fff', 4]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x, f.y); c.stroke() }
       oval(c, f.x, f.y, 7, 7); c.fillStyle = gk?.col || '#fff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke()
       txt(c, tr`내놔!`, f.x, f.y - 14, 13, '#ffb3d1'); break
     }
     case 'swing': {   // 토벌봉 — 노란 봉, 양 끝에 불꽃
       const { ex, ey } = f
-      const sk = G.sk[f.src]; c.globalAlpha = (1 - u) * 0.6; c.strokeStyle = sk?.col2 || '#fff3c4'; c.lineWidth = 10 * (1 - u) + 2; c.lineCap = 'round'
-      c.beginPath(); c.moveTo(f.x - ex, f.y - ey); c.lineTo(f.x + ex, f.y + ey); c.stroke()
+      const sk = G.sk[f.src]; c.lineCap = 'round'; c.beginPath(); c.moveTo(f.x - ex, f.y - ey); c.lineTo(f.x + ex, f.y + ey)
+      if (sk) { c.globalAlpha = (1 - u) * 0.35; c.strokeStyle = sk.col; c.lineWidth = 24 * (1 - u) + 4; c.stroke() }   // 스킨 — 넓은 빛
+      c.globalAlpha = (1 - u) * 0.6; c.strokeStyle = sk?.col2 || '#fff3c4'; c.lineWidth = 10 * (1 - u) + 2; c.stroke()
       c.globalAlpha = 1 - u; c.strokeStyle = OUT; c.lineWidth = 5; c.stroke(); c.strokeStyle = sk?.col || '#ffd54a'; c.lineWidth = 3; c.stroke()
       for (const s of [-1, 1]) flame(c, f.x + s * ex, f.y + s * ey, 6 + 4 * (1 - u))
       break
@@ -3400,6 +3665,8 @@ function hud(c) {
   for (const id in G.passives) { c.drawImage(SPR.E[id].c, x, top + 32, 20, 20); txt(c, String(G.passives[id]), x + 17, top + 52, 10); x += 22 }
   let sy = top + 72
   for (const id in G.sts) { const left = G.sts[id] - G.t; if (left > 0) { txt(c, tr`${STATUS[id].name} ${Math.ceil(left)}초 — ${STATUS[id].note}`, W / 2, sy + 2, 13, STATUS[id].col, W - 16); sy += 18 } }
+  if (G.storm.on > 0) { const n = Math.ceil(G.storm.on); txt(c, G.fire ? tr`눈보라 ${n}초 — 불꽃 옷: 받는 피해 그대로` : G.storm.warm ? tr`눈보라 ${n}초 — 몸이 따뜻해서 받는 피해 그대로` : tr`눈보라 ${n}초 — 받는 피해 +${Math.round((STORM.hurt - 1) * 100)}%`, W / 2, sy + 2, 13, G.fire || G.storm.warm ? '#ffb36b' : '#bfe6ff', W - 16); sy += 18 }
+  if (G.winter && pl.idleT >= 3 && !G.dying) { txt(c, pl.idleT >= ICE.after ? tr`꽁꽁 얼어붙는 중 — 움직이면 풀려요` : tr`몸이 차가워져요 — 움직여요!`, W / 2, sy + 2, 13, '#9fd8ff', W - 16); sy += 18 }
   for (const h of G.help) { txt(c, tr`${h.k === 'pajama' ? tr`♪ 파자마 파티즈 공연` : tr`한잎이 · 두잎이가 지키는 중`} ${Math.ceil(h.T - h.t)}초`, W / 2, sy + 2, 13, h.k === 'pajama' ? '#ffb3e6' : '#b9f09a', W - 16); sy += 18 }
   const boss = G.final ? alive(G.final.siren) : G.foes.find(e => e.boss && !e.dead)   // 보스 체력 — 아래에
   if (boss) {
@@ -3411,6 +3678,7 @@ function hud(c) {
   }
   if (G.banner) { const b = G.banner; c.globalAlpha = Math.min(1, (b.T - b.t) * 3, b.t * 6); const fs = Math.min(30, W / 15); c.font = `${fs}px ${FONT}`; txt(c, b.s, W / 2, H * 0.3, fs * Math.min(1, (W - 24) / c.measureText(b.s).width), b.col); c.globalAlpha = 1 }   // 화면보다 길면 글자를 줄인다
   if (G.freeze > 0) txt(c, tr`멈춤 ${Math.ceil(G.freeze)}`, W / 2, H * 0.3 + 34, 16, '#ffc2e0')
+  if (G.tip) { const b = G.tip; c.globalAlpha = Math.min(1, (b.T - b.t) * 3, b.t * 6); txt(c, b.s, W / 2, H * 0.3 + 40, 15, b.col, W - 24); c.globalAlpha = 1 }   // 작은 안내
   if (joy.on) {
     c.globalAlpha = 0.35; c.fillStyle = '#fff'; oval(c, joy.ox, joy.oy, 46, 46); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke()
     c.globalAlpha = 0.75; oval(c, joy.px, joy.py, 20, 20); c.fill(); c.stroke(); c.globalAlpha = 1
@@ -3435,17 +3703,18 @@ function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) 
   return h('div', { class: 'theme', role: 'radiogroup', 'aria-label': tr`테마` }, [['winter', 'snow', tr`겨울`], ['grass', 'clover', tr`풀밭`]].map(([k, pic, name]) =>
     h('button', { type: 'button', role: 'radio', 'aria-checked': String(save.theme === k), class: save.theme === k ? 'on' : '', onclick: e => {
       if (save.theme === k) return
-      save.theme = k; persist(); sprites()
+      save.theme = k; persist(); sprites(); SND.play(fieldSong())
       for (const b of e.currentTarget.parentNode.children) { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)) }
     } }, ic(pic), ` ${name}`)))
 }
 function title() {
-  SND.play('field')
+  SND.play(fieldSong())
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
   show(h('div', { class: 'panel home' }, themePick(), langPick(),
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
+    TAMPER && h('p', { class: 'hint' }, TAMPER === 'bak' ? tr`저장 기록이 게임 밖에서 바뀌어 바로 전 저장으로 되돌렸어요` : tr`저장 기록이 게임 밖에서 바뀌어 기록을 처음부터 시작해요`),
     h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), () => shop()), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(tr`토벌 시작!`, chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? tr`토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : tr`몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, tr`비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ`),
@@ -3522,6 +3791,7 @@ function guide() {
       step('syn', tr`짝꿍 스킬 2개를 모두 가지면 시너지! 둘 다 세져요`),
       step('awaken', tr`Lv 8 스킬이 있을 때 보스를 쓰러뜨리면 각성의 별이 떨어져요. 먹으면 스킬 하나가 각성!`),
       step('coinbox', tr`멀리 돌아다니면 가끔 떠돌이 보물상자가 나와요. 열면 보상금!`),
+      step('snow', tr`겨울 맵 — 가만히 있으면 몸이 얼어요! 눈보라가 오면 쌓인 눈에 미끄러지고 받는 피해가 늘어요. 계속 움직이면 몸에 열이 나서 괜찮아요`),
       step('coin', tr`판이 끝나면 보상금을 받아요. 상점에서 조금씩 세게 만들 수 있어요`),
       step('shirt', tr`상점 「의상」 탭에서 옷을 사서 입어요 — 한 번 사면 모든 캐릭터가! 어려움을 클리어하면 특별한 업적 의상`),
       step('sasu', tr`상점에서 무기 스킨 · 스킬 스킨도 바꿀 수 있어요 — 모양과 색만 바뀌어요`),
@@ -3620,7 +3890,10 @@ function finish(win, quit = false) {
   const b = save.best[bestKey(G.ch.id, G.diff)] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
   save.runs++; save.kills += G.kills
   report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
-  const dress = win && G.diff === 'hard' && !b.clears && OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach')   // 그 캐릭터로 처음 어려움 클리어 — 업적 의상
+  const dress = win && G.diff === 'hard' && !b.clears && OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach' && OUTFIT[k].ch)   // 그 캐릭터로 처음 어려움 클리어 — 업적 의상
+  const fire = win && G.diff === 'hard' && G.winter && !OUTFIT.fire.won()   // 겨울 맵을 처음 어려움으로 클리어 — 불꽃 옷(모두)
+  const wsk = win && G.winter && G.diff !== 'easy' && !save.wwin.includes(G.ch.id) && WSKINS_OF(G.ch.id).find(k => WSKIN[k].tier === 'winter')   // 그 캐릭터로 겨울 맵을 처음 보통 이상 클리어 — 겨울 무기 스킨
+  if (wsk) save.wwin.push(G.ch.id)
   if (win) { save.clears++; b.clears++ }
   const pay = bounty(win); save.coin += pay.sum
   const got = achieve(win, pay.sum)
@@ -3637,7 +3910,8 @@ function finish(win, quit = false) {
       h('p', {}, ic('coin'), h('span', {}, tr`토벌 보상금`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''}`)), h('b', {}, `+${pay.base.toLocaleString()}`)),
       h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 돌아다니면 가끔 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
       h('p', { class: 'sum' }, h('span', {}, tr`합계`), h('b', {}, `+${pay.sum.toLocaleString()}`))),
-    dress && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), h('span', {}, portrait(G.ch.id, dress), ` ${OUTFIT[dress].name}`), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`)),
+    ...[dress, fire && 'fire'].filter(Boolean).map(oid => h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), h('span', {}, portrait(G.ch.id, oid), ` ${OUTFIT[oid].name}`), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`))),
+    wsk && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`겨울 무기 스킨을 받았어요!`), h('span', {}, portrait(G.ch.id, wornId(G.ch.id), wsk), ` ${WSKIN[wsk].name}`), h('small', {}, tr`상점 「무기 스킨」 탭에서 바꿀 수 있어요`)),
     got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, tr`업적 달성!`), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? tr` — 보상금 +1%` : ''}`))),
     chips(), dmgTable(),
     h('div', { class: 'row' }, btn(tr`처음으로`, title), btn(tr`상점`, () => shop()), btn(tr`캐릭터 바꾸기`, chars), btn(tr`다시 하기`, () => startGame(pickCi), 'main'))))
@@ -3653,7 +3927,8 @@ function bounty(win) {
 function achieve(win, coin) {
   const A = save.ach, before = Object.fromEntries(Object.keys(ACH).map(id => [id, tierOf(id)])), add = (k, n) => { A[k] = (A[k] || 0) + n }
   add('goblin', G.gob); add('pajama', G.pj); add('lv8', G.weapons.filter(w => w.lv >= 8).length); add('aw', G.aw.size); add('parry', G.parried); save.awSeen = [...new Set([...(save.awSeen || []), ...G.aw])]; add('coin', coin); add('jackpot', G.jackpots); add('boss', G.bosses)
-  if (win) { add(G.endKind === 'time' ? 'survive' : 'clear', 1); if (G.diff === 'hard') add('hard', 1) }
+  if (win) { add(G.endKind === 'time' ? 'survive' : 'clear', 1); if (G.diff === 'hard') add('hard', 1); if (G.diff === 'hard' && G.winter) add('winter', 1) }
+  add('storm', G.storms)
   if (G.t >= 300 && (G.hit0 ?? G.t) >= 300) add('nohit', 1)
   return Object.keys(ACH).filter(id => tierOf(id) > before[id]).map(id => [id, tierOf(id)])
 }
@@ -3696,4 +3971,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

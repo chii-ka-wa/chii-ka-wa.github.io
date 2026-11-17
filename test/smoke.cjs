@@ -207,7 +207,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.locator('#ui .row button', { hasText: '처음으로' }).click(); await page.waitForTimeout(300)
     await page.locator('#ui .row button', { hasText: '업적' }).click(); await page.waitForTimeout(400)
     const list = await page.evaluate(() => ({ rows: document.querySelectorAll('.ach li').length, head: document.querySelector('#ui .coin')?.textContent, bad: [...document.querySelectorAll('img.medal')].filter(i => !i.naturalWidth).length }))
-    if (list.rows !== 15 || !/금메달 2 \/ 15 — 토벌 보상금 \+2%/.test(list.head) || list.bad) errors.push('[ach] 업적 화면 ' + JSON.stringify(list))
+    if (list.rows !== 17 || !/금메달 2 \/ 17 — 토벌 보상금 \+2%/.test(list.head) || list.bad) errors.push('[ach] 업적 화면 ' + JSON.stringify(list))
     await page.screenshot({ path: OUT + 'ach.png' }); await noEmoji(page, 'ach')
   })
   await run('perf', { width: 1280, height: 800 }, async page => {   // 자동 화질 — 처음보다 많이 느려지면 픽셀을 줄이고, 30fps 로 묶인 기기는 괜히 안 내리고, 새 판은 되돌린다
@@ -281,7 +281,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const a = await page.evaluate(() => ({ shop: JSON.parse(localStorage.getItem('mjg.v1')).stone, run: window.__mjg.G.runStones }))
     const m2 = await die(), coin = await page.locator('#ui .pay .found').innerText()
     console.log('wander', r, m1, a, m2, coin.slice(0, 60))
-    if (!r.spawned || !(r.avg > 39 && r.avg < 50) || !(r.stone > 1.5 && r.stone < 4.5) || m1 !== 'revive' || !/상점 부활석 2개는 이번 판엔 못 써요/.test(hint) || a.shop !== 2 || a.run !== 0 || m2 !== 'over' || !/떠돌이 보물상자[\s\S]*\+123/.test(coin)) errors.push('[wander] 떠돌이 보물상자 ' + JSON.stringify({ r, m1, a, m2, coin }))
+    if (!r.spawned || !(r.avg > 65 && r.avg < 115) || !(r.stone > 1.5 && r.stone < 4.5) || m1 !== 'revive' || !/상점 부활석 2개는 이번 판엔 못 써요/.test(hint) || a.shop !== 2 || a.run !== 0 || m2 !== 'over' || !/떠돌이 보물상자[\s\S]*\+123/.test(coin)) errors.push('[wander] 떠돌이 보물상자 ' + JSON.stringify({ r, m1, a, m2, coin }))
   })
 
   await run('awaken', { width: 1280, height: 800 }, async page => {   // 각성 — Lv 8 이 있어야 보스가 각성의 별을 떨어뜨리고, 각성 상자(카드 하나 · 리롤 꺼짐)에서 고르면 세지고, 기타 음표가 적 탄을 반쯤 막는다
@@ -331,7 +331,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.keyboard.press('Escape'); await page.waitForTimeout(100)   // PC — 메뉴에서 Esc = 처음으로
     const esc = await page.evaluate(() => window.__mjg.mode); if (esc !== 'title') errors.push('[outfit] Esc ' + esc)
     await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); s.best = { chiikawa: { t: 1, kills: 1, lvl: 1, clears: 1 } }; localStorage.setItem('mjg.v1', JSON.stringify(s)) }); await page.reload(); await page.waitForTimeout(500)
-    await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.locator('.list.wr li.wr-ach .btn.buy').click(); await page.waitForTimeout(100)
+    await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.locator('.list.wr li.wr-ach .btn.buy').first().click(); await page.waitForTimeout(100)
     const b = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); for (let i = 0; i < 30; i++) { M.pl.inv = 9; M.step(1 / 30) } return { wear: JSON.parse(localStorage.getItem('mjg.v1')).wear.chiikawa, fx: M.G.cfx.list.length } })
     if (a.coin !== 1000 || a.wear !== 'pj' || !a.richOff || !a.achOff || b.wear !== 'a_chiikawa' || !(b.fx > 0)) errors.push('[outfit] 의상 ' + JSON.stringify({ a, b }))
   })
@@ -340,7 +340,11 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ coin: 55000, noStats: true, awSeen: ['yaha'] })) }); await page.reload(); await page.waitForTimeout(500)
     await page.evaluate(() => window.__mjg.shop('weapon', 0)); await page.waitForTimeout(150); await noEmoji(page, 'skins')
     let b = page.locator('.list.wr li.wr-rich .btn.buy'); await b.click(); await b.click(); await page.waitForTimeout(150)
-    const w = await page.evaluate(() => ({ wear: JSON.parse(localStorage.getItem('mjg.v1')).wear['w:chiikawa'], achOff: document.querySelector('.list.wr li.wr-ach .btn.buy').disabled }))
+    const w = await page.evaluate(() => ({ wear: JSON.parse(localStorage.getItem('mjg.v1')).wear['w:chiikawa'], achOff: document.querySelector('.list.wr li.wr-ach .btn.buy').disabled, winterOff: document.querySelector('.list.wr li.wr-winter .btn.buy').disabled }))
+    const ww = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); s.wwin = ['chiikawa']; localStorage.setItem('mjg.v1', JSON.stringify(s)) })   // 겨울 맵 보통 이상 클리어 → 겨울 무기 스킨
+    await page.reload(); await page.waitForTimeout(400); await page.evaluate(() => window.__mjg.shop('weapon', 0)); await page.waitForTimeout(100)
+    const wOn = await page.evaluate(() => document.querySelector('.list.wr li.wr-winter .btn.buy')?.disabled === false)
+    if (!wOn) errors.push('[skins] 겨울 무기 스킨이 안 열림')
     await page.evaluate(() => window.__mjg.shop('skill', 0)); await page.waitForTimeout(150)
     const yaha = await page.evaluate(() => [...document.querySelectorAll('.list.wr li')].findIndex(li => li.querySelector('img.ico')?.src) >= 0 && document.querySelectorAll('.list.wr li .btn.buy').length)
     await page.locator('.list.wr li').nth(4).locator('b').click(); await page.waitForTimeout(150)   // 스킬 스킨 미리 보기 — 줄을 누르면 그 스킬의 원래 · 스킨이 나란히
@@ -348,7 +352,42 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!pv.cv || pv.name !== pv.want) errors.push('[skins] 스킬 미리 보기 ' + JSON.stringify(pv))
     b = page.locator('.list.wr li').first().locator('.btn.buy'); await b.click(); await b.click(); await page.waitForTimeout(150)
     const k = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); const M = window.__mjg; M.startGame(0); for (let i = 0; i < 30; i++) { M.pl.inv = 9; M.step(1 / 30) } return { coin: s.coin, skin: s.skin, sk: Object.keys(M.G.sk), wfx: M.G.wfx.list.length } })   // 무기 스킨 반짝이(wfx)
-    if (w.wear !== 'w_chiikawa' || !w.achOff || k.coin !== 5000 || !k.sk.includes('sasu') || k.sk.includes('yaha') || !(k.wfx > 0)) errors.push('[skins] 스킨 ' + JSON.stringify({ w, k, yaha }))
+    if (w.wear !== 'w_chiikawa' || !w.achOff || !w.winterOff || k.coin !== 5000 || !k.sk.includes('sasu') || k.sk.includes('yaha') || !(k.wfx > 0)) errors.push('[skins] 스킨 ' + JSON.stringify({ w, k, yaha }))
+  })
+
+  await run('winter', { width: 1000, height: 700 }, async page => {   // 겨울 맵 — 눈보라 예고 · 쌓인 눈에 미끄러짐 · 받는 피해 증가(계속 움직이면 사라짐) · 그치면 녹음 · 가만히 있으면 얼어붙기 · 불꽃 옷
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, theme: 'winter' })) }); await page.reload(); await page.waitForTimeout(500)
+    const r = await page.evaluate(() => {
+      const M = window.__mjg, o = {}, run = (n, f) => { for (let i = 0; i < n; i++) { M.G.queue.length = 0; f?.(); M.step(1 / 30) } }, key = (t, code) => window.dispatchEvent(new KeyboardEvent(t, { code }))
+      M.startGame(0); const G = M.G, W = G.storm; W.next = 6; G.next = 1e12   // 레벨 업 상자가 열리면 누른 키가 풀려(calm) 「5초 계속 움직이기」가 끊긴다 — 이 점검에선 레벨 업을 막는다
+      run(40, () => { M.pl.inv = 9 }); o.warn = G.tip?.s
+      let n = 0; while (W.on <= 0 && n++ < 60) { W.next = G.t; run(1) }   // 반반 — 올 때까지
+      o.on = W.on > 0; o.hurts = M.stormHurts(); run(60, () => { M.pl.inv = 9 }); o.piles = W.piles.length
+      const P = W.piles[0]; M.pl.x = P.x; M.pl.y = P.y; M.pl.vx = 120; M.pl.vy = 0; run(1); const x0 = M.pl.x; run(5); o.slide = M.pl.x - x0   // 손을 안 대도 주르륵
+      key('keydown', 'ArrowRight'); run(170, () => { M.pl.inv = 9 }); o.warm = W.warm && !M.stormHurts(); key('keyup', 'ArrowRight')   // 5초 넘게 계속 움직이면 몸에 열
+      run(380, () => { M.pl.inv = 9 }); o.after = { on: W.on, piles: W.piles.length, storms: G.storms }   // 눈보라 15초 + 녹는 0.6초
+      M.pl.inv = 0; const h0 = M.pl.hp; run(210, () => { G.foes.length = 0; G.eshots.length = 0; G.storm.next = G.t + 99 }); o.freeze = { idle: M.pl.idleT > 5, lost: h0 - M.pl.hp }   // 가만히 7초 — 2초째부터 조금씩
+      return o
+    })
+    if (r.warn !== '곧 눈보라가 와요!' || !r.on || !r.hurts || !(r.piles > 0) || !(r.slide > 5) || !r.warm || r.after.on > 0 || r.after.piles || r.after.storms !== 1 || !r.freeze.idle || !(r.freeze.lost > 1)) errors.push('[winter] 눈보라 · 얼어붙기 ' + JSON.stringify(r))
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); s.ach = { winter: 1 }; s.wear = { chiikawa: 'fire' }; localStorage.setItem('mjg.v1', JSON.stringify(s)) }); await page.reload(); await page.waitForTimeout(500)
+    const f = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); const W = M.G.storm; W.on = 5; return { worn: M.wornId('chiikawa'), fire: M.G.fire, hurts: M.stormHurts() } })
+    if (f.worn !== 'fire' || !f.fire || f.hurts) errors.push('[winter] 불꽃 옷 ' + JSON.stringify(f))
+  })
+
+  await run('secure', { width: 900, height: 800 }, async page => {   // 진짜 주소(?secure 로 흉내) — 시험 손잡이(__mjg) 숨김 · 저장을 고치면 바로 전 저장으로 · 둘 다 고치면 처음부터 · F12 막기
+    const S = URL + (URL.includes('?') ? '&' : '?') + 'secure', o = {}
+    await page.goto(S); await page.evaluate(() => localStorage.clear()); await page.goto(S); await page.waitForTimeout(400)
+    o.hook = await page.evaluate(() => typeof window.__mjg)
+    await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ coin: 3000 }))); await page.goto(S); await page.waitForTimeout(300)   // 서명 전 예전 저장은 그대로
+    await page.locator('.theme button').nth(1).click(); await page.waitForTimeout(200)   // 저장 → 서명
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); s.coin = 999999; localStorage.setItem('mjg.v1', JSON.stringify(s)) }); await page.goto(S); await page.waitForTimeout(300)
+    o.edit = await page.evaluate(() => ({ note: !!document.querySelector('.home p.hint'), coin: JSON.parse(localStorage.getItem('mjg.v1')).coin, theme: JSON.parse(localStorage.getItem('mjg.v1')).theme }))
+    await page.evaluate(() => { for (const k of ['mjg.v1', 'mjg.v1.bak']) { const s = JSON.parse(localStorage.getItem(k)); s.coin = 999999; localStorage.setItem(k, JSON.stringify(s)) } }); await page.goto(S); await page.waitForTimeout(300)
+    o.both = await page.evaluate(() => JSON.parse(localStorage.getItem('mjg.v1')).coin)
+    o.f12 = await page.evaluate(() => { const e = new KeyboardEvent('keydown', { key: 'F12', cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented })
+    if (o.hook !== 'undefined' || !o.edit.note || o.edit.coin !== 3000 || o.edit.theme !== 'grass' || o.both !== 0 || !o.f12) errors.push('[secure] 저장 지키기 ' + JSON.stringify(o))
+    await page.evaluate(() => localStorage.clear())
   })
 
   await run('awaken-key', { width: 1280, height: 800 }, async page => {   // 각성 상자 — 첫 카드가 골라져 있어 Enter · Space 로 받는다

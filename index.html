@@ -95,7 +95,8 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .trio canvas.pt { height: 76px }
 @media (max-width: 520px) { .trio canvas.pt { height: 54px } }
 .panel.home { position: relative }
-@media (max-width: 560px) { .panel.home .trio { margin-top: 34px } }   /* 좁으면 언어 단추 아래로 캐릭터를 내린다 */
+.panel.home p.hint { margin: 6px 0 0; color: #e8475f; font-size: 14px }   /* 저장 기록을 되돌렸다는 안내 */
+.panel.home .trio { margin-top: 34px }   /* 테마 · 언어 단추(위 양쪽 구석) 아래로 캐릭터를 내린다 — 의상 날개 · 화관이 가려지지 않게 */
 :root:lang(ja) { --cjk: "Zen Maru Gothic" } :root:lang(zh-CN) { --cjk: "Noto Sans SC" } :root:lang(zh-TW) { --cjk: "Noto Sans TC" }   /* 일본 · 중국 글자 — game.js 가 그 말일 때만 글꼴을 불러온다 */
 .theme { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; font-size: 15px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; box-shadow: 0 2px 0 var(--ink); overflow: hidden }   /* 테마 고르기 — 처음 화면 왼쪽 위 */
 .theme button { font: inherit; padding: 4px 10px 4px 7px; border: 0; background: none; color: var(--ink); cursor: pointer; white-space: nowrap }
@@ -297,7 +298,7 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 .wr-view small.try { color: #e8475f }
 .wr-view small.tip { margin-top: 6px; font-size: 13px; color: var(--soft) }
 .list.wr mark { margin-left: 6px; padding: 0 8px; border-radius: 999px; color: #fff; font-size: 12px; vertical-align: 2px; white-space: nowrap }
-.list.wr mark.cheap { background: #9aa6b2 } .list.wr mark.rich { background: #ffb400 } .list.wr mark.ach { background: #ff5ba7 }
+.list.wr mark.cheap { background: #9aa6b2 } .list.wr mark.rich { background: #ffb400 } .list.wr mark.ach { background: #ff5ba7 } .list.wr mark.winter { background: #5fb0e6 }
 .wardrobe .list span, .wardrobe .list em { font-family: inherit; color: var(--ink) }
 .list.wr .btn.buy.on { background: var(--pink); color: #fff }
 @media (max-height: 780px), (max-width: 480px) {   /* 낮은 화면 · 휴대폰 — 미리 보기 · 캐릭터 단추 · 머리말을 작게 해서 상점 줄이 보이게 */
