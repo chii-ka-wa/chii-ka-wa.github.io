@@ -97,6 +97,9 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .panel.home { position: relative }
 @media (max-width: 560px) { .panel.home .trio { margin-top: 34px } }   /* 좁으면 언어 단추 아래로 캐릭터를 내린다 */
 :root:lang(ja) { --cjk: "Zen Maru Gothic" } :root:lang(zh-CN) { --cjk: "Noto Sans SC" } :root:lang(zh-TW) { --cjk: "Noto Sans TC" }   /* 일본 · 중국 글자 — game.js 가 그 말일 때만 글꼴을 불러온다 */
+.theme { position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; font-size: 15px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; box-shadow: 0 2px 0 var(--ink); overflow: hidden }   /* 테마 고르기 — 처음 화면 왼쪽 위 */
+.theme button { font: inherit; padding: 4px 10px 4px 7px; border: 0; background: none; color: var(--ink); cursor: pointer; white-space: nowrap }
+.theme button.on { background: #ffe3ea }
 .lang { position: absolute; top: 12px; right: 12px; z-index: 2; text-align: left; font-size: 15px }   /* 언어 고르기 — 처음 화면 오른쪽 위 */
 .lang summary { list-style: none; cursor: pointer; padding: 4px 12px 4px 8px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; box-shadow: 0 2px 0 var(--ink); white-space: nowrap }
 .lang summary::-webkit-details-marker { display: none }

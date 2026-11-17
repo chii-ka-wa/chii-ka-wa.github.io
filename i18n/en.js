@@ -579,4 +579,7 @@ export default {
   " (끝)": " (max)",
   "다 샀어요": "Maxed",
   "판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요. 부활석은 쓰면 없어져요": "When a run ends you earn bounty for time survived · kills · bosses · clears (more on harder modes). Upgrades are small — buying everything is about one level of the same item. Revive Stones are used up when spent",
+  "테마": "Theme",
+  "겨울": "Winter",
+  "풀밭": "Meadow",
 }
