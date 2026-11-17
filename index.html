@@ -68,6 +68,53 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page, 
 #pause[hidden] ~ #spd { display: none }
 #sndm { position: fixed; inset: 0; z-index: 7; display: flex; padding: 16px; background: rgba(74, 59, 53, .35) }   /* 소리 크기 창 */
 #sndm[hidden] { display: none }
+/* 계정 · 랭킹 — 작은 창(바깥 · Esc · 닫기로 닫힌다) */
+.modal { position: fixed; inset: 0; z-index: 8; display: flex; padding: 16px; overflow-y: auto; background: rgba(74, 59, 53, .35) }
+.modal > .panel { width: min(360px, 100%) } .modal > .panel.choose { width: min(480px, 100%) } .modal > .panel.rinfo { width: min(420px, 100%) }
+.btn.sns { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin: 10px 0 0; font-size: 17px }
+.btn.sns.kakao { background: #FEE500; color: rgba(0, 0, 0, .85) } .btn.sns.google { background: #fff; color: #1f1f1f }
+.brand { display: inline-flex; width: 20px; height: 20px; flex: none } .brand svg { width: 100%; height: 100% }
+label.nick { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 6px 16px; border: 3px solid var(--ink); border-radius: 999px; background: #fff }
+label.nick input { flex: 1; min-width: 0; font: inherit; font-size: 18px; border: 0; outline: 0; background: none; color: var(--ink) }
+label.nick small { color: #a89488; font-size: 13px }
+.nmsg { min-height: 1.4em; margin: 6px 0 0; font-size: 14px } .nmsg.ok { color: #2f7a3a } .nmsg.no { color: #e8475f }
+.btn:disabled { opacity: .45; cursor: default; box-shadow: none; transform: translateY(4px) }
+.pickrecs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 }
+.pickrec { display: grid; gap: 3px; padding: 10px 8px; font: inherit; font-size: 14px; text-align: left; color: var(--soft); background: #fff; border: 3px solid var(--ink); border-radius: 16px; cursor: pointer }
+.pickrec b { font-size: 17px; color: var(--ink); font-weight: normal } .pickrec span.more { color: var(--ink); font-weight: bold } .pickrec small { color: #a89488 }
+.pickrec.on { background: #ffe3ea; border-color: var(--pink); box-shadow: 0 0 0 3px var(--pink) }
+.warn { margin: 6px 0 0; font-size: 14px; color: #e8475f }
+.corner { position: absolute; top: 12px; right: 12px; z-index: 2; display: flex; gap: 6px; align-items: flex-start }   /* 처음 화면 오른쪽 위 — 계정 · 언어 */
+.corner .lang { position: relative; top: auto; right: auto }
+.acct { position: relative; font: inherit; font-size: 15px; text-align: left; color: var(--ink) }
+button.acct, .acct summary { display: flex; align-items: center; gap: 5px; padding: 4px 12px 4px 8px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; box-shadow: 0 2px 0 var(--ink); white-space: nowrap; cursor: pointer; list-style: none }
+.acct summary::-webkit-details-marker { display: none } .acct summary::after { content: ' \25BE'; color: var(--soft) }
+.acct .nm { max-width: 6.5em; overflow: hidden; text-overflow: ellipsis }
+@media (max-width: 480px) { .corner .lang .lnm { display: none } .acct .nm { max-width: 4.5em } }   /* 좁은 폰 — 언어는 국기만, 닉네임은 줄여서(테마 단추와 안 겹치게) */
+.acct .brand { width: 16px; height: 16px } .acct .brand.kakao { background: #FEE500; border-radius: 50%; padding: 2px }
+.acct div { position: absolute; right: 0; margin-top: 6px; display: grid; gap: 2px; padding: 6px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; box-shadow: 0 3px 0 var(--ink) }
+.acct div button { font: inherit; text-align: left; padding: 6px 12px; border: 0; border-radius: 10px; background: none; color: var(--ink); cursor: pointer; white-space: nowrap }
+.acct div button:hover { background: #ffe3ea }
+.acct div button.del { margin-top: 4px; padding: 6px 12px 2px; border-top: 1px solid #eadccd; border-radius: 0; font-size: 12px; color: #a89488 }   /* 계정 지우기 — 맨 아래 작은 글씨 */
+.btn.danger { background: #e8475f; color: #fff; text-shadow: 0 1px 0 rgba(74, 59, 53, .5) }
+.rankline { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin: 0 0 6px; font-size: 15px }
+.rankline .btn { font-size: 15px; padding: 5px 14px; box-shadow: 0 3px 0 var(--ink) }
+.panel.rank .dex-nav button.on { background: var(--pink); border-color: var(--pink); color: #fff }
+.panel.rank .mine { margin: 0 0 8px } .panel.rank .mine > span { display: block; font-size: 14px; color: var(--soft) } .panel.rank .mine .btn { margin-top: 6px; font-size: 15px; padding: 5px 14px }
+.panel.rank .mine li { list-style: none; border-color: var(--pink) }
+.list.rank li, .panel.rank .mine li { display: grid; grid-template-columns: 30px 48px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left; cursor: pointer; background: #fff; border: 2px solid #eadccd; border-radius: 14px; padding: 6px 10px }
+.list.rank li.me { background: #fff0f4; border-color: var(--pink) }
+.list.rank li.wait { display: block; text-align: center; cursor: default; color: var(--soft) }
+.list.rank canvas.pt, .panel.rank .mine canvas.pt { height: 44px; max-width: 48px; object-fit: contain; justify-self: center }
+.list.rank b, .panel.rank .mine b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: normal }
+.list.rank .wp, .panel.rank .mine .wp { display: flex; gap: 2px } .rank .wp .ico { width: 18px; height: 18px }
+.rk { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 15px; color: var(--ink) }
+.rk.t3 { background: #ffd23f; border: 2px solid #d99a00 } .rk.t2 { background: #dfe4ea; border: 2px solid #97a2ae } .rk.t1 { background: #e0a46a; border: 2px solid #a8683a }
+.rank .sc { display: grid; justify-items: end; gap: 2px } .rank .sc small { font-size: 12px; color: var(--soft); white-space: nowrap }
+.lvpill { display: inline-block; padding: 1px 10px; border-radius: 999px; background: #9b6bff; color: #fff; border: 2px solid var(--ink); font-size: 14px }
+.panel.rinfo canvas.pt { height: 72px } .panel.rinfo .sub { margin-bottom: 4px }
+.panel.rinfo .brow { display: grid; grid-template-columns: 64px 1fr; align-items: center; text-align: left; gap: 6px } .panel.rinfo .brow > small { color: var(--soft); font-size: 13px }
+.panel.rinfo .build { justify-content: flex-start; margin: 4px 0 } .panel.rinfo .chip .ico { width: 18px; height: 18px; vertical-align: -4px }
 .panel.snd { width: min(360px, 100%) }
 .panel.snd label { display: grid; grid-template-columns: 84px 1fr 34px; align-items: center; gap: 10px; margin: 12px 0; font-size: 17px; text-align: left }
 .panel.snd input { width: 100%; accent-color: var(--pink) }
@@ -124,6 +171,7 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 #pause svg { display: block; margin: auto }
 .fine .linkish { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer }   /* 통계 보내지 않기 */
 .fine + .fine { margin-top: 4px }
+ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; line-height: 1.55 } ul.pv li { margin: 4px 0 }   /* 개인정보 처리방침 */
 
 /* 캐릭터 고르기 */
 .panel.wide { width: min(900px, 100%) }
@@ -136,10 +184,14 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .char small { font-size: 14px; color: #c07a2c }
 .char .trait { font-size: 15px; color: var(--pink) }
 .char .note, .char .best { font-size: 13px; color: var(--soft); font-family: system-ui, sans-serif, var(--cjk, sans-serif); line-height: 1.4 }
-.diff { display: flex; gap: 8px; justify-content: center; margin-top: 14px }
+.diff { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px }
 .diff button { font: inherit; font-size: 17px; padding: 6px 16px; border: 3px solid var(--ink); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer }
 .diff button.on { background: var(--pink); border-color: var(--pink); color: #fff }
-.diff-note { margin: 6px 0 0; text-align: center; font-size: 13px; color: var(--soft); font-family: system-ui, sans-serif, var(--cjk, sans-serif) }
+.diff-note { display: grid; margin: 6px 0 0; text-align: center; font-size: 13px; color: var(--soft); font-family: system-ui, sans-serif, var(--cjk, sans-serif) }
+.diff-note span { grid-area: 1 / 1; visibility: hidden } .diff-note span.on { visibility: visible }   /* 설명을 겹쳐 두어 높이가 그대로 — 아래 단추가 출렁이지 않게 */
+.diff button.on[data-k=easy] { background: #6cc46a; border-color: #6cc46a } .diff button.on[data-k=normal] { background: #f2b53a; border-color: #f2b53a }
+.diff button.on[data-k=hard] { background: #ef5a5a; border-color: #ef5a5a } .diff button.on[data-k=inf] { background: #9b6bff; border-color: #9b6bff }   /* 결과 화면 배지와 같은 색 */
+@media (max-width: 440px) { .diff { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px } .diff button { display: flex; flex-direction: column; align-items: center; padding: 4px 0; border-radius: 16px; font-size: 15px } }   /* 좁은 폰 — 네 칸 한 줄(아이콘 위 · 글자 아래) */
 @media (max-width: 520px) {
   .chars { grid-template-columns: 1fr }
   .char { display: grid; grid-template-columns: 76px 1fr; text-align: left; align-items: center; column-gap: 12px }
@@ -160,6 +212,7 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .card small { color: #b07a4f; font-size: 14px }
 .card b { font-size: 20px }
 .card .note { font-size: 14px; color: var(--soft); font-family: system-ui, sans-serif, var(--cjk, sans-serif); line-height: 1.4 }
+.card .note .low { color: #e8475f; font-weight: bold }
 .card.synergy { border-color: #e8a400; box-shadow: 0 4px 0 #e8a400, 0 0 0 4px rgba(255, 200, 60, .35) }
 .card .syn { grid-column: 1 / -1; margin-top: 6px; padding: 5px 9px; border-radius: 10px; background: #fff0c4; font-size: 13px; line-height: 1.4 }
 .card .syn mark { background: #e8a400; color: #fff; border-radius: 6px; padding: 0 6px }
@@ -176,7 +229,7 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .btn.act.on { background: #ffd9d9 }
 @media (min-width: 760px) {
   .panel.box { width: min(860px, 100%) }
-  .cards { grid-template-columns: repeat(3, 1fr) }
+  .cards { grid-auto-flow: column; grid-auto-columns: minmax(0, 260px); justify-content: center }   /* 세 장이든 갈림길 두 장이든 가운데 */
   .card { grid-template-columns: 1fr; text-align: center; align-content: start; padding-top: 16px }
   .card .ic { grid-row: auto; font-size: 48px }
 }
@@ -229,6 +282,7 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 .lvl-badge.easy { background: #6cc46a }
 .lvl-badge.normal { background: #f2b53a }
 .lvl-badge.hard { background: #ef5a5a }
+.lvl-badge.inf { background: #9b6bff }
 
 
 .guide .scroll .kid p { margin: 3px 0 0; font-family: inherit; font-size: 17px; line-height: 1.45; color: var(--ink) }
@@ -296,7 +350,19 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 .guide .scroll p.wr-msg:empty { display: none }
 .guide .scroll p.wr-msg { min-height: 1.4em; margin: 0 0 6px; text-align: center; font-family: inherit; font-size: 16px; color: #e8475f }
 .list.wr li { grid-template-columns: 56px 1fr auto }
-.list.wr .acts { display: flex; flex-direction: column; gap: 6px }   /* 입기 + 모두 입기(일괄 착용) */
+.list.wr .acts { display: flex; flex-direction: column; gap: 6px }
+.list.wr li.wr-bonus { display: block; cursor: default; background: #fffaf0; border-color: #f0dcb0 }   /* 의상 보유 효과 — 눌러서 펼친다 */
+.wr-bonus summary { cursor: pointer; font-size: 16px; color: var(--ink); list-style: none }
+.wr-bonus summary::-webkit-details-marker { display: none }
+.wr-bonus summary::after { content: ' \25BE'; color: var(--soft) }
+.wr-bonus details[open] summary::after { content: ' \25B4' }
+.wr-bonus .sum { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px 14px; margin: 10px 0 8px; font-size: 14px }
+.wr-bonus .sum div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 3px 6px; color: #a89488 }
+.wr-bonus .sum div.on { color: var(--ink) } .wr-bonus .sum div.on b { color: #c07a2c }
+.wr-bonus .sum small { font-weight: normal; color: #a89488 }
+.wr-bonus .sum i { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: linear-gradient(#e8b04a, #e8b04a) left / var(--w) 100% no-repeat, #f1e6d6 }
+.wr-bonus > details > small { color: #a89488; font-size: 13px }
+.list.wr .bon { color: #a89488 } .list.wr .bon.on { color: #c07a2c; font-weight: bold }   /* 의상 줄 — 보유 효과(가진 것은 금빛, 없는 것은 회색) */
 .list.wr .btn.buy.all { font-size: 13px; padding-top: 4px; padding-bottom: 4px }
 .list.wr li canvas.pt { height: 54px }
 .list.wr li.on { border-color: var(--pink); background: #fff7fa }
@@ -374,6 +440,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611171813"></script>
+<script type="module" src="game.js?v=202611180246"></script>
 </body>
 </html>

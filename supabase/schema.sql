@@ -33,8 +33,21 @@ alter table public.runs add constraint runs_v check (v ~ '^\d{4}-\d{2}-\d{2}#\d{
   add constraint runs_weapons check (weapons ~ '^[a-z]{2,12}[1-9]( [a-z]{2,12}[1-9]){0,5}$') not valid,
   add constraint runs_sane check ((result <> 'clear' or t >= 1500) and (result <> 'survive' or t >= 1790) and kills <= 100 * t + 100 and lvl <= t / 4 + 20) not valid;
 
+-- 요청한 사람의 IP 해시(Cloudflare · 프록시 헤더) — 못 읽으면 null. 서버에만 있는 비밀값을 섞는다(소금 없는 md5 는 IPv4 전체를 몇 분이면 다 대 볼 수 있다)
+--   비밀값은 처음 Run 할 때 한 번 만들어지고 다시 Run 해도 그대로(바뀌면 예전 해시 · 차단이 안 맞는다)
+create table if not exists public.guard_key (id int primary key default 1 check (id = 1), v text not null default gen_random_uuid()::text || gen_random_uuid()::text);
+insert into public.guard_key default values on conflict do nothing;
+alter table public.guard_key enable row level security;
+revoke all on public.guard_key from anon, authenticated;
+create or replace function public.ip_hash(ip text) returns text language sql stable security definer set search_path = public as $$ select md5((select v from guard_key) || ip) $$;
+create or replace function public.my_ip_h() returns text language sql stable as $$
+  select public.ip_hash(nullif(coalesce(h->>'cf-connecting-ip', trim(split_part(h->>'x-forwarded-for', ',', 1))), ''))
+  from (select coalesce(nullif(current_setting('request.headers', true), '')::json, '{}') as h) x
+$$;
+revoke all on function public.ip_hash, public.my_ip_h from public;
+
 -- 넣는 문 — 게임은 POST /rest/v1/rpc/report_run 만 부른다. 시각(created_at)은 서버가 찍는다(인자에 없다)
---   요청 횟수 제한: 같은 IP 한 시간 30판 · 모두 합쳐 한 시간 3000판까지(넘으면 조용히 버린다). IP 는 md5 로만 한 시간 들고 있다가 지운다
+--   요청 횟수 제한: 같은 IP 한 시간 30판 · 모두 합쳐 한 시간 3000판까지(넘으면 조용히 버린다). IP 는 비밀값을 섞은 해시(ip_hash)로만 한 시간 들고 있다가 지운다
 --   IP 를 못 읽으면(헤더 없음) IP 제한은 건너뛰고 전체 제한만 — 확인: select count(*) filter (where h is null), count(*) from run_gate;
 create table if not exists public.run_gate (h text, at timestamptz not null default now());
 create index if not exists run_gate_at on public.run_gate (at);
@@ -43,10 +56,7 @@ revoke all on public.run_gate from anon, authenticated;
 create or replace function public.report_run(v text, ch text, diff text, result text, t int, lvl int, kills int,
   killer text default null, boss text default null, weapons text default null, touch boolean default false, up int default 0)
 returns void language plpgsql security definer set search_path = public as $$
-declare
-  hd json := coalesce(nullif(current_setting('request.headers', true), '')::json, '{}');
-  ip text := coalesce(hd->>'cf-connecting-ip', nullif(trim(split_part(hd->>'x-forwarded-for', ',', 1)), ''));
-  ipk text := md5(ip);
+declare ipk text := my_ip_h();
 begin
   delete from run_gate where at < now() - interval '1 hour';
   if ipk is not null and (select count(*) from run_gate where h = ipk) >= 30 then return; end if;

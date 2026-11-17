@@ -1,0 +1,314 @@
+-- 계정(카카오 · 구글 로그인) — 저장 기록 동기화 · 닉네임 · 무한 모드 랭킹. Supabase 대시보드 SQL Editor 에 통째로 붙여 Run(여러 번 돌려도 된다)
+--   게임은 공개 키(publishable) + 로그인 토큰으로 부른다. 표는 RLS 로 막고, 남의 것은 아래 함수로만 본다
+--   ponytail: 랭킹 기록은 게임(브라우저)이 보낸 값 — 서버는 「판 시작 시각 → 실제 흐른 시간」 · 그럴듯한지 · 체크섬 · 횟수까지만 막는다. 이상한 기록은 대시보드에서 지운다(delete from ranks where …)
+--   부정 플레이: 걸린 것은 cheat_log 에 남고(IP 는 해시로만, 90일 보관) 의심 목록(suspects)으로 본다. 차단(bans)은 관리자가 직접 — 차단되면 랭킹 · 익명 통계에서 빠진다(게임 · 저장은 그대로)
+
+-- 0) 부정 플레이 기록 · 차단 ------------------------------------------------------------------------------------------------
+create table if not exists public.cheat_log (
+  id     bigint generated always as identity primary key,
+  at     timestamptz not null default now(),
+  uid    uuid,                                                        -- 로그인했으면 계정
+  ip_h   text,                                                        -- IP 해시(md5 + 서버 비밀값 — 원래 IP 는 남기지 않는다)
+  reason text not null check (reason ~ '^[a-z]{2,12}$'),              -- seal(프레임 봉인 깨짐) · spd(3배속 자격 없음) · ck(랭킹 체크섬 어긋남) · nohit(한 대도 안 맞은 긴 무한 판) · coin(보상금이 너무 빨리 늚)
+  detail jsonb check (detail is null or pg_column_size(detail) < 2000)
+);
+create index if not exists cheat_log_at on public.cheat_log (at);
+create index if not exists cheat_log_ip on public.cheat_log (ip_h);
+alter table public.cheat_log enable row level security;   -- 정책 없음 = 함수 · 대시보드만
+revoke all on public.cheat_log from anon, authenticated;
+
+-- 차단 — 계정(uid) 또는 IP(ip_h). until 이 지나면 풀린다(null = 직접 풀 때까지). 사람이 직접 넣는다(자동 차단은 coin 하나 — 랭킹에서만 빼 두고 확인을 기다린다)
+--   계정 차단(먼저 쓰기를 권함):  insert into bans (uid, reason) values ('<uid>', '무적');
+--   IP 차단(기간제를 권함 — 통신사 · 학교는 여러 사람이 IP 하나를 같이 쓴다):  insert into bans (ip_h, reason, until) values ('<ip_h>', '무적', now() + interval '7 days');
+--   원래 IP 를 알면:  insert into bans (ip_h, reason, until) values (public.ip_hash('1.2.3.4'), '…', now() + interval '7 days');
+--   풀기:  delete from bans where id = <id>;   지금 차단:  select * from bans where until is null or until > now();
+create table if not exists public.bans (
+  id     bigint generated always as identity primary key,
+  uid    uuid,
+  ip_h   text,
+  reason text,
+  at     timestamptz not null default now(),
+  until  timestamptz,
+  check (uid is not null or ip_h is not null)
+);
+create index if not exists bans_uid on public.bans (uid);
+create index if not exists bans_ip on public.bans (ip_h);
+alter table public.bans enable row level security;
+revoke all on public.bans from anon, authenticated;
+
+-- IP 해시(ip_hash · my_ip_h — 서버에만 있는 비밀값을 섞는다)는 schema.sql 에 있다(익명 통계 횟수 제한도 같이 쓴다)
+-- 지금 요청한 계정 · IP 가 차단됐나
+create or replace function public.banned() returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from bans b where (b.uid = auth.uid() or b.ip_h = my_ip_h()) and (b.until is null or b.until > now()))
+$$;
+-- 남기기 — 게임도 부른다(판에서 봉인이 깨졌을 때). 한 IP 한 시간 30줄까지(지울 때가 된 것은 gc — 맨 아래 6번)
+create or replace function public.report_cheat(reason text, detail jsonb default null) returns void language plpgsql security definer set search_path = public as $$
+declare ih text := my_ip_h();
+begin
+  if reason !~ '^[a-z]{2,12}$' or pg_column_size(detail) >= 2000 then return; end if;
+  perform gc();
+  if (select count(*) from cheat_log l where l.ip_h is not distinct from ih and l.at > now() - interval '1 hour') >= 30 then return; end if;
+  insert into cheat_log (uid, ip_h, reason, detail) values (auth.uid(), ih, report_cheat.reason, report_cheat.detail);
+end $$;
+
+-- 1) 저장 — 내 줄만 읽고 쓴다(게임 save 통째, 200KB 까지)
+create table if not exists public.saves (
+  uid        uuid primary key default auth.uid() references auth.users on delete cascade,
+  data       jsonb not null check (pg_column_size(data) < 200000),
+  updated_at timestamptz not null default now()
+);
+alter table public.saves enable row level security;
+drop policy if exists saves_own on public.saves;
+create policy saves_own on public.saves for all to authenticated using (uid = auth.uid()) with check (uid = auth.uid());
+revoke all on public.saves from anon, authenticated;
+grant select, insert, update on public.saves to authenticated;   -- 지우기는 없음 — 지우고 새로 넣어 아래 보상금 검사를 건너뛰지 못하게
+-- 보상금 검사 — 지난 저장(서버 시각 srv_at)부터 흐른 시간(3시간까지) × 분당 1,000 + 여유 6,000(잭팟 5,000)보다 많이 늘었으면 기록 + 랭킹에서 빼 둔다.
+--   저장은 그대로 받는다(잘못 걸린 아이의 진짜 진행이 기기와 계정에서 어긋나지 않게). 처음 올리는 것(insert — 기기에 모아 둔 것)은 검사하지 않는다
+--   (정직한 최대는 3배속에서 분당 200~300). updated_at 은 게임이 보낸 값이라 검사엔 srv_at 만 쓴다
+alter table public.saves add column if not exists srv_at timestamptz not null default now();
+create or replace function public.saves_guard() returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  num  numeric := case when jsonb_typeof(new.data->'coin') = 'number' then (new.data->>'coin')::numeric else 0 end;
+  was  numeric := case when jsonb_typeof(old.data->'coin') = 'number' then (old.data->>'coin')::numeric else 0 end;
+  mins numeric := least(180, greatest(0, extract(epoch from now() - old.srv_at) / 60));
+begin
+  new.srv_at := now();
+  if num - was > 1000 * mins + 6000 then
+    perform report_cheat('coin', jsonb_build_object('got', num - was, 'mins', round(mins)));
+    insert into bans (uid, reason) select new.uid, 'coin' where not exists (select 1 from bans b where b.uid = new.uid and b.reason = 'coin' and b.until is null);
+  end if;
+  return new;
+end $$;
+drop trigger if exists saves_guard on public.saves;
+create trigger saves_guard before update on public.saves for each row execute function public.saves_guard();
+
+-- 2) 닉네임 — 랭킹에 보이는 이름. NFKC 로 맞춘 뒤 2~12자(한 · 영 · 일 · 중 · 숫자 · _), 대소문자 무시하고 겹치면 안 된다. 바꾸기는 7일에 한 번. 표는 함수로만
+create table if not exists public.players (
+  uid        uuid primary key references auth.users on delete cascade,
+  nick       text not null check (char_length(nick) between 2 and 12 and nick ~ '^[0-9A-Za-z_가-힣ぁ-んァ-ヶー一-鿿]+$'),
+  changed_at timestamptz not null default now()
+);
+create unique index if not exists players_nick on public.players (lower(nick));
+alter table public.players enable row level security;   -- 정책 없음 = 함수 말고는 아무도 못 본다
+revoke all on public.players from anon, authenticated;
+
+-- 3) 판 시작 — 무한 판을 시작할 때 시각을 남기고, 기록을 올릴 때 「실제 흐른 시간 ≥ 기록 ÷ 3」(배속 단추 — 어려움을 클리어하면 3배속)를 본다. 올리면 소진
+create table if not exists public.run_starts (uid uuid primary key references auth.users on delete cascade, at timestamptz not null default now());
+alter table public.run_starts add column if not exists tok uuid not null default gen_random_uuid();   -- 이 판의 일회용 값 — 랭킹 체크섬에 들어간다
+alter table public.run_starts enable row level security;
+revoke all on public.run_starts from anon, authenticated;
+
+-- 4) 랭킹 — 계정 · 캐릭터마다 가장 좋은 무한 모드 기록 하나. 순서: 단계 ↓ → 잡은 보스 ↓ → 마지막 보스를 잡은 때 ↑ → 먼저 세운 기록
+create table if not exists public.ranks (
+  uid      uuid not null references auth.users on delete cascade,
+  ch       text not null check (ch ~ '^[a-z]{2,12}$'),
+  lv       int  not null check (lv between 0 and 500),                    -- 무한 단계(세이렌을 다 쓰러뜨린 횟수)
+  bosses   int  not null check (bosses between 0 and 100000),             -- 잡은 보스(세이렌 포함, 중간보스 · 인어 빼고)
+  bt       int  not null check (bt >= 0),                                 -- 마지막 보스를 잡은 때(초)
+  t        int  not null check (t between 0 and 86400),                   -- 버틴 시간(초)
+  kills    int  not null check (kills between 0 and 10000000),
+  lvl      int  not null check (lvl between 1 and 5000),                  -- 캐릭터 레벨
+  weapons  text not null check (weapons ~ '^[a-z]{2,12}[1-9]( [a-z]{2,12}[1-9]){0,5}$'),   -- 스킬 id + 레벨(9 = 각성), 첫째가 메인
+  passives text check (passives is null or passives ~ '^[a-z]{2,12}[0-9]{1,2}( [a-z]{2,12}[0-9]{1,2}){0,9}$'),   -- 보조 아이템 id + 레벨
+  slain    text check (slain is null or slain ~ '^[a-zA-Z]{2,16}[0-9]{1,4}( [a-zA-Z]{2,16}[0-9]{1,4}){0,15}$'),     -- 잡은 보스 종류 + 마리 수
+  winter   boolean not null default false,                                -- 겨울 맵
+  v        text not null check (v ~ '^\d{4}-\d{2}-\d{2}#\d{1,3}$'),       -- 게임 버전
+  at       timestamptz not null default now(),
+  primary key (uid, ch),
+  check (bt <= t and kills <= 100 * t + 100 and lvl <= t / 4 + 20 and (lv = 0 or t >= 1500 + 60 * (lv - 1)) and bosses >= lv)   -- 그럴듯한 기록만
+);
+create index if not exists ranks_order on public.ranks (lv desc, bosses desc, bt, at);
+alter table public.ranks enable row level security;   -- 정책 없음 — 넣기 · 보기 모두 함수로만
+revoke all on public.ranks from anon, authenticated;
+
+-- 닉네임 정하기 · 바꾸기 → 'ok' | 'bad'(규칙 · 금지어) | 'taken'(이미 있음) | 'wait'(7일에 한 번)
+create or replace function public.set_nick(nick text) returns text language plpgsql security definer set search_path = public as $$
+declare n text := btrim(normalize(nick, NFKC)); old players;
+begin
+  if auth.uid() is null then return 'bad'; end if;
+  if char_length(n) not between 2 and 12 or n !~ '^[0-9A-Za-z_가-힣ぁ-んァ-ヶー一-鿿]+$'
+    or lower(n) ~ '(운영자|관리자|운영진|개발자|공식|admin|official|moderator|씨발|시발|병신|좆|개새|fuck|shit|bitch)' or lower(n) ~ '^gm' then return 'bad'; end if;
+  if exists (select 1 from players p where lower(p.nick) = lower(n) and p.uid <> auth.uid()) then return 'taken'; end if;
+  select * into old from players p where p.uid = auth.uid();
+  if found and old.nick = n then return 'ok'; end if;
+  if found and old.changed_at > now() - interval '7 days' then return 'wait'; end if;
+  insert into players (uid, nick) values (auth.uid(), n) on conflict (uid) do update set nick = excluded.nick, changed_at = now();
+  return 'ok';
+exception when unique_violation then return 'taken';
+end $$;
+
+-- 닉네임 검사만(정하지 않고) — 입력하는 동안 「쓸 수 있어요 / 이미 있어요」
+create or replace function public.nick_free(nick text) returns text language sql stable security definer set search_path = public as $$
+  select case
+    when char_length(n) not between 2 and 12 or n !~ '^[0-9A-Za-z_가-힣ぁ-んァ-ヶー一-鿿]+$'
+      or lower(n) ~ '(운영자|관리자|운영진|개발자|공식|admin|official|moderator|씨발|시발|병신|좆|개새|fuck|shit|bitch)' or lower(n) ~ '^gm' then 'bad'
+    when exists (select 1 from players p where lower(p.nick) = lower(n) and p.uid is distinct from auth.uid()) then 'taken'
+    else 'ok' end
+  from (select btrim(normalize(nick, NFKC)) as n) x
+$$;
+
+-- 내 닉네임 · 바꿀 수 있는 때(없으면 null)
+create or replace function public.my_nick() returns json language sql stable security definer set search_path = public as $$
+  select json_build_object('nick', nick, 'next', changed_at + interval '7 days') from players where uid = auth.uid()
+$$;
+
+-- 무한 판 시작 → 이 판의 일회용 값(tok)
+drop function if exists public.start_run();
+create or replace function public.start_run() returns text language sql security definer set search_path = public as $$
+  insert into run_starts (uid) select auth.uid() where auth.uid() is not null on conflict (uid) do update set at = now(), tok = gen_random_uuid()
+  returning tok::text
+$$;
+
+-- 기록 올리기 → { r: 'ok' | 'kept'(예전 기록이 더 좋음) | 'nonick' | 'nostart' | 'fast'(흐른 시간보다 긴 기록) | 'old'(시작한 지 6시간 넘음) | 'hold'(차단 · 체크섬 어긋남), rank: 전체 순위(내 최고) }
+--   ck = sha256(tok|ch|lv|bosses|bt|t|kills|lvl|weapons|hit0|v|소금) — game.js 의 runCk 와 같은 순서 · 소금. 어긋나면 그 판만 거절 + 기록(자동 차단은 안 한다 — 배포 직후 예전 game.js 일 수도)
+--   hit0 = 처음 맞은 때(초, -1 = 한 번도 안 맞음). 25분 넘게 한 대도 안 맞은 판은 받되 의심 목록 맨 위로(고수의 진짜 기록을 거절하지 않게)
+drop function if exists public.submit_rank(text, int, int, int, int, int, int, text, text, text, boolean, text);
+create or replace function public.submit_rank(ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, v text, hit0 int, ck text)
+returns json language plpgsql security definer set search_path = public as $$
+declare old ranks; st timestamptz; tk uuid; res text := 'ok'; my int;
+begin
+  if auth.uid() is null or not exists (select 1 from players where uid = auth.uid()) then return json_build_object('r', 'nonick'); end if;
+  if banned() then return json_build_object('r', 'hold'); end if;
+  delete from run_starts s where s.uid = auth.uid() returning s.at, s.tok into st, tk;   -- 한 판에 한 번
+  if st is null then return json_build_object('r', 'nostart'); end if;
+  if ck is distinct from encode(sha256(convert_to(concat_ws('|', tk::text, submit_rank.ch, submit_rank.lv, submit_rank.bosses, submit_rank.bt, submit_rank.t, submit_rank.kills, submit_rank.lvl, submit_rank.weapons, submit_rank.hit0, submit_rank.v, 'mjg|r7Q'), 'UTF8')), 'hex') then
+    perform report_cheat('ck', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t, 'v', submit_rank.v)::jsonb);
+    return json_build_object('r', 'hold');
+  end if;
+  if submit_rank.hit0 < 0 and submit_rank.t >= 1500 then perform report_cheat('nohit', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t)::jsonb); end if;
+  if now() - st < make_interval(secs => submit_rank.t / 3.0 - 5) then return json_build_object('r', 'fast'); end if;
+  if now() - st > interval '6 hours' then return json_build_object('r', 'old'); end if;   -- 시작해 두고 오래 묵힌 것
+  select * into old from ranks r where r.uid = auth.uid() and r.ch = submit_rank.ch;
+  if found and (old.lv, old.bosses, -old.bt) >= (submit_rank.lv, submit_rank.bosses, -submit_rank.bt) then res := 'kept';
+  else
+    insert into ranks (uid, ch, lv, bosses, bt, t, kills, lvl, weapons, passives, slain, winter, v)
+      values (auth.uid(), ch, lv, bosses, bt, t, kills, lvl, weapons, nullif(passives, ''), nullif(slain, ''), winter, v)
+      on conflict on constraint ranks_pkey do update set lv = excluded.lv, bosses = excluded.bosses, bt = excluded.bt, t = excluded.t, kills = excluded.kills, lvl = excluded.lvl,
+        weapons = excluded.weapons, passives = excluded.passives, slain = excluded.slain, winter = excluded.winter, v = excluded.v, at = now();
+  end if;
+  select x.rank into my from top_ranks() x where x.me;
+  return json_build_object('r', res, 'rank', my);
+end $$;
+
+-- 랭킹 보기 — only_ch 가 없으면 모두에서 사람마다 가장 좋은 기록 하나씩 TOP 100, 있으면 그 캐릭터 TOP 10. me = 내 기록인지
+create or replace function public.top_ranks(only_ch text default null)
+returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean)
+language sql stable security definer set search_path = public as $$
+  with best as (
+    select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
+    order by r.uid, r.lv desc, r.bosses desc, r.bt, r.at
+  )
+  select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.at), p.nick, b.ch, b.lv, b.bosses, b.bt, b.t, b.kills, b.lvl, b.weapons, b.passives, b.slain, b.winter, b.at, b.uid = auth.uid()
+  from best b join players p on p.uid = b.uid
+  order by b.lv desc, b.bosses desc, b.bt, b.at
+  limit case when only_ch is null then 100 else 10 end
+$$;
+
+-- 내 순위(TOP 밖이어도) — 랭킹 화면 위 「내 기록」 줄
+create or replace function public.my_rank(only_ch text default null)
+returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean)
+language sql stable security definer set search_path = public as $$
+  with best as (
+    select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
+    order by r.uid, r.lv desc, r.bosses desc, r.bt, r.at
+  ), ranked as (
+    select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.at) as rank, b.* from best b join players p on p.uid = b.uid
+  )
+  select x.rank, p.nick, x.ch, x.lv, x.bosses, x.bt, x.t, x.kills, x.lvl, x.weapons, x.passives, x.slain, x.winter, x.at, true
+  from ranked x join players p on p.uid = x.uid where x.uid = auth.uid()
+$$;
+
+revoke all on function public.set_nick, public.nick_free, public.my_nick, public.start_run, public.submit_rank, public.top_ranks, public.my_rank, public.report_cheat, public.banned, public.my_ip_h, public.ip_hash, public.saves_guard from public;
+grant execute on function public.set_nick, public.nick_free, public.my_nick, public.start_run, public.submit_rank, public.my_rank to authenticated;
+grant execute on function public.top_ranks, public.report_cheat to anon, authenticated;
+
+-- 익명 통계(runs)도 차단된 IP 는 조용히 버린다(report_run 은 그대로 두고 표 앞에서)
+create or replace function public.runs_guard() returns trigger language plpgsql security definer set search_path = public as $$
+begin if banned() then return null; end if; return new; end $$;
+revoke all on function public.runs_guard from public;
+drop trigger if exists runs_guard on public.runs;
+create trigger runs_guard before insert on public.runs for each row execute function public.runs_guard();
+
+-- 의심 목록 — 대시보드 SQL Editor 에서: select * from suspects;  (한 대도 안 맞은 판 → 많이 걸린 순. accounts_on_ip = 그 IP 에서 걸린 계정 수)
+create or replace view public.suspects with (security_invoker = true) as
+  select l.uid, (select p.nick from players p where p.uid = l.uid) as nick, l.ip_h,
+    count(*) as n, array_agg(distinct l.reason) as reasons, min(l.at) as first, max(l.at) as last,
+    (select count(distinct x.uid) from cheat_log x where x.ip_h = l.ip_h) as accounts_on_ip,
+    exists (select 1 from bans b where (b.uid = l.uid or b.ip_h = l.ip_h) and (b.until is null or b.until > now())) as banned
+  from cheat_log l group by l.uid, l.ip_h
+  order by bool_or(l.reason = 'nohit') desc, count(*) desc, max(l.at) desc;
+revoke all on public.suspects from anon, authenticated;
+
+-- 익명 통계(runs)에도 무한 모드가 들어가게 — 난이도 'inf' · 30분 넘는 시간
+alter table public.runs drop constraint if exists runs_diff_check;
+alter table public.runs add constraint runs_diff_check check (diff in ('easy', 'normal', 'hard', 'inf'));
+alter table public.runs drop constraint if exists runs_t_check;
+alter table public.runs add constraint runs_t_check check (t between 0 and 86400);
+
+-- 4) 계정 지우기(계정 창 맨 아래 「계정 지우기」) — auth.users 를 지우면 저장 · 닉네임 · 랭킹 · 판 시작이 따라 지워진다(on delete cascade). 그 계정의 부정 플레이 기록도
+--    진행 중인 차단만 기간이 끝날 때까지 남긴다(끝난 것은 지운다). 이 기기의 기록(브라우저)은 그대로
+create or replace function public.delete_me() returns text language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid();
+begin
+  if me is null then return 'nologin'; end if;
+  delete from cheat_log where uid = me;
+  delete from bans where uid = me and until <= now();
+  begin delete from auth.audit_log_entries where payload->>'actor_id' = me::text; exception when others then null; end;   -- 로그인 기록(계정 번호만 남아 있다)
+  delete from auth.users where id = me;
+  return 'ok';
+end $$;
+revoke all on function public.delete_me from public;
+grant execute on function public.delete_me to authenticated;
+
+-- 5) 개인정보 — 이메일 · 이름 · 사진은 남기지 않는다. 남는 것은 로그인 식별자(auth.identities.provider_id = 제공자 사용자 번호) ↔ 계정(uid) ↔ 닉네임뿐
+--    Supabase 가 로그인할 때마다 제공자 정보로 다시 채우므로 넣기 · 고치기 때마다 비운다. 로그인 기록(audit_log_entries)의 이메일 · 이름 · IP, 세션의 IP · 기기 정보도
+--    이메일이 없으니 같은 이메일이어도 카카오 · 구글 계정이 저절로 합쳐지지 않는다(따로따로 계정)
+--    비우다 탈이 나면 그대로 둔다(로그인은 막지 않는다). 확인: 이 파일 맨 아래 표
+create or replace function public.ids_only(j jsonb) returns jsonb language sql immutable as $$
+  select case when jsonb_typeof(j) = 'object' then (select coalesce(jsonb_object_agg(k, v), '{}') from jsonb_each(j) e(k, v) where k in ('iss', 'sub', 'provider_id', 'email_verified', 'phone_verified')) else '{}' end $$;
+create or replace function public.scrub() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_table_name = 'users' then new.email := null; new.raw_user_meta_data := ids_only(new.raw_user_meta_data);
+  elsif tg_table_name = 'identities' then new.identity_data := ids_only(new.identity_data);
+  elsif tg_table_name = 'audit_log_entries' then new.payload := (new.payload::jsonb - 'actor_username' - 'actor_name' - 'traits')::json; new.ip_address := '';
+  else new := jsonb_populate_record(new, '{"ip": null, "user_agent": null}');   -- sessions(칸이 없는 판이어도 탈 없게)
+  end if;
+  return new;
+exception when others then return new;
+end $$;
+revoke all on function public.ids_only, public.scrub from public;
+do $$ declare t text; begin
+  foreach t in array array['users', 'identities', 'audit_log_entries', 'sessions'] loop
+    begin
+      execute format('drop trigger if exists mjg_scrub on auth.%I', t);
+      execute format('create trigger mjg_scrub before insert or update on auth.%I for each row execute function public.scrub()', t);
+    exception when others then raise warning 'auth.% — 개인정보 비우기를 못 켬: %', t, sqlerrm; continue;
+    end;
+    begin   -- 이미 들어온 것도 한 번 비운다
+      execute format('update auth.%I set %s', t, case t when 'users' then 'email = email' when 'identities' then 'identity_data = identity_data' when 'audit_log_entries' then 'ip_address = ip_address' else 'user_id = user_id' end);
+    exception when others then raise warning 'auth.% — 예전 것을 못 비움: %', t, sqlerrm;
+    end;
+  end loop;
+end $$;
+
+-- 6) 지울 때가 된 것 지우기 — 한 시간마다(pg_cron). 개인정보 처리방침에 적은 보관 기간 그대로
+--    부정 플레이 기록 90일(진행 중인 차단에 걸린 계정 · IP 것은 차단이 끝날 때까지) · 끝난 차단 · 익명 통계 횟수 제한용 IP 해시 1시간
+--    pg_cron 을 못 켜면 아래 확인 표에 false — 대시보드 Database › Extensions 에서 pg_cron 을 켜고 이 파일을 다시 Run
+create or replace function public.gc() returns void language sql security definer set search_path = public as $$
+  delete from cheat_log l where l.at < now() - interval '90 days' and not exists (select 1 from bans b where (b.uid = l.uid or b.ip_h = l.ip_h) and (b.until is null or b.until > now()));
+  delete from bans where until <= now();
+  delete from run_gate where at < now() - interval '1 hour';
+$$;
+revoke all on function public.gc from public;
+do $$ begin
+  create extension if not exists pg_cron;
+  perform cron.schedule('mjg-gc', '7 * * * *', 'select public.gc()');
+exception when others then raise warning 'pg_cron 을 못 켬: %', sqlerrm;
+end $$;
+
+notify pgrst, 'reload schema';
+-- 확인 — 다섯 줄 모두 true 여야 한다
+select c.t as "확인", c.ok as "켜짐" from (
+  select 'auth.' || t || ' 개인정보 비우기', exists (select 1 from pg_trigger g where g.tgname = 'mjg_scrub' and g.tgrelid = to_regclass('auth.' || t)) from unnest(array['users', 'identities', 'audit_log_entries', 'sessions']) t
+  union all select 'pg_cron 오래된 기록 지우기', exists (select 1 from pg_extension where extname = 'pg_cron')
+) c(t, ok);

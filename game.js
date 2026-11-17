@@ -10,7 +10,7 @@ const LANGS = [['ko', '한국어', 'kr'], ['ja', '日本語', 'jp'], ['en', 'Eng
 const LANG = (() => {   // 주소에 ?lang=en 이 있으면(홍보 링크 chii-ka-wa.github.io/en/ 이 여기로 보낸다) 그 말로 정하고 기억, 없으면 기억한 말
   const q = new URLSearchParams(location.search).get('lang')?.toLowerCase(), hit = LANGS.find(x => x[0].toLowerCase() === q)?.[0]
   let s = {}; try { s = JSON.parse(localStorage.getItem('mjg.v1')) || {} } catch {}
-  if (hit) { s.lang = hit; try { localStorage.setItem('mjg.v1', JSON.stringify(s)) } catch {} history.replaceState(null, '', location.pathname + location.hash) }   // 주소에서는 지운다(언어 단추로 바꾼 뒤 다시 불러와도 고른 말이 이기게)
+  if (hit) { s.lang = hit; try { localStorage.setItem('mjg.v1', JSON.stringify(s)) } catch {} const u = new URLSearchParams(location.search); u.delete('lang'); history.replaceState(null, '', location.pathname + (u.size ? '?' + u : '') + location.hash) }   // 주소에서는 지운다(언어 단추로 바꾼 뒤 다시 불러와도 고른 말이 이기게)
   return hit || (LANGS.some(x => x[0] === s.lang) ? s.lang : 'ko')
 })()
 const TR = LANG === 'ko' ? null : await import(`./i18n/${LANG}.js${new URL(import.meta.url).search}`).then(m => m.default, () => null)   // ?v= — index.html 이 붙인 판 번호를 번역 파일에도(새 판이면 새로 받는다)
@@ -104,6 +104,11 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-17', [
+    ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
+    ['fix', 'coin', tr`상점 값이 내려갔어요 — 고급 의상 20,000(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 10,000), 무기 스킨 · 스킬 스킨 10,000`],
+    ['new', 'wind', tr`어려움을 클리어하면 3배속이 열려요 — 오른쪽 위 ×2 단추를 한 번 더 누르면 ×3`],
+    ['new', 'inf', tr`무한 모드가 생겼어요! 어려움보다 1.5배 어렵고 25분 세이렌을 쓰러뜨려도 끝나지 않아요 — 강해진 보스가 둘 · 셋씩, 세이렌도 둘 · 셋!`],
+    ['new', 'shirt', tr`고급 · 업적 의상을 모으면 입지 않아도 아주 작은 보유 효과가 생겨요 — 상점 「의상」 탭 맨 위에서 볼 수 있어요`],
     ['up', 'coinbox', tr`떠돌이 보물상자 잭팟이 500에서 5,000으로 커졌어요!`],
     ['new', 'snow', tr`겨울이 왔어요! 눈이 내리고 토벌 대상들이 산타 모자를 썼어요 — 처음 화면 왼쪽 위에서 풀밭으로 바꿀 수 있어요`],
     ['new', 'wind', tr`겨울 맵에 눈보라가 와요! 1분마다 반반 확률 — 쌓인 눈은 미끄럽고 받는 피해가 조금 늘어요(5초 넘게 계속 움직이면 몸에 열이 나서 괜찮아요)`],
@@ -208,7 +213,7 @@ const PASS = {
   clover: { name: tr`네잎클로버`, note: tr`행운 +10% (잭팟 · 치명타 · 떨어지는 것)`, max: 5 },
   wage: { name: tr`토벌 보수`, note: tr`경험치 +8%`, max: 5 },
 }
-const FILL = { onigiri: { name: tr`오니기리`, note: tr`체력 40% 회복` }, cheer: { name: tr`응원`, note: tr`이번 판 공격력 +2% (최대 +50%)` } }   // 더 올릴 게 없을 때
+const FILL = { onigiri: { name: tr`오니기리`, note: tr`체력 40% 회복` }, cheer: { name: tr`응원`, note: tr`이번 판 공격력 +2% (최대 +50%, 무한 모드는 끝없이)` } }   // 더 올릴 게 없을 때
 // 줍는 것 — 적이 떨어뜨린다(USE)
 const ITEMS = {
   onigiri: { name: tr`오니기리`, note: tr`체력 30% 회복` },
@@ -266,6 +271,8 @@ const BOSS = {
 const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인어는 그대로)
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
+// 무한 — 세이렌을 쓰러뜨리면 단계(lv)가 오른다. 단계마다 강해진 보스가 lv+1 마리씩 INF.gap 초마다(종류는 섞어서 BOSS 여섯이 다 나올 때까지), 다 쓰러뜨리면 세이렌 lv+1 명(인어 셋씩). INF.dark 초 안에 못 쓰러뜨리면 검은 별똥별
+const INF = { gap: 60, rest: 12, dark: 240, foe: 0.2, kinds: ['dekatsuyo', 'goblinKing', 'bigChimera', 'rps', 'chef', 'anoko'], hp: 0.6, dmg: 0.25, spd: 0.04 }   // hp · dmg · spd — 단계마다 보스가 그만큼씩 세진다(1 + 값 × 단계, 선형). foe — 일반 적 체력도 단계마다(보스의 1/3)
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'rps'], [1080, 'chef', 1], [1200, 'anoko'],
   [1320, 'chef'], [1410, 'bigChimera', 1]]   // 20~25분은 보스 셋(예전 넷 — 24분 중간보스 데카츠요는 뺐다)
 // 영구 강화(처음 화면 「상점」) — 판마다 받는 토벌 보상금으로 산다. 한 칸이 같은 아이템 한 레벨의 1/5쯤, 다 사도 아이템 한 레벨 몫이라 판의 밸런스가 무너지지 않는다
@@ -281,7 +288,7 @@ const SHOP = {
   armor: { name: tr`단단함`, lab: tr`받는 피해`, per: 1, max: 1, cost: 400, val: v => `-${v}` },
 }
 for (const u of Object.values(SHOP)) u.val ||= v => `+${Math.round(v * 100)}%`   // 보여 주는 값 — 따로 없으면 %
-const perm = id => SHOP[id].per * (save.up[id] || 0)
+const perm = id => SHOP[id].per * (save.up[id] || 0) + (BONUS_ORDER.includes(id) ? coll(id) : 0)   // 상점 강화 + 의상 보유 효과(판 중에만 불린다 — 의상 표는 아래에)
 // 업적 — 동 · 은 · 금. 쉬운 것은 횟수를 많이, 어려운 것은 적게. 금메달 하나마다 토벌 보상금 +1%. ico = 메달 가운데 그림(아이콘 id, a_ 는 캐릭터 그림)
 const ACH = {
   runs: { name: tr`토벌 대원`, note: tr`토벌에 나간 판`, ico: 'sasu', tiers: [10, 50, 200] },
@@ -316,9 +323,11 @@ const DIFF = {
   easy: { name: tr`쉬움`, hp: 0.6, xp: 1.5, drop: 2, shot: false, coin: 1, dmg: 0.6, revive: 3 },
   normal: { name: tr`보통`, hp: 0.8, xp: 1.25, drop: 1.5, shot: false, coin: 1.25, dmg: 0.8, revive: 2 },
   hard: { name: tr`어려움`, hp: 1, xp: 1, drop: 1, shot: true, coin: 1.5, dmg: 1, revive: 1 },   // coin = 토벌 보상금 배수 · dmg = 받는 피해 배수 · revive = 한 판에 부활석을 쓸 수 있는 횟수
+  inf: { name: tr`무한`, hp: 1.5, xp: 1, drop: 1, shot: true, coin: 2, dmg: 1.5, revive: 1, inf: true },   // 무한 — 어려움보다 적 체력 · 받는 피해 1.5배. 25분까지는 어려움과 같은 진행, 세이렌 뒤로 끝없이(INF)
 }
 { const E = DIFF.easy, pc = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`   // 설명은 쉬움 기준 — 배수를 바꾸면 글도 따라 바뀐다
   for (const d of Object.values(DIFF)) d.note = (d === E ? tr`기준 난이도 — 처음이라면 여기서` : tr`쉬움보다 적 체력 ${pc(d.hp / E.hp - 1)} · 경험치 ${pc(d.xp / E.xp - 1)} · 줍는 것 ${pc(d.drop / E.drop - 1)} · 받는 피해 ${pc(d.dmg / E.dmg - 1)} · 보상금 ${pc(d.coin / E.coin - 1)}`) + (d.shot ? tr` · 멀리서 쏘는 몬스터도 나온다` : tr` · 멀리서 쏘는 몬스터 없음`) }
+  DIFF.inf.note = tr`어려움보다 적 1.5배 · 보상금 2배 — 세이렌을 쓰러뜨려도 더 센 단계가 계속돼요`
 const bestKey = (id, d) => d === 'hard' ? id : `${id}.${d}`   // 어려움 기록은 예전 기록 그대로
 
 // ---------------------------------------------------------------- 저장 — 이 브라우저(localStorage)에만
@@ -347,18 +356,228 @@ save.owned ||= []; save.wear ||= {}; save.skin ||= {}; save.wwin ||= []   // wwi
 save.theme ||= 'winter'; const fieldSong = () => save.theme === 'winter' ? 'winter' : 'field'   // 처음 화면 · 토벌 배경음 — 겨울이면 겨울 곡
 const pageColor = () => { const c = save.theme === 'winter' ? '#e6eff8' : '#cdeaa8'; document.documentElement.style.setProperty('--page', c); document.querySelector('meta[name=theme-color]')?.setAttribute('content', c) }   // 화면 밖 바탕 · 휴대폰 주소창 색 — 바닥 색(겨울 눈밭 · 풀밭)
 pageColor()   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
-const persist = () => { try { if (SECURE) { save._s = sign(save); localStorage.setItem('mjg.k', '1') } const j = JSON.stringify(save); localStorage.setItem(LS, j); if (SECURE) localStorage.setItem(LS + '.bak', j) } catch {} }   // 진짜 주소면 서명 · 바로 전 저장도
+let auth = (() => { try { return JSON.parse(localStorage.getItem('mjg.auth')) } catch { return null } })(), linked = false   // 로그인(아래 「계정」) — linked: 계정 저장과 맞춘 뒤에만 올린다
+const persist = () => { try { if (SECURE) { save._s = sign(save); localStorage.setItem('mjg.k', '1') } const j = JSON.stringify(save); localStorage.setItem(LS, j); if (SECURE) localStorage.setItem(LS + '.bak', j) } catch {} cloudPush() }   // 진짜 주소면 서명 · 바로 전 저장도
 if (TAMPER) persist()   // 되돌린 것을 바로 저장
 if (SECURE) {   // 개발자 도구 단축키 · 오른쪽 클릭 메뉴 막기(메뉴로 여는 것까지는 못 막는다) · 콘솔 경고
   addEventListener('keydown', e => { const m = e.ctrlKey || e.metaKey; if (e.key === 'F12' || (m && (e.shiftKey || e.altKey) && ['KeyI', 'KeyJ', 'KeyC', 'KeyK'].includes(e.code)) || (m && e.code === 'KeyU')) { e.preventDefault(); e.stopImmediatePropagation() } }, true)
   addEventListener('contextmenu', e => { if (!e.target.closest?.('a, input, textarea')) e.preventDefault() })
   console.log('%c잠깐만요!', 'font-size:26px;font-weight:bold;color:#e8475f', '\n여기에 무언가를 붙여 넣으라는 말은 속임수일 수 있어요. 기록을 고치면 바로 전 저장으로 되돌아가요.\nAnyone asking you to paste something here may be tricking you. Edited saves are rolled back.')
+  setInterval(() => Function('debugger')(), 1500)   // 개발자 도구를 메뉴로 열어도 여기서 계속 멈춘다(닫혀 있으면 아무 일 없다) — 막기만 하고 판에 표시는 안 한다(호기심에 연 아이 · 부모)
 }
+// ---------------------------------------------------------------- 부정 플레이 살피기 — 진짜 주소에서만(SECURE, 점검은 ?guard)
+//   봉인(체크섬): 프레임마다 step 을 다 돌린 뒤 중요한 값(체력 · 무적 시간 · 능력치 · 시간 · 처치 · 레벨 · 경험치 · 스킬 · 아이템 · 응원 · 보스 · 단계 · 주운 보상금)을 해시해 두고(guardOut)
+//   다음 프레임 step 전에 다시 잰다(guardIn) — 그 사이에(콘솔 · 개발자 도구 · 메모리 고치기 · 일시정지 · 상자 화면 동안) 바뀌었으면 이 판에 표시(G.bad).
+//   step 밖에서 값을 바꾸는 곳(상자 고르기 take · 다음 상자 next · 부활 revive)은 바꾸기 전에 재 보고 바꾼 뒤 다시 봉인한다
+//   배속: 어려움을 클리어하지 않았는데 3배속이면 표시
+//   표시된 판은 랭킹에 안 올리고(결과 화면에 한 줄 — 이유는 안 쓴다) 처음 걸린 때 서버에 한 번 알린다(report_cheat — IP 는 서버가 해시로만). 게임은 그대로 한다
+const GUARD = SECURE || /[?&]guard\b/.test(location.search)
+const h32 = t => { let a = 0x811c9dc5; for (let i = 0; i < t.length; i++) a = Math.imul(a ^ t.charCodeAt(i), 0x01000193); return a >>> 0 }
+const sealOf = () => h32([pl.hp, pl.inv, G.t, G.kills, G.lvl, G.xp, G.cheer, G.bosses, G.found, G.loop.lv, G.weapons.map(w => w.id + w.lv), Object.entries(G.passives), Object.values(S)].join())
+const spdMax = () => (save.ach.hard || 0) > 0 ? 3 : 2   // 3배속은 어려움을 클리어한 사람만
+function foul(why) {
+  if (!GUARD || !G || G.bad?.includes(why)) return
+  (G.bad ||= []).push(why)
+  if (G.bad.length === 1 && auth && location.hostname === STATS.host) rpc('report_cheat', { reason: why, detail: { ch: G.ch.id, diff: G.diff, t: Math.round(G.t), v: PATCH_ID } })
+}
+const guardIn = () => { if (GUARD && G) { if (G.seal != null && G.seal !== sealOf()) foul('seal'); if (spd > spdMax()) foul('spd') } }
+const guardOut = () => { if (GUARD && G) G.seal = sealOf() }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
 //   끄기: 처음 화면 아래 「통계 보내지 않기」(save.noStats) · 브라우저의 추적 거부(GPC · DNT)도 따른다. 이 사이트 주소에서만 보낸다(로컬 · 복사본은 안 보냄). 표 만들기는 supabase/schema.sql
 const STATS = { url: 'https://lvxkcaorsdicichwtcgd.supabase.co', key: 'sb_publishable_7VKkPWLzbF2043yTZ1iYRQ_Xd2lPgSD', host: 'chii-ka-wa.github.io' }   // 공개 키(publishable) — report_run 함수(검사 · 횟수 제한 · 시각은 서버)만 부를 수 있다. 표는 못 만진다. url 을 비우면 안 보낸다. secret 키는 절대 넣지 말 것
 const statsOn = () => !!STATS.url && !save.noStats && location.hostname === STATS.host && !navigator.globalPrivacyControl && navigator.doNotTrack !== '1'
+// ---------------------------------------------------------------- 계정 — 카카오 · 구글 로그인(Supabase Auth). 표 · 함수는 supabase/account.sql
+//   로그인 → Supabase 가 카카오 · 구글을 거쳐 이 주소#access_token=… 으로 돌려보낸다. 토큰은 localStorage 'mjg.auth'
+//   로그인하면 저장(save 통째)을 계정에도 두고(saves 표), 무한 모드 기록을 랭킹(ranks)에 올린다 — 닉네임은 게임 안에서 정한다
+//   기기마다 「마지막으로 계정과 맞춘 때 · 그때 저장의 서명」(mjg.sync)을 둔다 → 다른 기기에서 바뀌었는지 · 이 기기에서 바뀌었는지 안다
+const authSet = a => { auth = a; try { a ? localStorage.setItem('mjg.auth', JSON.stringify(a)) : localStorage.removeItem('mjg.auth') } catch {} }
+const jwt = t => { try { return JSON.parse(decodeURIComponent(escape(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))))) } catch { return {} } }
+const fromToken = (at, rt, ttl) => { const p = jwt(at); return { at, rt, exp: Date.now() / 1000 + +ttl, uid: p.sub, prov: p.app_metadata?.provider } }
+const syncMark = at => { try { localStorage.setItem('mjg.sync', JSON.stringify({ at, h: sign(save) })) } catch {} }
+let AUTH_ERR = '', AUTH_NEW = false, NICK = null, MODAL = null   // 로그인 실패 글 · 방금 로그인 · 내 닉네임({ nick, next }) · 떠 있는 창 닫기
+{ const q = new URLSearchParams(location.hash.slice(1)), qs = new URLSearchParams(location.search), err = q.get('error_description') || qs.get('error_description')   // 로그인에서 돌아왔다
+  if (q.get('access_token')) { authSet(fromToken(q.get('access_token'), q.get('refresh_token'), q.get('expires_in') || 3600)); AUTH_NEW = true }
+  if (err) AUTH_ERR = err.slice(0, 120)
+  if (q.get('access_token') || err) { for (const k of ['error', 'error_code', 'error_description']) qs.delete(k); history.replaceState(null, '', location.pathname + (qs.size ? '?' + qs : '')) }   // 주소의 토큰 · 오류는 지운다
+}
+const login = prov => { location.href = `${STATS.url}/auth/v1/authorize?provider=${prov}&redirect_to=${encodeURIComponent(location.origin + location.pathname)}` }
+function logout() {
+  if (auth) fetch(`${STATS.url}/auth/v1/logout`, { method: 'POST', headers: { apikey: STATS.key, Authorization: `Bearer ${auth.at}` } }).catch(() => {})
+  clearTimeout(cloudPush.t); cloudPush.t = 0; authSet(null); linked = false; NICK = null; try { localStorage.removeItem('mjg.sync') } catch {} title()
+}
+async function token() {   // 쓸 수 있는 토큰(1분 안에 끝나면 새로 받는다 — 동시에 여러 번 불러도 한 번만)
+  if (!auth) return null
+  if (auth.exp - 60 > Date.now() / 1000) return auth.at
+  token.p ||= fetch(`${STATS.url}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: STATS.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: auth.rt }) })
+    .then(async r => { if (r.ok) { const j = await r.json(); authSet(fromToken(j.access_token, j.refresh_token, j.expires_in)) } else if (r.status < 500) authSet(null) })   // 만료 · 취소 — 로그아웃
+    .catch(() => {}).finally(() => { token.p = null })
+  await token.p; return auth?.at ?? null
+}
+async function api(path, body, head = {}) {   // Supabase REST — 로그인했으면 그 토큰으로. 실패면 null
+  const t = await token(), b = body && JSON.stringify(body)
+  const r = await fetch(`${STATS.url}/rest/v1/${path}`, { method: body ? 'POST' : 'GET', keepalive: !!b && b.length < 60000, headers: { apikey: STATS.key, Authorization: `Bearer ${t || STATS.key}`, 'Content-Type': 'application/json', ...head }, body: b }).catch(() => null)
+  return !r?.ok ? null : r.status === 204 ? true : r.json().catch(() => true)
+}
+const rpc = (fn, args = {}) => api('rpc/' + fn, args)
+function cloudPush(now) {   // 저장할 때마다 계정에도(2초 모아서). 페이지를 닫을 때는 바로
+  if (!linked || !auth) return
+  clearTimeout(cloudPush.t)
+  const go = () => { const at = Date.now(); api('saves?on_conflict=uid', { uid: auth.uid, data: save, updated_at: new Date(at).toISOString() }, { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(ok => ok && syncMark(at)) }
+  if (now) go(); else cloudPush.t = setTimeout(go, 2000)
+}
+addEventListener('pagehide', () => { if (cloudPush.t) cloudPush(true) })
+/** 로그인한 뒤 · 켤 때 — 계정 저장과 이 기기 저장을 맞춘다. 둘 다 바뀌었으면 고르게 한다 */
+async function link() {
+  if (!auth) return
+  const rows = await api('saves?select=data,updated_at')
+  if (!rows || !auth) return   // 인터넷이 안 되면 다음에
+  const cloud = rows[0], mark = (() => { try { return JSON.parse(localStorage.getItem('mjg.sync')) } catch { return null } })(), at = cloud && Date.parse(cloud.updated_at)
+  const empty = !save.runs && !save.coin && !save.owned.length
+  if (!cloud) { linked = true; cloudPush(true) }   // 계정에 아직 없다 — 이 기기 것을 올린다
+  else if (sign(cloud.data) === sign(save) || mark?.at === at) { linked = true; syncMark(at); if (sign(cloud.data) !== sign(save)) cloudPush(true) }   // 같다 · 계정은 그대로고 이 기기만 앞섰다
+  else if (empty || mark?.h === sign(save)) return adopt(cloud.data, at)   // 이 기기는 그대로고 다른 기기에서 앞섰다(또는 이 기기가 비었다) — 계정 것으로
+  else return choose(cloud.data, at)   // 둘 다 바뀌었다 — 고르게
+  NICK = await rpc('my_nick'); if (mode === 'title') title()
+  if (AUTH_NEW && !NICK) { AUTH_NEW = false; nickBox() }   // 처음 로그인 — 랭킹에 쓸 이름부터
+}
+function adopt(data, at) {   // 계정 저장으로 바꾸고 다시 연다
+  const d = { ...data }; if (SECURE) d._s = sign(d)
+  try { const j = JSON.stringify(d); localStorage.setItem(LS, j); localStorage.setItem(LS + '.bak', j); localStorage.setItem('mjg.sync', JSON.stringify({ at, h: sign(d) })) } catch {}
+  location.reload()
+}
+/** 떠 있는 작은 창(바깥 · Esc · 닫기로 닫힌다) — 닫는 함수를 돌려준다 */
+function modal(cls, ...kids) {
+  MODAL?.()
+  const box = h('div', { class: 'modal', role: 'dialog' }, h('div', { class: `panel ${cls}` }, ...kids)), close = () => { box.remove(); if (MODAL === close) MODAL = null }
+  box.onpointerdown = e => { if (e.target === box) close() }
+  document.body.append(box); MODAL = close; return close
+}
+const svgIc = (s, cls = 'brand') => { const e = h('span', { class: cls, 'aria-hidden': 'true' }); e.innerHTML = s; return e }
+const KAKAO_IC = '<svg viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.74l-.96 3.53c-.08.31.27.56.54.38l4.2-2.78c.49.06.99.1 1.5.1 5.52 0 10-3.58 10-8S17.52 3 12 3z"/></svg>'
+const GOOGLE_IC = '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
+function loginBox() {   // 로그인 창 — 카카오 · 구글
+  const close = modal('login', h('p', { class: 'h' }, tr`로그인`), h('p', { class: 'sub' }, tr`기록과 상점 구매를 계정에 저장하고 무한 랭킹에 올라가요`),
+    h('button', { type: 'button', class: 'btn sns kakao', onclick: () => login('kakao') }, svgIc(KAKAO_IC), tr`카카오로 시작하기`),
+    h('button', { type: 'button', class: 'btn sns google', onclick: () => login('google') }, svgIc(GOOGLE_IC), tr`Google로 시작하기`),
+    h('p', { class: 'fine' }, tr`로그인하지 않아도 지금처럼 이 기기에 저장돼요`),
+    h('div', { class: 'row' }, btn(tr`닫기`, () => close())))
+}
+/** 닉네임 창 — 입력을 멈추고 0.4초 뒤 서버에 물어본다. done(정했으면 true) */
+function nickBox(done = () => {}) {
+  const inp = h('input', { type: 'text', maxlength: '12', value: NICK?.nick || '', placeholder: tr`닉네임`, autocomplete: 'off', 'aria-label': tr`닉네임` }), cnt = h('small', {}), msg = h('p', { class: 'nmsg' }), ok = btn(tr`정했어요!`, async () => {
+    ok.disabled = true; const r = await rpc('set_nick', { nick: inp.value })
+    if (r === 'ok') { NICK = await rpc('my_nick'); close(); done(true); if (mode === 'title') title() }
+    else { say2(r); ok.disabled = false }
+  }, 'main')
+  const say2 = r => { msg.className = 'nmsg' + (r === 'ok' ? ' ok' : ' no'); msg.textContent = r === 'ok' ? tr`✓ 쓸 수 있어요` : r === 'taken' ? tr`✗ 이미 있는 이름이에요` : r === 'wait' ? tr`✗ 닉네임은 7일에 한 번 바꿀 수 있어요 (${new Date(NICK?.next).toLocaleDateString(LANG)}부터)` : r === 'bad' ? tr`✗ 쓸 수 없는 이름이에요` : tr`✗ 인터넷 연결을 확인해 주세요` }
+  let t = 0
+  const check = () => { const v = inp.value.trim(), len = [...v].length; cnt.textContent = `${len}/12`; ok.disabled = true; msg.textContent = ''; clearTimeout(t)
+    if (len < 2) return
+    t = setTimeout(async () => { const r = await rpc('nick_free', { nick: v }); if (inp.value.trim() !== v) return; say2(r); ok.disabled = r !== 'ok' }, 400) }
+  inp.oninput = check; inp.onkeydown = e => { if (e.key === 'Enter' && !ok.disabled) ok.click() }
+  const close = modal('nick', h('p', { class: 'h' }, tr`랭킹에 쓸 이름을 정해요`), h('label', { class: 'nick' }, inp, cnt), msg,
+    h('p', { class: 'fine' }, tr`2~12자 · 한글 · 영어 · 일본어 · 중국어 · 숫자`), h('div', { class: 'row' }, btn(tr`나중에`, () => { close(); done(false) }), ok))
+  check(); setTimeout(() => inp.focus(), 50)
+}
+/** 기록이 두 군데 — 이 기기 / 내 계정 중 하나를 고른다(되돌릴 수 없어서 한 번 더 묻는다) */
+function choose(cloud, at) {
+  const sum = d => { const ids = Object.keys(BONUS), best = Object.entries(d.best || {}).filter(([k]) => k.endsWith('.inf')).reduce((a, [, b]) => Math.max(a, b.lv || 0), 0)
+    return [[tr`토벌`, d.runs || 0], [tr`클리어`, d.clears || 0], [tr`토벌 보상금`, d.coin || 0], [tr`의상`, (d.owned || []).filter(k => OUTFIT[k]).length], [tr`무한 최고 단계`, best]] }
+  const A = sum(save), B = sum(cloud), day = ms => ms ? new Date(ms).toLocaleDateString(LANG) : '—'
+  const card = (k, name, rows, other, when) => h('button', { type: 'button', class: 'pickrec', 'data-k': k, onclick: e => { for (const b of e.currentTarget.parentNode.children) b.classList.toggle('on', b === e.currentTarget); go.disabled = false } },
+    h('b', {}, name), rows.map(([n, v], i) => h('span', { class: v > other[i][1] ? 'more' : '' }, `${n} ${v.toLocaleString()}`)), h('small', {}, tr`마지막 ${day(when)}`))
+  const go = btn(tr`이걸로 할게요`, () => {
+    const k = document.querySelector('.modal .pickrec.on')?.dataset.k; if (!k) return
+    const name = k === 'here' ? tr`이 기기` : tr`내 계정`
+    modal('choose', h('p', { class: 'h' }, tr`정말 ${name} 기록으로 할까요?`), h('p', { class: 'warn' }, tr`다른 쪽 기록은 지워져요`),
+      h('div', { class: 'row' }, btn(tr`아니요`, () => choose(cloud, at)), btn(tr`네, 이걸로`, () => { MODAL?.(); if (k === 'cloud') adopt(cloud, at); else { linked = true; cloudPush(true); link() } }, 'main')))
+  }, 'main')
+  go.disabled = true
+  modal('choose', h('p', { class: 'h' }, tr`기록이 두 군데 있어요`), h('p', { class: 'sub' }, tr`어느 쪽으로 이어서 할까요?`),
+    h('div', { class: 'pickrecs' }, card('here', tr`이 기기`, A, B, save.last), card('cloud', tr`내 계정`, B, A, at)),
+    h('p', { class: 'warn' }, tr`고르지 않은 쪽 기록은 사라져요`), h('div', { class: 'row' }, btn(tr`나중에`, () => { MODAL?.(); logout() }), go))
+}
+/** 처음 화면 오른쪽 위 — 로그인 단추 / 로그인했으면 [로고 닉네임 ▾](닉네임 바꾸기 · 로그아웃) */
+function acctPick() {
+  if (!auth) return h('button', { type: 'button', class: 'acct', onclick: loginBox }, tr`로그인`)
+  return h('details', { class: 'acct' }, h('summary', {}, svgIc(auth.prov === 'google' ? GOOGLE_IC : KAKAO_IC, `brand ${auth.prov}`), h('span', { class: 'nm' }, NICK?.nick || tr`로그인됨`)),
+    h('div', {}, h('button', { type: 'button', onclick: () => nickBox() }, NICK ? tr`닉네임 바꾸기` : tr`닉네임 정하기`), h('button', { type: 'button', onclick: () => ranking() }, tr`랭킹`), h('button', { type: 'button', onclick: logout }, tr`로그아웃`), h('button', { type: 'button', class: 'del', onclick: delBox }, tr`계정 지우기`)))
+}
+/** 계정 지우기 — 닉네임(없으면 「지우기」)을 그대로 써야 눌린다(아이가 잘못 누르지 않게). 서버 delete_me → 로그아웃 → 처음 화면 */
+function delBox() {
+  const word = NICK?.nick || tr`지우기`, inp = h('input', { type: 'text', maxlength: '12', placeholder: word, autocomplete: 'off', 'aria-label': word }), msg = h('p', { class: 'nmsg no' })
+  const go = btn(tr`지우기`, async () => { go.disabled = true; if (await rpc('delete_me') === 'ok') { MODAL?.(); logout() } else { msg.textContent = tr`✗ 인터넷 연결을 확인해 주세요`; go.disabled = false } }, 'danger')
+  go.disabled = true; inp.oninput = () => { go.disabled = inp.value.trim() !== word }; inp.onkeydown = e => { if (e.key === 'Enter' && !go.disabled) go.click() }
+  modal('nick', h('p', { class: 'h' }, tr`계정을 지울까요?`), h('p', { class: 'warn' }, tr`계정 · 계정에 저장한 기록 · 랭킹 기록이 모두 지워지고 되돌릴 수 없어요. 이 기기의 기록은 남아요.`),
+    h('p', { class: 'sub' }, tr`지우려면 아래 칸에 똑같이 써 주세요`, h('br'), h('b', {}, word)), h('label', { class: 'nick' }, inp), msg, h('div', { class: 'row' }, btn(tr`아니요`, () => MODAL?.()), go))
+  setTimeout(() => inp.focus(), 50)
+}
+// ---- 무한 랭킹 — 판을 시작할 때 start_run(서버가 이 판의 일회용 값 tok 을 준다), 끝나면 submit_rank(서버가 실제 흐른 시간 · 그럴듯한지 · 체크섬을 본다)
+//   체크섬 ck = SHA-256(tok | 기록 | 소금) — 요청을 손으로 고쳐 보내면 서버가 다시 계산한 값과 어긋난다(supabase/account.sql 의 submit_rank 와 같은 순서 · 소금)
+const CK_SALT = 'mjg|r7Q'
+const runCk = async (tok, a) => { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode([tok, a.ch, a.lv, a.bosses, a.bt, a.t, a.kills, a.lvl, a.weapons, a.hit0, a.v, CK_SALT].join('|'))); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('') } catch { return '' } }
+const rankArgs = () => ({ ch: G.ch.id, lv: G.loop.lv, bosses: G.bosses, bt: Math.round(G.bossT), t: Math.round(G.t), kills: G.kills, lvl: G.lvl,
+  weapons: G.weapons.map(w => w.id + (G.aw.has(w.id) ? 9 : Math.min(8, w.lv))).join(' '), passives: Object.entries(G.passives).map(([k, n]) => k + n).join(' '),
+  slain: Object.entries(G.slain).map(([k, n]) => k + n).join(' '), winter: !!G.winter, v: PATCH_ID, hit0: G.hit0 == null ? -1 : Math.round(G.hit0) })   // hit0 — 처음 맞은 때(-1 = 한 번도 안 맞음)
+function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기 / 로그인 안내
+  const el = h('div', { class: 'rankline' }), set = (...k) => el.replaceChildren(...k)
+  if (!auth) { set(h('span', {}, tr`로그인하면 다음 판부터 랭킹에 올라가요`), btn(tr`로그인`, loginBox)); return el }
+  if (G.bad) { set(h('span', {}, tr`이 판은 랭킹에 올라가지 않아요`)); return el }   // 부정 플레이 표시 — 이유는 안 쓴다
+  const args = rankArgs(), tok = G.tok, send = async () => {
+    if (!tok) return set(h('span', {}, tr`이 판은 랭킹에 올릴 수 없어요 — 로그인한 뒤 새로 시작한 판만 올라가요`))   // 시작할 때 서버에 못 알렸다
+    set(h('span', {}, tr`랭킹에 올리는 중…`))
+    const r = await rpc('submit_rank', { ...args, ck: await runCk(tok, args) })
+    if (!r) set(h('span', {}, tr`랭킹에 올리지 못했어요 — 인터넷 연결을 확인해 주세요`))
+    else if (r.r === 'nonick') set(h('span', {}, tr`닉네임을 정하면 이 기록이 랭킹에 올라가요`), btn(tr`닉네임 정하기`, () => nickBox(ok => ok && send())))
+    else if (r.r === 'ok' || r.r === 'kept') set(h('span', {}, r.r === 'ok' ? tr`랭킹 #${r.rank} · 최고 기록 갱신!` : tr`랭킹 #${r.rank} — 예전 기록이 더 좋아요`), btn(tr`랭킹 보기`, () => ranking()))
+    else if (r.r === 'hold') set(h('span', {}, tr`이 판은 랭킹에 올라가지 않아요`))   // 체크섬이 안 맞음 · 차단된 계정
+    else set(h('span', {}, tr`이 판은 랭킹에 올릴 수 없어요 — 로그인한 뒤 새로 시작한 판만 올라가요`))
+  }
+  send(); return el
+}
+const RK_COL = ['', 't3', 't2', 't1']   // 1 · 2 · 3등 — 금 · 은 · 동
+const icSafe = id => { try { return ic(id) } catch { return null } }   // 랭킹 기록은 서버 것 — 예전 판의 없어진 id 여도 화면이 멈추지 않게
+/** 랭킹 화면 — 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10. 줄을 누르면 자세히 */
+async function ranking(only = null) {
+  mode = 'rank'; G = null
+  const list = h('ol', { class: 'list rank scroll' }, h('li', { class: 'wait' }, tr`불러오는 중…`)), mine = h('div', { class: 'mine' })
+  show(h('div', { class: 'panel wide pick rank' },
+    h('p', { class: 'h' }, ic('inf'), tr` 무한 랭킹`),
+    h('div', { class: 'dex-nav' }, h('button', { type: 'button', class: only ? '' : 'on', onclick: () => ranking() }, tr`전체 TOP100`),
+      CHARS.map(c => h('button', { type: 'button', class: only === c.id ? 'on' : '', onclick: () => ranking(c.id) }, ic(c.w), ` ${c.name}`))),
+    mine, list,
+    h('div', { class: 'row' }, btn(tr`← 처음으로`, title))))
+  const [rows, me] = await Promise.all([rpc('top_ranks', { only_ch: only }), auth ? rpc('my_rank', { only_ch: only }) : null])
+  if (mode !== 'rank') return
+  if (!rows) return list.replaceChildren(h('li', { class: 'wait' }, tr`랭킹을 불러오지 못했어요 — 인터넷 연결을 확인해 주세요`))
+  list.replaceChildren(...(rows.length ? rows.map(rankRow) : [h('li', { class: 'wait' }, tr`아직 기록이 없어요 — 첫 번째가 되어 보세요!`)]))
+  if (!auth) mine.replaceChildren(h('span', {}, tr`로그인하면 내 기록도 올라가요`), btn(tr`로그인`, loginBox))
+  else if (me?.[0]) mine.replaceChildren(rankRow(me[0]))
+  else mine.replaceChildren(h('span', {}, NICK ? tr`무한 모드를 해 보면 여기에 내 기록이 나와요` : tr`닉네임을 정하면 랭킹에 올라가요`), !NICK && btn(tr`닉네임 정하기`, () => nickBox()))
+}
+function rankRow(r) {
+  return h('li', { class: r.me ? 'me' : '', onclick: () => rankInfo(r) },
+    h('span', { class: `rk ${RK_COL[r.rank] || ''}` }, r.rank),
+    portrait(r.ch, null, null),
+    h('div', {}, h('b', {}, r.nick), h('span', { class: 'wp' }, r.weapons.split(' ').map(w => icSafe(w.replace(/\d+$/, ''))))),
+    h('div', { class: 'sc' }, h('span', { class: 'lvpill' }, `∞ ${r.lv}`), h('small', {}, tr`보스 ${r.bosses} · ${fmt(r.t)}`)))
+}
+function rankInfo(r) {   // 자세히 — 작은 결과 화면처럼
+  const ch = CHARS.find(c => c.id === r.ch), ws = r.weapons.split(' ').map(w => [w.replace(/\d+$/, ''), +w.match(/\d+$/)[0]]), lvOf = v => v === 9 ? '★' : `Lv${v}`
+  const chip = (id, txt, w) => h('span', { class: `chip${w ? ' w' : ''}` }, icSafe(id), ` ${txt}`), stat = (k, v) => h('div', {}, h('small', {}, k), h('b', {}, v))
+  const row = (k, ...kids) => kids.flat().length > 0 && h('div', { class: 'brow' }, h('small', {}, k), h('div', { class: 'build' }, ...kids))
+  const close = modal('rinfo', portrait(r.ch, null, null),
+    h('p', { class: 'h' }, `#${r.rank} ${r.nick}`), h('p', { class: 'sub' }, `${ch?.name ?? r.ch} · ${new Date(r.at).toLocaleDateString(LANG)} · ${r.winter ? tr`겨울` : tr`풀밭`}`),
+    h('p', { class: 'lvl-badge inf' }, ic('inf'), tr` ${r.lv}단계`),
+    h('div', { class: 'stats' }, stat(tr`버틴 시간`, fmt(r.t)), stat(tr`처치`, r.kills.toLocaleString()), stat(tr`보스`, r.bosses), stat(tr`레벨`, r.lvl)),
+    row(tr`메인`, ws.slice(0, 1).map(([id, v]) => chip(id, `${WEAP[id]?.name ?? id} ${lvOf(v)}`, 1))),
+    row(tr`보조`, ws.slice(1).map(([id, v]) => chip(id, `${WEAP[id]?.name ?? id} ${lvOf(v)}`, 1))),
+    row(tr`각성`, ws.filter(([, v]) => v === 9).map(([id]) => chip('awaken', AW[id]?.name ?? id))),
+    row(tr`아이템`, (r.passives || '').split(' ').filter(Boolean).map(p => { const [, id, n] = p.match(/^([a-z]+)(\d+)$/); return chip(id, `${PASS[id]?.name ?? id} Lv${n}`) })),
+    row(tr`잡은 보스`, (r.slain || '').split(' ').filter(Boolean).map(p => { const [, id, n] = p.match(/^([a-zA-Z]+)(\d+)$/); return h('span', { class: 'chip' }, `${BOSS[id]?.name ?? id} ×${n}`) })),
+    h('div', { class: 'row' }, btn(tr`닫기`, () => close())))
+}
 if (statsOn()) {   // 방문 통계(Google 애널리틱스) — 익명 통계와 같은 규칙(이 주소에서만 · 보내지 않기 · 추적 거부면 안 불러온다)
   window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments) }
   gtag('js', new Date()); gtag('config', 'G-DZDG6FBGP0')
@@ -1732,6 +1951,7 @@ const ICO = {
     g.beginPath(); g.moveTo(0, -11.5); g.bezierCurveTo(4, -6, 9.5, -2, 9, 4); g.bezierCurveTo(8.5, 9, 4.5, 11.5, 0, 11.5); g.bezierCurveTo(-4.5, 11.5, -8.5, 9, -9, 4); g.bezierCurveTo(-9.2, -1, -5.5, -3, -4.5, -7); g.bezierCurveTo(-2.5, -5, -1, -6, 0, -11.5); g.closePath(); ink(g, '#ff6a3d', 1.5)
     g.beginPath(); g.moveTo(0, -2); g.bezierCurveTo(3, 1, 5, 4, 4.5, 6.5); g.bezierCurveTo(4, 9.5, -4, 9.5, -4.5, 6.5); g.bezierCurveTo(-5, 4, -2, 2, 0, -2); g.fillStyle = '#ffd23f'; g.fill()
   },
+  inf: g => { g.lineCap = g.lineJoin = 'round'; const P = () => { g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(4, -7, 11, -7, 11, 0); g.bezierCurveTo(11, 7, 4, 7, 0, 0); g.bezierCurveTo(-4, -7, -11, -7, -11, 0); g.bezierCurveTo(-11, 7, -4, 7, 0, 0) }; for (const [c, w] of [[OUT, 6], ['#b98cff', 3.2]]) { P(); g.strokeStyle = c; g.lineWidth = w; g.stroke() } },   // 무한 — 보랏빛 ∞
   a_goblin: 'goblin', a_dekatsuyo: 'dekatsuyo', a_chiikawa: 'chiikawa', a_siren: 'siren', a_darkstar: 'darkstar',   // 업적 메달 가운데 그림
   // 그 밖
   coin: g => { el(g, 0, 0, 10.5); ink(g, '#ffd23f', 1.6); el(g, 0, 0, 7); g.lineWidth = 1.2; g.strokeStyle = '#d99a00'; g.stroke(); g.lineCap = 'round'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(0, -3.6); g.lineTo(0, 3.6); g.stroke(); el(g, -4.4, -5, 1.5, 2.3, 0.6); g.fillStyle = '#fffbe0'; g.fill() },   // 토벌 보상금
@@ -1874,7 +2094,7 @@ function sprites() {
 // ---------------------------------------------------------------- 의상 — 꾸미기만(능력치는 그대로). 캐릭터마다 셋: 저가(상점 · 수수한 그림) · 고가(상점 · 원작 의상 + 이펙트) · 업적(어려움 클리어 · 원작 의상 + 화려한 이펙트)
 //   그림은 mochi() 가 몸을 그리는 차례에 끼워 그린다 — back(몸 뒤 · 망토) · body(몸 안에 오려 그림 · 옷) · head(얼굴 뒤에 · 모자). q = 몸 크기(W · H · hw · t 머리 끝 · y(f) 위에서 f 만큼 · mid 머리와 몸 경계 · P 몸 테두리)
 //   save.owned = 산 의상 id, save.wear[캐릭터] = 입은 의상 id(없으면 기본). 업적 의상은 그 캐릭터로 어려움을 클리어하면(save.best[id].clears)
-const OUTFIT_COST = { cheap: 5000, rich: 50000 }, priceOf = oid => OUTFIT[oid].cost ?? OUTFIT_COST[OUTFIT[oid].tier] ?? 0   // priceOf — 상점 줄 순서(싼 것부터)   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 20,000)
+const OUTFIT_COST = { cheap: 5000, rich: 20000 }, priceOf = oid => OUTFIT[oid].cost ?? OUTFIT_COST[OUTFIT[oid].tier] ?? 0   // priceOf — 상점 줄 순서(싼 것부터)   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 10,000)
 const crude = (g, fill, lw = 1.15) => { g.fillStyle = fill; g.fill(); g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }   // 저가 — 칠만 하고 굵은 선(수수하게)
 const inHead = (g, q, fn) => { g.save(); g.clip(q.P); fn(); g.restore() }   // 머리 · 몸 테두리 안에만
 // 고가 · 업적 의상 그리기 도우미
@@ -2032,15 +2252,15 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       for (let i = 0; i < 6; i++) blob(g, bx - 4 + i * 1.6, by - 2.2 - Math.sin(i / 5 * Math.PI) * 2.8, 1.6, 1.4, '#f6efcf', 0.45); blob(g, bx + 1.4, by - 5.6, 1.4, 1.2, '#f6efcf', 0.45)   // 숙주 산더미
       g.beginPath(); g.moveTo(bx - 5.8, by - 1.4); g.lineTo(bx + 5.8, by - 1.4); g.quadraticCurveTo(bx + 5.2, by + 3.4, bx, by + 3.6); g.quadraticCurveTo(bx - 5.2, by + 3.4, bx - 5.8, by - 1.4); ink(g, '#fff', LW); g.strokeStyle = '#e8473b'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(bx - 5, by - 0.3); g.lineTo(bx + 5, by - 0.3); g.stroke()   // 라멘 그릇
     } },
-  crab: { tier: 'rich', cost: 20000, name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
+  crab: { tier: 'rich', cost: 10000, name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
     fx: { k: ['spark'], col: ['#ff9bb0', '#ffd0d8', '#ffffff'], rate: 5 },
     head: (g, q) => { g.strokeStyle = OUT; g.lineWidth = 1.6; g.beginPath(); g.arc(0, q.y(0.2), 9.4, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); g.strokeStyle = '#f08a9a'; g.lineWidth = 0.8; g.stroke(); for (const s of [-1, 1]) pincer(g, s * 4.2, q.t - 1.2, s, '#f08a9a', '#f7b0ba') } },
-  chestnut: { tier: 'rich', cost: 20000, name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
+  chestnut: { tier: 'rich', cost: 10000, name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
     fx: { k: ['nut', 'leaf'], col: ['#b5673b', '#d9a441', '#86c565'], rate: 3, fall: true },
     head: (g, q) => { const b = q.y(0.3); inHead(g, q, () => { g.beginPath(); g.moveTo(-16, b + 1); g.quadraticCurveTo(0, b - 3.6, 16, b + 1); g.lineTo(16, q.t - 4); g.lineTo(-16, q.t - 4); g.closePath(); g.fillStyle = '#d98b5f'; g.fill(); g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(-4.6, q.y(0.1), 3.4, 1.6, -0.4, 0, TAU); g.fill() })
       g.lineWidth = 0.8; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-q.hw + 0.4, b + 0.6); g.quadraticCurveTo(0, b - 3.6, q.hw - 0.4, b + 0.6); g.stroke()
       g.beginPath(); g.moveTo(-2.4, q.t + 0.6); g.quadraticCurveTo(0, q.t - 4.6, 2.4, q.t + 0.6); g.closePath(); ink(g, '#c27548', LW) } },
-  daifuku: { tier: 'rich', cost: 20000, name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
+  daifuku: { tier: 'rich', cost: 10000, name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
     fx: { k: ['dot'], col: ['#ffffff', '#fff6ec', '#ffe3e3'], rate: 6 },
     body: (g, q) => { g.fillStyle = '#f6f0e4'; g.fillRect(-20, q.neck - 0.4, 40, 40); g.fillStyle = '#fff'; for (const [x, k] of [[-6, 0.3], [4, 0.45], [-2, 0.75], [7, 0.8]]) { g.beginPath(); g.arc(x, q.neck + (-1 - q.neck) * k, 0.7, 0, TAU); g.fill() } },
     head: (g, q) => { const b = q.y(0.13); g.beginPath(); g.moveTo(-q.hw - 1.2, b); g.quadraticCurveTo(-q.hw - 1.4, q.t - 3.6, 0, q.t - 3.8); g.quadraticCurveTo(q.hw + 1.4, q.t - 3.6, q.hw + 1.2, b); g.quadraticCurveTo(0, b + 2.4, -q.hw - 1.2, b); ink(g, '#f6f0e4', LW)
@@ -2048,9 +2268,9 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       g.fillStyle = '#ffe36e'; for (const [x, y] of [[-1.6, -7.6], [1.4, -7.2], [-0.4, -5.6], [1.8, -5.4], [-2, -5.8]]) { g.beginPath(); g.arc(x, q.t + y, 0.35, 0, TAU); g.fill() }
       for (const s of [-1, 0, 1]) { g.beginPath(); g.ellipse(s * 1.6, q.t - 9.8, 1.7, 0.8, s * 0.6, 0, TAU); ink(g, '#5da34a', 0.5) } } },
   // 고급 — 생일 · 핼러윈 만화의 원작 의상(반짝임만, 발밑 빛은 업적에)
-  cinder: { tier: 'rich', cost: 20000, name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
+  cinder: { tier: 'rich', cost: 10000, name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
     of: ch => { const t = TONE[ch]; return { fx: { k: ['spark', 'note', 'heart'], col: [t[1], '#ffffff', t[0], '#fff3a1'], rate: 5 }, ...gown(t[0], t[1], ['chiikawa', 'usagi', 'momonga', 'kani'].includes(ch) ? 'heart' : 'star', t[2]) } } },
-  prince: { tier: 'rich', cost: 20000, name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
+  prince: { tier: 'rich', cost: 10000, name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
     fx: { k: ['spark', 'star'], col: ['#ff9be0', '#9fd8ff', '#fff3a1', '#b6f0c2'], rate: 5 },
     body: (g, q) => { suit(g, q, '#ffffff'); g.fillStyle = '#2e2e48'; g.fillRect(-0.9, q.neck - 0.4, 1.8, 30); for (let i = 0; i < 3; i++) blob(g, 2.2, q.neck + 1.4 + i * 2, 0.7, 0.7, '#e2b33c', 0.4) },
     head: (g, q) => { hoodRing(g, q, '#5a3a28'); g.fillStyle = '#5a3a28'; g.beginPath(); for (let i = -3; i <= 3; i++) { const x = i * 2.4 + q.look; g.moveTo(x - 1.4, q.y(0.21)); g.quadraticCurveTo(x, q.y(0.29), x + 1.4, q.y(0.21)) } g.fill()
@@ -2088,6 +2308,15 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
 }
 const TIER_ORD = { cheap: 0, rich: 1, ach: 2 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier] || priceOf(a) - priceOf(b))   // 일반 → 고급 → 업적
 const achWon = id => (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 어려움 클리어(어려움 기록은 열쇠가 캐릭터 id)
+// 의상 보유 효과 — 고급 · 업적 의상을 가지고만 있어도(입지 않아도) 아주 작은 능력치. [SHOP 능력치 id(coin = 토벌 보상금), 비율]. 다 모아도 능력치마다 4 ~ 5%
+const BONUS = {
+  crab: ['slipper', 0.01], chestnut: ['manju', 0.01], daifuku: ['clover', 0.02], cinder: ['wage', 0.01], prince: ['license', 0.01],
+  fairy: ['pouch', 0.02], ramen: ['manju', 0.02], dark: ['license', 0.02], pantu: ['wage', 0.02], white: ['slipper', 0.02], fire: ['coin', 0.02],
+  a_chiikawa: ['manju', 0.01], a_hachiware: ['slipper', 0.01], a_usagi: ['license', 0.01], a_momonga: ['wage', 0.01], a_kurimanju: ['clover', 0.02], a_rakko: ['license', 0.01], a_shisa: ['coin', 0.02], a_kani: ['pouch', 0.02],
+}
+const BONUS_ORDER = ['manju', 'license', 'slipper', 'wage', 'pouch', 'clover', 'coin']
+const bonusLab = k => k === 'coin' ? tr`토벌 보상금` : SHOP[k].lab, bonusTxt = oid => { const [k, v] = BONUS[oid]; return `${bonusLab(k)} +${Math.round(v * 100)}%` }
+const coll = k => Object.entries(BONUS).reduce((a, [oid, [s, v]]) => a + (s === k && OUTFIT[oid] && owns(oid) ? v : 0), 0)   // 그 능력치에 가진 의상 보유 효과 합
 const owns = oid => { const o = OUTFIT[oid]; return o.tier === 'ach' ? (o.won ? o.won() : achWon(o.ch)) : save.owned.includes(oid) }   // 업적 — 그 캐릭터 어려움 클리어(won 이 있으면 그 조건)
 const wornId = id => { const o = save.wear[id], k = o && OUTFIT[o]; return k && (!k.ch || k.ch === id) && owns(o) ? o : null }
 const LOOK_OF = {}, outfitOf = (oid, ch) => { const o = oid && OUTFIT[oid]; return !o ? undefined : o.of ? (LOOK_OF[oid + ':' + ch] ||= { ...o, ...o.of(ch) }) : o }   // 그 캐릭터가 입은 모습(종류는 캐릭터마다 색 · 장식)
@@ -2174,6 +2403,13 @@ function shop(tab = 'up', ci = 0) {
     : own ? h('button', { type: 'button', class: 'btn buy', onclick: () => { wearIt(); draw() } }, tr`입기`)
     : lock ? h('button', { type: 'button', class: 'btn buy', disabled: true }, ...lock) : buy(cost, done, label)
   const item = (cls, pic, name, mark, mcls, text, extra, act, id) => h('li', { class: cls + (id !== undefined && peek === id ? ' peek' : ''), onclick: id === undefined ? null : e => { if (e.target.closest('button')) return; peek = id; draw() } }, pic, h('div', {}, h('b', {}, name, mark && h('mark', { class: mcls }, mark)), h('span', {}, text), extra && h('em', {}, extra)), act)
+  const bonusBox = () => {   // 의상 보유 효과(닫혀 있다가 펼친다) — 능력치마다 「지금 / 다 모으면」 + 막대. 벌마다 효과는 그 의상 줄에
+    const ids = Object.keys(BONUS).filter(k => OUTFIT[k]), pc = v => Math.round(v * 100)
+    return h('li', { class: 'wr-bonus' }, h('details', {}, h('summary', {}, ic('coin'), tr` 의상 보유 효과 — ${ids.filter(owns).length} / ${ids.length}벌`),
+      h('div', { class: 'sum' }, BONUS_ORDER.map(k => { const now = coll(k), all = ids.reduce((a, oid) => a + (BONUS[oid][0] === k ? BONUS[oid][1] : 0), 0)
+        return h('div', { class: now ? 'on' : '' }, h('span', {}, bonusLab(k)), h('b', {}, `+${pc(now)}%`, h('small', {}, tr` · 최대 ${pc(all)}%`)), h('i', { style: `--w:${now / all * 100}%` })) })),
+      h('small', {}, tr`고급 · 업적 의상은 입지 않아도 가지고만 있으면 효과가 있어요`)))
+  }
   const wearAll = oid => { for (const c of CHARS) { if (oid) save.wear[c.id] = oid; else delete save.wear[c.id] } peek = undefined; persist(); msg.textContent = tr`모두 「${oid ? OUTFIT[oid].name : tr`기본`}」을(를) 입었어요`; draw() }   // 일괄 착용 — 모든 캐릭터
   const rows = {
     up: () => [h('li', { class: 'stone' }, ic('stone'), h('div', {}, h('b', {}, tr`부활석`, h('small', {}, tr`${save.stone}개`)), h('span', {}, tr`쓰러지면 하나 써서 다시 일어나요 — 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지`)),
@@ -2185,7 +2421,8 @@ function shop(tab = 'up', ci = 0) {
       })],
     outfit: ch => [null, ...OUTFITS_OF(ch.id)].map(oid => { const o = oid && OUTFIT[oid], on = wornId(ch.id) === oid, own = !o || owns(oid), fx = outfitOf(oid, ch.id)?.fx
       const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && (o.lock ? [ic(o.lock[0]), o.lock[1]] : [ic('hard'), tr` 어려움 클리어`]), o && priceOf(oid), () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
-      return item(`wr-${o ? o.tier : 'base'}${on ? ' on' : ''}`, portrait(ch.id, oid, wornW(ch.id)), o ? o.name : tr`기본`, o && TIER_NAME[o.tier], o?.tier, o ? o.note : tr`평소 모습`, fx && (o.tier === 'ach' ? tr`이펙트: 아주 화려하게 반짝반짝!` : tr`이펙트: 반짝반짝`),
+      const fxT = fx && (o.tier === 'ach' ? tr`이펙트: 아주 화려하게 반짝반짝!` : tr`이펙트: 반짝반짝`), bon = BONUS[oid] && h('span', { class: 'bon' + (own ? ' on' : '') }, tr`보유 효과 ${bonusTxt(oid)}`)   // 가지고 있으면 금빛
+      return item(`wr-${o ? o.tier : 'base'}${on ? ' on' : ''}`, portrait(ch.id, oid, wornW(ch.id)), o ? o.name : tr`기본`, o && TIER_NAME[o.tier], o?.tier, o ? o.note : tr`평소 모습`, (fxT || bon) && [fxT, fxT && bon && ' · ', bon],
         own && !o?.ch ? h('div', { class: 'acts' }, act, h('button', { type: 'button', class: 'btn buy all', onclick: () => wearAll(oid) }, tr`모두 입기`)) : act, oid) }),
     weapon: ch => [null, ...WSKINS_OF(ch.id)].map(wid => { const w = wid && WSKIN[wid], on = wornW(ch.id) === wid
       const kind = w ? (w.tier === 'shop' ? 'rich' : w.tier) : 'base'   // 줄 색 — 상점(노랑) · 업적(분홍) · 겨울(하늘)
@@ -2209,8 +2446,9 @@ function shop(tab = 'up', ci = 0) {
       requestAnimationFrame(() => tabs.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'center' }))   // 고른 캐릭터가 보이게
     }
     list.replaceChildren(...rows[tab](ch))
+    if (tab === 'outfit') list.prepend(bonusBox())   // 보유 효과 — 눌러서 펼친다
     note.textContent = tab === 'up' ? tr`판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요. 부활석은 쓰면 없어져요`
-      : tab === 'outfit' ? tr`의상은 꾸미기만 해요 — 능력치는 그대로예요(불꽃 옷만 눈보라에도 받는 피해가 늘지 않아요). 일반 · 고급 의상은 한 번 사면 모든 캐릭터가 입을 수 있어요(「모두 입기」로 한꺼번에). 업적 의상은 그 캐릭터로 어려움을 클리어하면 받아요`
+      : tab === 'outfit' ? tr`일반 · 고급 의상은 한 번 사면 모든 캐릭터가 입을 수 있어요(「모두 입기」로 한꺼번에). 업적 의상은 그 캐릭터로 어려움을 클리어하면 받아요. 고급 · 업적 의상은 모으면 아주 작은 보유 효과가 생겨요(입지 않아도) — 맨 위 「의상 보유 효과」를 눌러 보세요. 불꽃 옷은 눈보라에도 받는 피해가 늘지 않아요`
       : tab === 'weapon' ? tr`무기 스킨은 손에 든 무기 모양만 바꿔요. 하나는 상점에서, 하나는 그 캐릭터로 보통 이상을 클리어하면, 하나는 그 캐릭터로 겨울 맵을 보통 이상 클리어하면 받아요`
       : tr`스킬 스킨은 그 스킬의 색과 반짝이만 바꿔요 — 세기는 그대로예요. 상점에서 사거나, 그 스킬을 한 번 각성해 보면 그냥 받아요`
   }
@@ -2225,7 +2463,7 @@ setInterval(() => { if (mode === 'shop') ui.querySelector('.wr-pv')?._tick?.(0.0
 //   무기 스킨: 캐릭터마다 둘 — 상점(WSKIN_COST) · 업적(그 캐릭터로 보통 이상 클리어). 든 무기를 바꿔 그린다(모몽가 · 시사는 스킨을 끼우면 손에 든다)
 //   스킬 스킨: 스킬마다 하나 — 상점(SKIN_COST), 그 스킬을 각성해 본 적이 있으면 그냥 받는다. 그 스킬의 색을 바꾸고 지나간 자리에 작은 반짝이를 남긴다
 //   save.wskin[캐릭터] = 낀 무기 스킨 id, save.skin[스킬] = 켰는지, save.owned 에 산 것('sk:스킬')
-const WSKIN_COST = 20000, SKIN_COST = 30000
+const WSKIN_COST = 10000, SKIN_COST = 10000
 function stickSkin(g, x, y, col, stripe, ends, bolt) {   // 토벌봉 모양 막대
   g.save(); g.translate(x, y); g.rotate(-1.3)
   for (const [c, lw] of [[OUT, 2.8], [col, 1.6]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(-5, 0); g.lineTo(17, 0); g.stroke() }
@@ -2394,6 +2632,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Tab') tabbed = true
   if (k) key[k] = 1
   if ((k || e.code === 'Space') && mode === 'play') e.preventDefault()
+  if (MODAL) { if (e.code === 'Escape') MODAL(); return }   // 떠 있는 작은 창(로그인 · 닉네임 · 랭킹 자세히)
   if (SND.open?.()) { if (e.code === 'Escape') SND.close(); return }   // 소리 창이 떠 있으면 Esc 로 닫기만
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
   if (e.code === 'Escape' && !e.repeat && !['play', 'pause', 'sound', 'box', 'revive'].includes(mode)) { const home = [...ui.querySelectorAll('button')].find(b => b.onclick === title); if (home) { e.preventDefault(); return home.click() } }   // PC — 메뉴 화면에서 Esc = 「처음으로」
@@ -2429,8 +2668,8 @@ cv.addEventListener('pointermove', e => {
 const lift = e => { if (e.pointerId === joy.id) { joy.on = false; joy.id = null; joy.x = joy.y = 0 } }
 cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift)
 pauseBtn.addEventListener('click', () => { pauseBtn.blur(); pause() })
-let spd = 1   // 게임 배속(1 · 2) — 오른쪽 위 ×2 단추로 켜고 끈다
-document.getElementById('spd').addEventListener('click', e => { spd = 3 - spd; e.currentTarget.setAttribute('aria-pressed', spd > 1); e.currentTarget.blur() })
+let spd = 1   // 게임 배속(1 · 2 · 3) — 오른쪽 위 단추로 1 → 2 → 3 → 1. 3배속은 어려움을 클리어한 사람만(무한에서 세이렌을 잡아도)
+document.getElementById('spd').addEventListener('click', e => { const b = e.currentTarget; spd = spd >= spdMax() ? 1 : spd + 1; b.textContent = `×${Math.max(2, spd)}`; b.setAttribute('aria-pressed', spd > 1); b.setAttribute('aria-label', `×${Math.max(2, spd)}`); b.blur() })
 
 // ---------------------------------------------------------------- 한 판
 let mode = 'title', G = null, pl = null, S = null, shake = 0, pickCi = 0, SRC = null   // SRC — 지금 피해를 주는 스킬 · 친구(스킬별 피해 표)
@@ -2445,6 +2684,8 @@ function newGame(ch) {
     kills: 0, lvl: 1, xp: 0, next: need(1), queue: [], dmg: {}, rest: null, gob: 0, pj: 0, hit0: null, cheer: 0, jackpots: 0, bosses: 0, freeze: 0, spawnT: 0.5,
     nextElite: 140, nextSwarm: 100, nextEvt: 600, pi: 0, dying: 0, won: 0, banner: null, sts: {}, final: null,
     rr: b, skips: b, bans: b, banned: new Set(),   // 상자에서 쓰는 리롤 · 스킵 · 제외 · 제외한 카드(t + id)
+    bossT: 0, slain: {},
+    inf: !!DIFF[save.diff].inf, loop: { lv: 0, queue: [], next: 0, spawned: [], sirens: 0 },   // 무한 — 단계 · 남은 보스 종류 · 다음 무리 때 · 이번 단계에 나온 보스 · 쓰러뜨린 세이렌
     winter: save.theme === 'winter', storm: { next: STORM.every, warned: false, on: 0, k: 0, hot: 0, warm: false, piles: [], spawn: 0, fade: 0 }, storms: 0, tip: null, slip: false,   // 겨울 맵 — 눈보라 · 버텨 낸 눈보라 · 작은 안내 · 눈 위에서 미끄러지는 중
     aw: new Set(), arr: b, parried: 0, revives: 0, anchor: [0, 0], lastBox: -99, found: 0, runStones: 0, gotRunStone: false,   // … · 떠돌이 보물상자(앵커 · 마지막 때 · 받은 보상금) · 주운 부활석(이번 판만)
       // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
@@ -2458,12 +2699,12 @@ function newGame(ch) {
   say(tr`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
 function startGame(i) { if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
-  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
+  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
   S = {
-    might: 1 + 0.1 * L('license') + perm('license') + 0.02 * Math.min(25, G.cheer) + (m.might || 0),
+    might: 1 + 0.1 * L('license') + perm('license') + 0.02 * G.cheer + (m.might || 0),
     armor: L('armor') + perm('armor') + (m.armor || 0),
     maxHp: Math.round(G.ch.hp * (1 + 0.2 * L('manju') + perm('manju') + (m.hp || 0))),
     regen: 0.2 * L('pudding') + perm('pudding') + (m.regen || 0),
@@ -2654,7 +2895,7 @@ const dmgK = m => 1 + 0.055 * Math.min(m, 20) + 0.02 * clamp(m - 20, 0, 5) + 0.1
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
-  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm)) * G.D.hp * (big ? 1 : G.crowd || 1)
+  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm) * (G.inf ? 1 + INF.foe * G.loop.lv : 1)) * G.D.hp * (big ? 1 : G.crowd || 1)
   const e = {
     type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * dmgK(m), xp: F.xp * (big ? 1 : G.crowd || 1),
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
@@ -2675,12 +2916,40 @@ function summon(kind, mid = false) {
 }
 const bubble = (e, s, col) => fx({ k: 'shout', e, s, col, T: 1.8 })
 /** 최종보스 — 세이렌 + 둘레를 도는 인어 셋. 인어가 살아 있는 동안 세이렌은 받는 피해 -50% */
+function infStep() {   // 무한 — 보스 무리(일정 시간마다) → 다 쓰러뜨리면 세이렌 여럿
+  const L = G.loop
+  if (G.final) return
+  const n = Math.min(INF.kinds.length, L.lv + 1)
+  if (L.queue.length && G.t >= L.next) {   // 강해진 보스 n 마리 — 서로 다른 종류
+    const kinds = L.queue.splice(0, n)
+    kinds.forEach((k, i) => { const e = summon(k); e.max *= 1 + INF.hp * L.lv; e.hp = e.max; e.dmg *= 1 + INF.dmg * L.lv; e.spd *= 1 + INF.spd * L.lv; e.loop = L.lv; e.castT = G.t + 4 + i * 2.5; L.spawned.push(e) })
+    say(tr`무한 ${L.lv}단계 — 강해진 보스 ${kinds.length}마리!`, 2.4, '#ff8a5c'); L.next = G.t + INF.gap
+  }
+  if (!L.queue.length && L.spawned.every(e => e.dead)) sirens(Math.min(3, n))   // 이번 단계 보스를 다 쓰러뜨렸다 — 세이렌 n 명
+}
+function sirens(n) {   // 무한 — 세이렌 여럿(각각 인어 셋이 둘레를 돈다). 단계만큼 세다
+  const L = G.loop, list = [], mermaids = []
+  for (let k = 0; k < n; k++) {
+    const s = summon('siren'); s.sea = true; s.max *= 1 + INF.hp * L.lv; s.hp = s.max; s.dmg *= 1 + INF.dmg * L.lv; list.push(s)
+    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, m = spawn('mermaid', s.x + Math.cos(a) * 130, s.y + Math.sin(a) * 100); Object.assign(m, { v: i, sea: true, orb: a, patT: 2 + i, pat: 0, castT: Infinity, host: s }); mermaids.push(m) }
+  }
+  G.final = { siren: list[0], sirens: list, mermaids, at: G.t }; SND.play('siren')
+  say(tr`세이렌 ${n}명! ${INF.dark / 60}분 안에 못 쓰러뜨리면 검은 별똥별이 와요`, 3.2, '#ff7ad9'); shake = 10
+}
+function stageClear(e) {   // 무한 — 세이렌을 모두 쓰러뜨렸다 → 다음 단계(보스 무리부터)
+  const L = G.loop
+  L.lv++; L.queue = [...INF.kinds].sort(() => rnd() - 0.5); L.spawned = []; L.next = G.t + INF.rest
+  G.final = null; SND.play(fieldSong(), false, G.ch.id)
+  for (const f of G.foes) if (!f.dead) kill(f, true)   // 잠깐 숨 돌리게 — 남은 적은 모두 도망친다
+  item(e.x, e.y, 'chest'); fx({ k: 'pillar', T: 1 })
+  say(tr`무한 ${L.lv}단계! 보스가 ${Math.min(INF.kinds.length, L.lv + 1)}마리씩 와요`, 3.2, '#ffd23f')
+}
 function finale() {
   const s = summon('siren'); s.sea = true
-  G.final = { siren: s, mermaids: [] }; SND.play('siren')
+  G.final = { siren: s, sirens: [s], mermaids: [], at: G.t }; SND.play('siren')
   for (let i = 0; i < 3; i++) {
     const a = i / 3 * TAU, m = spawn('mermaid', s.x + Math.cos(a) * 130, s.y + Math.sin(a) * 100)
-    Object.assign(m, { v: i, sea: true, orb: a, patT: 2 + i, pat: 0, castT: Infinity })
+    Object.assign(m, { v: i, sea: true, orb: a, patT: 2 + i, pat: 0, castT: Infinity, host: s })
     G.final.mermaids.push(m)
   }
   say(tr`최종보스 — 세이렌! 인어부터 쓰러뜨리자`, 3.2, '#ff7ad9'); shake = 10
@@ -2710,7 +2979,8 @@ function spawner(dt) {
     }
   }
   while (G.pi < PLAN.length && G.t >= PLAN[G.pi][0]) { const [, kind, mid] = PLAN[G.pi++]; summon(kind, !!mid) }
-  if (!G.final && G.t >= FINAL_T) finale()
+  if (!G.final && G.t >= FINAL_T && !G.loop.lv) finale()
+  if (G.inf && G.loop.lv) infStep()
   if (G.t >= G.nextElite) { spawn('golden'); G.nextElite += m < 10 ? 60 : 40 }
   if (G.t >= G.nextSwarm) {   // 꼬마 키메라가 사방에서 둘러싼다
     const n = 18 + (m * 2.5 | 0), R = Math.max(VW, VH) * 0.62
@@ -2792,7 +3062,7 @@ function bossAI(e, dt, dx, dy, d) {
   if (e.kind === 'dekatsuyo') return charge(e, dt, dx, dy)
   const sp = e.spd
   if (e.kind === 'mermaid') {   // 세이렌 둘레를 돈다
-    const s = alive(G.final?.siren), cx = s ? s.x : pl.x, cy = s ? s.y : pl.y
+    const s = alive(e.host) || alive(G.final?.siren), cx = s ? s.x : pl.x, cy = s ? s.y : pl.y   // 자기 세이렌 둘레(무한 — 세이렌이 여럿)
     e.orb += dt * 0.7
     const tx = cx + Math.cos(e.orb) * 130 - e.x, ty = cy + Math.sin(e.orb) * 100 - e.y, q = Math.hypot(tx, ty) || 1, v = Math.min(sp * 1.6, q * 4)
     e.vx = tx / q * v; e.vy = ty / q * v
@@ -2879,13 +3149,19 @@ function kill(e, quiet = false) {
   else if (!e.boss && G.t >= 180 && rnd() < 0.0004 * S.luck * G.D.drop) item(e.x, e.y, rnd() < 0.5 ? 'pajama' : 'battery')
   if (!e.boss) return
   const B = BOSS[e.kind]
+  if (!e.mid && e.kind !== 'mermaid') { G.bossT = G.t; G.slain[e.kind] = (G.slain[e.kind] || 0) + 1 }   // 랭킹 — 마지막 보스를 잡은 때 · 종류별 마리 수
   shake = e.mid ? 6 : 10; fx({ k: 'ring', x: e.x, y: e.y, R: e.mid ? 120 : 180, T: 0.6, col: '#ffd23f' }); fx({ k: 'flash', x: e.x, y: e.y - 40, R: e.mid ? 110 : 160, col: '#ffd23f', T: 0.6 })   // 먼저 — 세이렌이 떠오르며 사라지는 그림이 빛 위에 보이게
   if (e.kind === 'mermaid') say(guarded() ? tr`인어 격파!` : tr`세이렌의 보호막이 사라졌다!`, 2, '#7fd8ff')
-  else if (e.kind === 'siren') {   // 클리어 — 남은 적은 모두 도망친다
+  else if (e.kind === 'siren' && G.inf) {   // 무한 — 세이렌을 다 쓰러뜨려야 다음 단계(판은 이어진다)
+    G.bosses++; G.loop.sirens++; const rest = (G.final?.sirens || []).filter(s => !s.dead)
+    if (rest.length) { G.final.siren = rest[0]; say(tr`세이렌 격파! 남은 세이렌 ${rest.length}`, 2, '#ff9be0') }
+    else { if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; stageClear(e) }
+  } else if (e.kind === 'siren') {   // 클리어 — 남은 적은 모두 도망친다
     G.bosses++; G.won = 2.8; G.endKind = 'siren'; const v = e.angry ? SPR.sirenAngry : SPR[e.type]; fx({ k: 'bye', s: (e.fx < 0 ? v.L : v.R)[0], x: e.x, y: e.y, T: 1.6 }); if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; say(tr`세이렌 격파! 토벌 성공!`, 3, '#ffd23f')
     for (const f of G.foes) if (!f.dead) kill(f, true)
   } else if (e.mid) { say(tr`${B.name} 격파!`, 1.6, '#ffb35e'); G.rest = { name: tr`중간보스 ${B.name}`, at: G.t + 1.2 } }
-  else { G.bosses++; if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(tr`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
+  // 보통 보스 — 각성의 별(다 각성했으면 대신 보물상자) · 보물상자 · 잠옷이나 전지
+  else { G.bosses++; if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); else if (G.weapons.length >= 6 && G.weapons.every(w => G.aw.has(w.id))) item(e.x - 26, e.y, 'chest'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(tr`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
 }
 /** 둘레 R 안 작은 적(보스 · 돌격대 빼고)을 밀쳐 낸다 — 세기 kb(밀리는 거리 ≈ kb / 9) */
 function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return; const [dx, dy] = toward(e); e.kx += dx * kb; e.ky += dy * kb }) }
@@ -2980,13 +3256,13 @@ function helpers(dt) {
 // ---- 검은 별똥별 — 29분까지 세이렌을 못 쓰러뜨리면 나타나 끝까지 쫓아온다. G.foes 밖이라 스킬 · 폭죽에 안 맞는다(쓰러뜨릴 수 없다)
 function darkStep(dt) {
   if (!G.dark) {
-    if (G.t < DARK_T) return
+    if (G.inf ? !(G.final && G.t - G.final.at >= INF.dark) : G.t < DARK_T) return   // 무한 — 세이렌 단계 4분이 지나면(쓰러뜨릴 때까지)
     const a = rnd() * TAU, R = Math.max(VW, VH) * 0.6
     G.dark = { x: pl.x + Math.cos(a) * R, y: pl.y + Math.sin(a) * R, t: 0, cd: 3 }
-    say(tr`검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 도망쳐!`, 3.2, '#c9b3ff'); shake = 10; SND.dark()
+    say(G.inf ? tr`검은 별똥별! 세이렌을 쓰러뜨릴 때까지 쫓아와요` : tr`검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 도망쳐!`, 3.2, '#c9b3ff'); shake = 10; SND.dark()
     return
   }
-  const D = G.dark, [dx, dy] = toward(pl, D.x, D.y), sp = 118 + D.t * 0.6   // 점점 빨라진다(30분엔 거의 내 속도)
+  const D = G.dark, [dx, dy] = toward(pl, D.x, D.y), sp = 118 + D.t * 0.6   // 점점 빨라진다(30분엔 거의 내 속도) — 무한도 끝없이(못 잡으면 결국 따라잡힌다 · 판이 끝나는 자리)
   D.t += dt
   if (G.freeze <= 0) { D.x += dx * sp * dt; D.y += dy * sp * dt }
   if ((D.x - pl.x) ** 2 + (D.y - pl.y) ** 2 < (pl.r + 16) ** 2) ouch(pct(0.3), tr`검은 별똥별`)
@@ -3007,7 +3283,7 @@ function step(dt) {
   const dead = G.dying > 0
   if (dead && (G.dying -= dt / 0.3) <= 0) return canRevive() ? askRevive() : finish(false)   // 쓰러지는 동안은 느린 화면(dt 는 0.3배로 들어온다)
   if (G.won && (G.won -= dt) <= 0) return finish(true)
-  if (G.t >= END_T && !dead && !G.won) { G.endKind = 'time'; return finish(true) }   // 30분 — 검은 별똥별에게서 끝까지 도망쳤다
+  if (G.t >= END_T && !dead && !G.won && !G.inf) { G.endKind = 'time'; return finish(true) }   // 30분 — 검은 별똥별에게서 끝까지 도망쳤다
   // 나
   let mx = key.r - key.l + joy.x, my = key.d - key.u + joy.y
   const m = Math.hypot(mx, my)
@@ -3174,21 +3450,26 @@ function offers(keep = []) {
     if (o.fresh) o.t === 'w' ? wFree-- : pFree--
     out.push(o)
   }
-  while (out.length < 3) out.push({ t: 'f', id: out.some(o => o.id === 'onigiri') && G.cheer < 25 ? 'cheer' : 'onigiri' })
+  const fill = id => out.length < 3 && !out.some(o => o.id === id) && out.push({ t: 'f', id })   // 더 올릴 게 없으면 갈림길 — 오니기리 · 응원 한 장씩(같은 카드 두 장은 안 준다)
+  fill('onigiri'); if (G.cheer < cheerMax()) fill('cheer')
   return out
 }
+const cheerMax = () => G.inf ? Infinity : 25   // 응원 한도(번) — 무한은 끝없이(적도 단계마다 세진다)
 function label(o) {
   if (o.t === 'a') { const a = AW[o.id]; return { name: a.name, lv: tr`각성 · ${WEAP[o.id].name} Lv 8 → ★`, note: `${upText(a.up)} · ${a.note}` } }
-  if (o.t === 'f') return { name: FILL[o.id].name, lv: tr`보너스`, note: FILL[o.id].note }
+  if (o.t === 'f' && o.id === 'cheer') return { name: FILL.cheer.name, lv: tr`Lv ${G.cheer} → ${G.cheer + 1} · 보너스`, note: G.inf ? tr`공격력 +${G.cheer * 2}% → +${G.cheer * 2 + 2}%` : tr`공격력 +${G.cheer * 2}% → +${G.cheer * 2 + 2}% · 최대 +50%` }   // 지금 단계 → 다음(무한은 한도 없음)
+  if (o.t === 'f') { const p = Math.round(pl.hp / S.maxHp * 100); return { name: FILL.onigiri.name, lv: tr`보너스`, note: [tr`체력 40% 회복 · `, h('span', { class: p <= 40 ? 'low' : '' }, tr`지금 ${p}%`)] } }   // 지금 체력 — 40% 이하면 빨강
   if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id), d = WEAP[o.id]; return { name: d.name, ...(w ? { lv: `Lv ${w.lv} → ${w.lv + 1} · ${d.how}`, note: Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ') } : { lv: tr`새 스킬 · ${d.how}`, note: d.note }) } }
   const lv = G.passives[o.id], p = PASS[o.id]; return { name: p.name, lv: lv ? `Lv ${lv} → ${lv + 1}` : tr`새 아이템`, note: p.note }
 }
 function take(o) {
+  guardIn()
   if (o.t === 'a') awaken(o.id)
   else if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id); if (w) { w.lv++; w.st = wstat(w) } else addWeapon(o.id) }
   else if (o.t === 'p') { G.passives[o.id] = (G.passives[o.id] || 0) + 1; stats() }
   else if (o.id === 'onigiri') pl.hp = Math.min(S.maxHp, pl.hp + S.maxHp * 0.4)
   else { G.cheer++; stats() }
+  guardOut()
 }
 /** 새 스킬 카드 아래 — 내가 가진 스킬의 짝일 때만 시너지 이름 · 효과(짝이 없으면 아무것도 안 붙인다) */
 function synCard(o) {
@@ -3208,7 +3489,7 @@ const ACTS = [['rr', tr`리롤`], ['skips', tr`스킵`], ['bans', tr`제외`]]
 function openBox() {
   const kind = G.queue.shift(), chest = kind === 'chest', aw = kind === 'awaken'   // aw — 각성 상자: 잭팟 · 스킵 · 제외 없이 리롤만(G.arr, 레벨 업 상자와 따로)
   if (aw && !awCan().length) return next()
-  if (kind === 'level') { const v = Math.round(S.maxHp * 0.1); pl.hp = Math.min(S.maxHp, pl.hp + v); num(pl.x, pl.y - 48, `+${v}`, 'heal') }   // 레벨 업 — 체력 10% 회복
+  if (kind === 'level') { const v = Math.round(S.maxHp * 0.1); pl.hp = Math.min(S.maxHp, pl.hp + v); num(pl.x, pl.y - 48, `+${v}`, 'heal'); guardOut() }   // 레벨 업 — 체력 10% 회복
   chest || aw ? SND.chest() : SND.level(); SND.voice(G.ch.id, 'happy')
   const jack = !aw && rnd() < (chest ? 0.5 : 0.01 * S.luck * (G.ch.mod.jackpot ? 2 : 1))   // 잭팟 — 셋 다 받는다. 레벨 업 1%(행운 배수 · 하치와레 2배), 보물상자 50%
   const box = BOX = { opts: aw ? awOffers() : offers(), jack, ready: false, ban: false }, acts = aw ? ACTS.slice(0, 1) : ACTS, cnt = k => aw ? 'arr' : k
@@ -3216,14 +3497,15 @@ function openBox() {
   mode = 'box'; calm(); pauseBtn.hidden = true; still = 2
   const cards = h('div', { class: 'cards' }), hint = h('p', { class: 'hint' })
   const btns = acts.map(([k, s], j) => h('button', { type: 'button', class: 'btn act', onclick: () => act(k) }, s, h('em'), h('kbd', {}, j + 4)))
-  const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, tr`셋 다 받기`, h('kbd', {}, 'Enter'))
+  const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, h('span'), h('kbd', {}, 'Enter'))
   const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}${aw ? ' awaken' : ''}` },
     h('p', { class: 'box-title' }, aw ? [ic('awaken'), tr` 각성!`] : chest ? [ic('chest'), tr` 보물상자!`] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
     jack && h('p', { class: 'jack' }, 'JACKPOT!!'), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
   const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}${box.ban && owned(o) ? ' keep' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
   const sync = () => {
     cards.replaceChildren(...box.opts.map(card)); root.classList.toggle('banning', box.ban)
-    hint.textContent = aw ? tr`Lv 8 스킬 하나를 각성시켜요 — 스킵 · 제외는 없어요${awCan().length > 3 ? tr` (리롤로 다른 스킬도)` : ''}` : box.ban ? tr`이번 판에서 뺄 카드를 고르세요 — 가진 스킬은 못 빼요 (제외를 다시 누르면 취소)` : jack ? tr`셋 다 가져요!` : tr`하나를 고르세요`
+    hint.textContent = aw ? tr`Lv 8 스킬 하나를 각성시켜요 — 스킵 · 제외는 없어요${awCan().length > 3 ? tr` (리롤로 다른 스킬도)` : ''}` : box.ban ? tr`이번 판에서 뺄 카드를 고르세요 — 가진 스킬은 못 빼요 (제외를 다시 누르면 취소)` : jack ? (box.opts.length === 3 ? tr`셋 다 가져요!` : tr`다 가져요!`) : tr`하나를 고르세요`
+    if (takeBtn) takeBtn.firstChild.textContent = box.opts.length === 3 ? tr`셋 다 받기` : tr`다 받기`   // 갈림길(두 장 · 한 장)이면 「다」
     btns.forEach((b, j) => { const k = cnt(acts[j][0]); b.querySelector('em').textContent = G[k]; b.disabled = !G[k] || aw && awCan().length <= 3; b.classList.toggle('on', box.ban && k === 'bans') })
   }
   function pick(i) {
@@ -3254,9 +3536,9 @@ function openBox() {
   setTimeout(() => { if (BOX === box) { box.ready = true; root.classList.add('ready'); aim() } }, 450)   // 움직이던 손가락이 바로 카드를 누르지 않게
 }
 function next() {
-  BOX = null
+  guardIn(); BOX = null
   if (G.queue.length) return openBox()
-  ui.hidden = true; mode = 'play'; pauseBtn.hidden = false; breather()
+  ui.hidden = true; mode = 'play'; pauseBtn.hidden = false; breather(); guardOut()
 }
 /** 레벨 업 빛기둥 — 둘레를 비우고 1.2초 무적(고르자마자 몰려 맞지 않게). 부활할 때도 */
 function breather() {
@@ -3276,12 +3558,13 @@ function askRevive() {
 }
 function revive() {
   if (mode !== 'revive' || !canRevive()) return
+  guardIn()
   if (G.gotRunStone) G.runStones--; else { save.stone--; persist() }
   G.revives++
   G.dying = 0; G.killer = null; pl.hp = S.maxHp; G.eshots.length = 0
   mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; SND.duck(false); SND.level(); SND.voice(G.ch.id, 'happy')
   for (const e of G.foes) if (!e.dead && !e.boss && !e.rush && onScreen(e, 40)) kill(e)   // 폭탄 — 화면 안 일반 몬스터 토벌
-  fx({ k: 'white', T: 0.4 }); shake = 8; breather()
+  fx({ k: 'white', T: 0.4 }); shake = 8; breather(); guardOut()
   say(G.gotRunStone ? tr`부활! — 주운 부활석을 썼어요` : tr`부활! — 부활석 ${save.stone}개 남았어요`, 2.2, '#9fe3ff')
 }
 function boxKey(e) {
@@ -3658,6 +3941,13 @@ function star(c, x, y, r, col) {
 }
 /** 타이머 아래 한 줄 — 다음 보스까지 · 세이렌전 중엔 검은 별똥별까지 · 나오면 30:00까지 */
 function nextLine() {
+  if (G.inf && G.loop.lv) {   // 무한 — 단계는 타이머 왼쪽 보라 알약에, 여기는 남은 것만
+    const L = G.loop
+    if (G.dark) return [tr`검은 별똥별! 세이렌을 쓰러뜨려요`, '#ff6b6b']
+    if (G.final) { const left = INF.dark - (G.t - G.final.at); return [tr`검은 별똥별 ${fmt(Math.max(0, left))}`, left <= 60 ? '#ff6b6b' : '#fff'] }   // 1분 남으면 빨강
+    const left = L.queue.length + L.spawned.filter(e => !e.dead).length
+    return [L.queue.length ? tr`남은 보스 ${left} · 다음 무리 ${fmt(Math.max(0, L.next - G.t))}` : tr`남은 보스 ${left} — 다 쓰러뜨리면 세이렌!`, '#fff']
+  }
   if (G.dark) return [tr`검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 ${fmt(Math.max(0, END_T - G.t))}`, '#c9b3ff']
   if (G.final) return [tr`최종보스! · 검은 별똥별까지 ${fmt(Math.max(0, DARK_T - G.t))}`, '#ff9be0']
   const nx = PLAN[G.pi]
@@ -3669,9 +3959,16 @@ function hud(c) {
   c.fillStyle = 'rgba(74,59,53,.45)'; c.fillRect(0, 0, W, 10)
   c.fillStyle = '#7fd3ff'; c.fillRect(0, 0, W * Math.min(1, G.xp / G.next), 10)
   txt(c, `Lv ${G.lvl}`, 34, 32, 17)
-  const [nl, nc] = nextLine(); c.font = `12px ${FONT}`
-  const half = c.measureText(nl).width / 2 + 4, cx = Math.max(half, Math.min(W / 2, W - 172 - half))   // 좁은 화면 — 가운데 글자를 왼쪽으로 비켜 오른쪽 위 단추 셋(배속 · 소리 · 일시정지)과 안 겹치게
-  txt(c, fmt(G.t), cx, 38, 26); txt(c, nl, cx, 56, 12, nc); txt(c, tr`처치 ${G.kills}`, cx, 73, 12)
+  let [nl, nc] = nextLine(); c.font = `14px ${FONT}`
+  const place = () => { const half = c.measureText(nl).width / 2 + 4; return Math.max(half, Math.min(W / 2, W - 172 - half)) }   // 좁은 화면 — 가운데 글자를 왼쪽으로 비켜 오른쪽 위 단추 셋(배속 · 소리 · 일시정지)과 안 겹치게
+  let cx = place(), pill = null
+  if (G.inf && G.loop.lv) {   // 무한 — 타이머 왼쪽 보라 알약 「∞ N단계」. 자리가 없으면(좁은 폰) 아래 줄 앞에 붙인다
+    const ps = `∞ ${tr`${G.loop.lv}단계`}`; c.font = `15px ${FONT}`; const w = c.measureText(ps).width + 18; c.font = `26px ${FONT}`
+    const x = cx - c.measureText(fmt(G.t)).width / 2 - 8 - w; c.font = `14px ${FONT}`
+    if (x >= 74) pill = [ps, x, w]; else { nl = `${ps} · ${nl}`; cx = place() }
+  }
+  txt(c, fmt(G.t), cx, 38, 26); txt(c, nl, cx, 57, 14, nc); txt(c, tr`처치 ${G.kills}`, cx, 74, 12)
+  if (pill) { const [ps, x, w] = pill; c.fillStyle = '#9b6bff'; c.strokeStyle = OUT; c.lineWidth = 2.5; c.beginPath(); c.roundRect(x, 20, w, 24, 12); c.fill(); c.stroke(); txt(c, ps, x + w / 2, 37.5, 15) }
   const top = W < 700 ? 84 : 44   // 좁은 화면(휴대폰)은 스킬 줄을 타이머 · 다음 보스 · 처치 글자 아래로 — 안 겹치게
   let x = 10
   for (const w of G.weapons) { const p = Math.max(0, 1 - (G.t - (w.fire ?? -9)) / 0.25); if (p) { c.globalAlpha = p * 0.7; c.fillStyle = '#fff'; oval(c, x + 13, top + 13, 17, 17); c.fill(); c.globalAlpha = 1 } c.drawImage(SPR.E[w.id].c, x - 3 * p, top - 3 * p, 26 + 6 * p, 26 + 6 * p); txt(c, G.aw.has(w.id) ? '★' : String(w.lv), x + 22, top + 26, 11, G.aw.has(w.id) ? '#ff9be0' : w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
@@ -3710,7 +4007,7 @@ function show(...kids) { ui.replaceChildren(...kids); ui.hidden = false; ui.scro
 addEventListener('pointerdown', e => { const d = document.querySelector('.lang[open]'); if (d && !d.contains(e.target)) d.open = false })   // 바깥을 누르면 닫힌다
 function langPick() {
   const [, name, fl] = LANGS.find(l => l[0] === LANG)
-  return h('details', { class: 'lang' }, h('summary', { 'aria-label': 'Language' }, ic(fl), ` ${name}`),
+  return h('details', { class: 'lang' }, h('summary', { 'aria-label': 'Language' }, ic(fl), h('span', { class: 'lnm' }, ` ${name}`)),
     h('div', {}, LANGS.map(([code, nm, f]) => h('button', { type: 'button', lang: code, class: code === LANG ? 'on' : '', onclick: () => { if (code !== LANG) { save.lang = code; persist(); location.reload() } } }, ic(f), ` ${nm}`))))
 }
 function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) · 풀밭(예전). 고르면 기억하고 바닥 · 적 그림만 다시 그린다
@@ -3724,17 +4021,18 @@ function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) 
 function title() {
   SND.play(fieldSong())
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
-  show(h('div', { class: 'panel home' }, themePick(), langPick(),
+  show(h('div', { class: 'panel home' }, themePick(), h('div', { class: 'corner' }, acctPick(), langPick()),
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
+    AUTH_ERR && h('p', { class: 'hint' }, tr`로그인하지 못했어요 — 잠시 뒤 다시 해 보세요`),
     TAMPER && h('p', { class: 'hint' }, TAMPER === 'bak' ? tr`저장 기록이 게임 밖에서 바뀌어 바로 전 저장으로 되돌렸어요` : tr`저장 기록이 게임 밖에서 바뀌어 기록을 처음부터 시작해요`),
-    h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), () => shop()), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(tr`토벌 시작!`, chars, 'main')),
+    h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), () => shop()), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(h('span', {}, ic('inf'), tr` 랭킹`), () => ranking()), btn(tr`토벌 시작!`, chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? tr`토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : tr`몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, tr`비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ`),
     STATS.url && h('p', { class: 'fine' }, tr`게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)와 방문 통계(Google 애널리틱스)를 모아요 · `,
       h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? tr`다시 보내기` : tr`보내지 않기` } }, save.noStats ? tr`다시 보내기` : tr`보내지 않기`)),
-    h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
+    h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('button', { type: 'button', class: 'linkish', onclick: privacy }, tr`개인정보 처리방침`))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
 function pickChar(i) {
@@ -3747,7 +4045,7 @@ const bestText = id => { const b = save.best[bestKey(id, save.diff)]; return b ?
 function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 글자만 바꾼다(깜빡임 없이)
   save.diff = k; persist()
   for (const b of ui.querySelectorAll('.diff button')) { const on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)) }
-  ui.querySelector('.diff-note').textContent = DIFF[k].note
+  for (const n of ui.querySelectorAll('.diff-note span')) n.classList.toggle('on', n.dataset.k === k)
   ui.querySelectorAll('.char .best').forEach((el, i) => { el.textContent = bestText(CHARS[i].id) })
 }
 function chars() {
@@ -3761,7 +4059,7 @@ function chars() {
         h('span', { class: 'best' }, bestText(ch.id)))
     })),
     h('div', { class: 'diff', role: 'radiogroup', 'aria-label': tr`난이도` }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, [ic(k), ` ${d.name}`]))),
-    h('p', { class: 'diff-note' }, DIFF[save.diff].note),
+    h('p', { class: 'diff-note' }, Object.entries(DIFF).map(([k, d]) => h('span', { class: k === save.diff ? 'on' : '', 'data-k': k }, d.note))),   // 설명을 겹쳐 두고 고른 것만 — 높이가 그대로라 아래 단추가 출렁이지 않는다
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title), btn(tr`토벌 시작!`, () => startGame(pickCi), 'main'))))
 }
 setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리걸음
@@ -3770,6 +4068,28 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   if (!cv?._walk?.length) return
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
+/** 개인정보 처리방침 — 처음 화면 맨 아래 링크 · 주소 ?privacy 로 바로(카카오 · 구글 로그인 설정에 넣는 주소: https://chii-ka-wa.github.io/?privacy)
+ *  고치면 PRIVACY_DAY(시행일)도. 실제와 같아야 한다 — 보관 기간은 supabase/account.sql 의 gc() · 비우기(scrub) · delete_me 와 맞춘다 */
+const PRIVACY_DAY = '2026-11-18'
+function privacy() {
+  mode = 'privacy'
+  const sec = (t, ...li) => [h('h3', { class: 'day' }, t), h('ul', { class: 'pv' }, li.map(s => h('li', {}, s)))]
+  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, tr`개인정보 처리방침`), h('p', { class: 'sub' }, tr`시행일 ${new Date(PRIVACY_DAY + 'T12:00').toLocaleDateString(LANG, { year: 'numeric', month: 'long', day: 'numeric' })}`),
+    h('div', { class: 'scroll' },
+      sec(tr`1. 로그인하지 않으면`, tr`게임 기록은 이 기기 브라우저에만 저장되고 서버로 보내지 않습니다.`,
+        tr`게임을 고치려고 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 등 개인을 알 수 없는 정보)와 방문 통계(Google 애널리틱스, 쿠키 사용)를 모읍니다. 처음 화면의 「보내지 않기」나 브라우저의 추적 거부 설정으로 끌 수 있습니다.`,
+        tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
+      sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록`,
+        tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`),
+      sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남깁니다. 90일 뒤 지우고, 차단된 경우는 차단 기간이 끝날 때까지 보관합니다.`),
+      sec(tr`4. 보관과 삭제`, tr`계정 정보는 탈퇴할 때까지 보관합니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있고, 계정 · 게임 저장 · 랭킹 기록이 바로 지워집니다. 이 기기 브라우저의 기록은 남습니다.`),
+      sec(tr`5. 처리를 맡기는 곳`, tr`Supabase — 계정 · 저장 · 랭킹 · 통계 보관(서버 위치 호주 시드니)`, tr`Google — 방문 통계, 구글 로그인`, tr`Kakao — 카카오 로그인`, tr`GitHub — 사이트 호스팅`,
+        tr`국외 이전 — 위 정보는 서비스를 쓸 때 네트워크로 호주의 Supabase 서버와 미국의 Google · GitHub 로 전송됩니다. 목적: 게임 서비스 · 통계 / 보관: 위 기간 / 거부: 로그인과 통계를 쓰지 않으면 게임 기록은 전송되지 않습니다. 랭킹 화면을 열 때만 랭킹을 받아 오려고 Supabase 에 접속합니다(사이트를 여는 접속 정보는 GitHub 로 갑니다).`,
+        tr`Supabase · Google · GitHub 는 접속할 때의 IP 등 접속 기록을 각자의 방침에 따라 잠깐 보관합니다(Supabase 는 약 1일).`),
+      sec(tr`6. 만 14세 미만`, tr`로그인은 선택입니다. 만 14세 미만은 보호자와 함께 로그인해 주세요.`),
+      sec(tr`7. 문의`, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))),
+    h('div', { class: 'row' }, btn(tr`← 처음으로`, title, 'main'))))
+}
 function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스크롤
   mode = 'notes'; save.seen = PATCH_ID; persist()
   show(h('div', { class: 'panel guide pick' },
@@ -3794,7 +4114,7 @@ function guide() {
       step('slipper', tr`방향키 · WASD로 움직여요. 휴대폰은 화면을 누른 채로 끌어요`),
       step('sasu', tr`공격은 알아서 나가요!`),
       step('clock', tr`Esc · P · 오른쪽 위 단추 — 잠깐 멈춰요`),
-      step('wind', tr`×2 단추 — 게임이 2배 빨라져요`)),
+      step('wind', tr`×2 단추 — 게임이 2배 빨라져요(어려움을 클리어하면 한 번 더 눌러 3배)`)),
     sec('play', 'chest', tr`놀이 방법`),
     h('ul', { class: 'steps' },
       step('wage', tr`적을 쓰러뜨리면 보석이 떨어져요. 주우면 경험치가 차고 레벨 업!`),
@@ -3904,27 +4224,31 @@ function finish(win, quit = false) {
   const b = save.best[bestKey(G.ch.id, G.diff)] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
   save.runs++; save.kills += G.kills
   report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
-  const dress = win && G.diff === 'hard' && !b.clears && OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach' && OUTFIT[k].ch)   // 그 캐릭터로 처음 어려움 클리어 — 업적 의상
-  const fire = win && G.diff === 'hard' && G.winter && !OUTFIT.fire.won()   // 겨울 맵을 처음 어려움으로 클리어 — 불꽃 옷(모두)
+  const hardish = G.diff === 'hard' || G.inf; win ||= G.inf && G.loop.lv > 0   // 무한 — 쓰러져도 세이렌을 한 번 쓰러뜨렸으면 클리어(업적 · 의상 · 보상금)
+  const dress = win && hardish && !b.clears && OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach' && OUTFIT[k].ch)   // 그 캐릭터로 처음 어려움 클리어 — 업적 의상
+  const fire = win && hardish && G.winter && !OUTFIT.fire.won()   // 겨울 맵을 처음 어려움으로 클리어 — 불꽃 옷(모두)
   const wsk = win && G.winter && G.diff !== 'easy' && !save.wwin.includes(G.ch.id) && WSKINS_OF(G.ch.id).find(k => WSKIN[k].tier === 'winter')   // 그 캐릭터로 겨울 맵을 처음 보통 이상 클리어 — 겨울 무기 스킨
   if (wsk) save.wwin.push(G.ch.id)
   if (win) { save.clears++; b.clears++ }
   const pay = bounty(win); save.coin += pay.sum
   const got = achieve(win, pay.sum)
+  if (G.inf) b.lv = Math.max(b.lv || 0, G.loop.lv); save.last = Date.now()   // 무한 최고 단계 · 마지막으로 한 때(기록 고르기 창)
   b.t = Math.max(b.t, G.t); b.kills = Math.max(b.kills, G.kills); b.lvl = Math.max(b.lvl, G.lvl)
   persist()
   const stat = (k, v, n) => h('div', {}, h('small', {}, k), h('b', {}, v), n && h('span', { class: 'new' }, 'NEW'))
   show(h('div', { class: `panel result${win ? ' win' : ''}` },
     portrait(G.ch.id),
-    h('p', { class: 'h' }, win ? [G.endKind === 'time' ? tr`30분 생존! ` : tr`토벌 성공! `, ic('party')] : quit ? tr`토벌 중단` : tr`쓰러졌다… 와아…`),
-    h('p', { class: 'sub' }, win ? (G.endKind === 'time' ? tr`검은 별똥별에게서 끝까지 도망쳤어요!` : tr`세이렌을 쫓아냈어요!`) : G.final ? tr`세이렌까지 왔어요! 조금만 더` : tr`세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
+    h('p', { class: 'h' }, G.inf && G.loop.lv ? [tr`무한 ${G.loop.lv}단계! `, ic('party')] : win ? [G.endKind === 'time' ? tr`30분 생존! ` : tr`토벌 성공! `, ic('party')] : quit ? tr`토벌 중단` : tr`쓰러졌다… 와아…`),
+    h('p', { class: 'sub' }, G.inf && G.loop.lv ? tr`세이렌을 ${G.loop.sirens}명 쫓아냈어요! 더 멀리 가 봐요` : win ? (G.endKind === 'time' ? tr`검은 별똥별에게서 끝까지 도망쳤어요!` : tr`세이렌을 쫓아냈어요!`) : G.final ? tr`세이렌까지 왔어요! 조금만 더` : tr`세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))} 남았어요`),
     h('p', { class: `lvl-badge ${G.diff}` }, ic(G.diff), ` ${G.D.name}`),
-    h('div', { class: 'stats' }, stat(tr`버틴 시간`, fmt(G.t), rec), stat(tr`레벨`, G.lvl), stat(tr`처치`, G.kills.toLocaleString()), stat(tr`보스`, G.bosses)),
+    G.inf && rankLine(),   // 무한 — 랭킹 #순위(로그인) / 로그인 안내
+    h('div', { class: 'stats' }, G.inf ? [stat(tr`도달 단계`, `∞ ${G.loop.lv}`), stat(tr`버틴 시간`, fmt(G.t), rec), stat(tr`처치`, G.kills.toLocaleString()), stat(tr`보스`, G.bosses)]   // 무한은 랭킹 순서대로
+      : [stat(tr`버틴 시간`, fmt(G.t), rec), stat(tr`레벨`, G.lvl), stat(tr`처치`, G.kills.toLocaleString()), stat(tr`보스`, G.bosses)]),
     h('div', { class: 'coin pay' },   // 토벌 보상금 · 떠돌이 보물상자 · 합계를 줄마다
       h('p', {}, ic('coin'), h('span', {}, tr`토벌 보상금`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''}`)), h('b', {}, `+${pay.base.toLocaleString()}`)),
       h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 돌아다니면 가끔 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
       h('p', { class: 'sum' }, h('span', {}, tr`합계`), h('b', {}, `+${pay.sum.toLocaleString()}`))),
-    ...[dress, fire && 'fire'].filter(Boolean).map(oid => h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), h('span', {}, portrait(G.ch.id, oid), ` ${OUTFIT[oid].name}`), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`))),
+    (dress || fire) && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), [dress, fire && 'fire'].filter(Boolean).map(oid => h('span', {}, portrait(G.ch.id, oid), ` ${OUTFIT[oid].name}`)), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`)),   // 여러 벌이어도 제목 · 안내는 한 번
     wsk && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`겨울 무기 스킨을 받았어요!`), h('span', {}, portrait(G.ch.id, wornId(G.ch.id), wsk), ` ${WSKIN[wsk].name}`), h('small', {}, tr`상점 「무기 스킨」 탭에서 바꿀 수 있어요`)),
     got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, tr`업적 달성!`), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? tr` — 보상금 +1%` : ''}`))),
     chips(), dmgTable(),
@@ -3935,13 +4259,14 @@ function bounty(win) {
   const parts = [[tr`버틴 시간`, G.t / 10], [tr`처치`, G.kills / 200], [tr`보스`, G.bosses * 15], [tr`클리어`, win ? 60 : 0]].map(([k, v]) => [k, Math.floor(v * G.D.coin)])
   const base = parts.reduce((a, p) => a + p[1], 0), g = golds(), bonus = Math.ceil(base * g / 100)   // 업적 금메달 하나마다 +1%(올림 — 금메달이 있으면 적어도 1)
   if (bonus) parts.push([tr`금메달 ${g}개 보너스`, bonus])
-  return { parts, base: base + bonus, found: G.found, sum: base + bonus + G.found }   // 떠돌이 보물상자에서 받은 것은 그대로(난이도 배수 · 금메달 보너스 없이) — 결과 화면에서 따로 한 줄
+  const cb = coll('coin') && Math.ceil(base * coll('coin')); if (cb) parts.push([tr`의상 보유 효과`, cb])   // 의상 보유 효과 — 토벌 보상금 +%
+  return { parts, base: base + bonus + cb, found: G.found, sum: base + bonus + cb + G.found }   // 떠돌이 보물상자에서 받은 것은 그대로(난이도 배수 · 금메달 보너스 없이) — 결과 화면에서 따로 한 줄
 }
 /** 판이 끝나면 업적 누적을 더하고, 새로 딴 메달 [id, 단계] 를 돌려준다 */
 function achieve(win, coin) {
   const A = save.ach, before = Object.fromEntries(Object.keys(ACH).map(id => [id, tierOf(id)])), add = (k, n) => { A[k] = (A[k] || 0) + n }
   add('goblin', G.gob); add('pajama', G.pj); add('lv8', G.weapons.filter(w => w.lv >= 8).length); add('aw', G.aw.size); add('parry', G.parried); save.awSeen = [...new Set([...(save.awSeen || []), ...G.aw])]; add('coin', coin); add('jackpot', G.jackpots); add('boss', G.bosses)
-  if (win) { add(G.endKind === 'time' ? 'survive' : 'clear', 1); if (G.diff === 'hard') add('hard', 1); if (G.diff === 'hard' && G.winter) add('winter', 1) }
+  if (win) { add(G.endKind === 'time' ? 'survive' : 'clear', 1); if (G.diff === 'hard' || G.inf) add('hard', 1); if ((G.diff === 'hard' || G.inf) && G.winter) add('winter', 1) }   // 무한도 세이렌을 쓰러뜨렸으면 어려움 클리어로
   add('storm', G.storms)
   if (G.t >= 300 && (G.hit0 ?? G.t) >= 300) add('nohit', 1)
   return Object.keys(ACH).filter(id => tierOf(id) > before[id]).map(id => [id, tierOf(id)])
@@ -3975,14 +4300,15 @@ function frame(ts) {
   if (last) autoQ(ts - last)
   let dt = Math.min(0.05, last ? (ts - last) / 1000 : 0.016)
   last = ts; tnow += dt
-  if (mode === 'play' && G) { if (G.dying > 0) dt *= 0.3; for (let i = 0; i < spd && mode === 'play'; i++) step(dt) }   // 2배속은 한 프레임에 두 번(한 번에 길게 돌리면 빠른 탄이 적을 지나친다)
+  if (mode === 'play' && G) { guardIn(); if (G.dying > 0) dt *= 0.3; for (let i = 0; i < spd && mode === 'play'; i++) step(dt); guardOut() }   // 2배속은 한 프레임에 두 번(한 번에 길게 돌리면 빠른 탄이 적을 지나친다)
   else if (!G) cam.x += dt * 24
   if (mode !== lastMode) { lastMode = mode; still = 2 }
   if (mode === 'play' || !G || still-- > 0) render()   // 상자 · 일시정지 · 결과 동안은 다시 그리지 않는다 — 메뉴 연출이 부드럽게
   requestAnimationFrame(frame)
 }
 size()
-title()
+if (/[?&]privacy\b/.test(location.search)) privacy(); else title()
 requestAnimationFrame(frame)
+if (auth) link()   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 로그인했으면 닉네임부터)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

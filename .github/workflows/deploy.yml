@@ -1,0 +1,23 @@
+# 배포 — main 에 푸시하면 난독화 빌드(test/build.cjs → dist/)만 GitHub Pages 로 올린다. 저장소 파일을 그대로 내보내지 않는다
+#   준비(한 번): Settings › Pages › Build and deployment › Source 를 「GitHub Actions」로
+name: deploy
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+permissions: { contents: read, pages: write, id-token: write }
+concurrency: { group: pages, cancel-in-progress: false }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm i --no-save --no-audit --no-fund terser@5.51.0 javascript-obfuscator@5.9.1
+      - run: node test/i18n.cjs
+      - run: node test/build.cjs
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: dist }
+      - id: d
+        uses: actions/deploy-pages@v4

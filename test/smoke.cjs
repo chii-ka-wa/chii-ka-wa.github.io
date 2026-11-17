@@ -2,7 +2,7 @@
 //   처음 화면 → 캐릭터 → 판 → 상자 → 최종보스까지 빨리 돌리기(무적) → 세이렌 → 클리어. 콘솔 에러가 하나라도 있으면 실패
 const { chromium } = require('playwright')
 const OUT = __dirname + '/shots/'; require('fs').mkdirSync(OUT, { recursive: true })
-const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END = 30 * 60
+const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END = 30 * 60, M_INF = { rest: 12, gap: 60, dark: 240 }   // 무한 — game.js INF 와 같게
 
 ;(async () => {
   const browser = await chromium.launch()
@@ -10,7 +10,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   const run = async (name, viewport, fn) => {
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
-    page.on('request', q => { if (q.url().includes('.supabase.co')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다
+    page.on('request', q => { if (q.url().includes('.supabase.co') && name !== 'acct') errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
     await fn(page)
@@ -336,8 +336,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (a.coin !== 1000 || a.wear !== 'pj' || !a.richOff || !a.achOff || b.wear !== 'a_chiikawa' || !(b.fx > 0)) errors.push('[outfit] 의상 ' + JSON.stringify({ a, b }))
   })
 
-  await run('skins', { width: 420, height: 900 }, async page => {   // 무기 스킨(상점 20,000 · 업적은 보통 클리어) · 스킬 스킨(상점 30,000 · 각성해 본 스킬은 그냥) — 켜면 게임에서 G.sk 에
-    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ coin: 55000, noStats: true, awSeen: ['yaha'] })) }); await page.reload(); await page.waitForTimeout(500)
+  await run('skins', { width: 420, height: 900 }, async page => {   // 무기 스킨(상점 10,000 · 업적은 보통 클리어) · 스킬 스킨(상점 10,000 · 각성해 본 스킬은 그냥) — 켜면 게임에서 G.sk 에
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ coin: 25000, noStats: true, awSeen: ['yaha'] })) }); await page.reload(); await page.waitForTimeout(500)
     await page.evaluate(() => window.__mjg.shop('weapon', 0)); await page.waitForTimeout(150); await noEmoji(page, 'skins')
     let b = page.locator('.list.wr li.wr-rich .btn.buy'); await b.click(); await b.click(); await page.waitForTimeout(150)
     const w = await page.evaluate(() => ({ wear: JSON.parse(localStorage.getItem('mjg.v1')).wear['w:chiikawa'], achOff: document.querySelector('.list.wr li.wr-ach .btn.buy').disabled, winterOff: document.querySelector('.list.wr li.wr-winter .btn.buy').disabled }))
@@ -400,6 +400,77 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   })
 
   // 언어 — 처음 화면 오른쪽 위에서 고르면 기억하고 다시 불러온다. 다른 말에서는 처음 화면 · 도감 · 패치노트 · 캐릭터 고르기 · 레벨 업 상자 · 일시정지에 한국어가 남지 않는다(언어 이름 「한국어」 빼고)
+  await run('inf', { width: 1280, height: 800 }, async page => {   // 무한 — 세이렌을 쓰러뜨려도 판이 이어지고, 보스 둘씩 → 세이렌 둘 → 4분 넘으면 검은 별똥별
+    await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, diff: 'inf', seen: 1 }))); await page.reload(); await page.waitForTimeout(400)
+    const go = (sec, who = '') => page.evaluate(([sec, who]) => { const M = window.__mjg, G = M.G
+      for (let i = 0; i < sec * 20; i++) { M.pl.inv = 9; G.next = 1e12; G.rest = null; M.step(0.05)
+        for (const e of G.foes) if (e.boss && !e.dead && (who === 'boss' ? e.kind !== 'siren' && e.kind !== 'mermaid' : e.kind === who)) M.kill(e) }
+      return { lv: G.loop.lv, q: G.loop.queue.length, n: G.foes.filter(e => e.loop && !e.dead).length, sirens: G.final?.sirens?.filter(s => !s.dead).length || 0, dark: !!G.dark, mode: M.mode } }, [sec, who])
+    await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = M.FINAL_T - 1 })
+    await go(2, 'boss'); await go(0.2, 'mermaid'); const a = await go(0.2, 'siren')   // 첫 세이렌 → 1단계
+    const b = await go(M_INF.rest + 1)   // 보스 둘
+    await go(0.2, 'boss'); await go(M_INF.gap + 1); await go(0.2, 'boss'); await go(M_INF.gap + 1); const c = await go(0.2, 'boss')   // 여섯을 다 쓰러뜨리면 세이렌 둘
+    const d = await go(M_INF.dark + 2)   // 4분 — 검은 별똥별
+    await go(0.2, 'mermaid'); const e = await go(0.2, 'siren')   // 다 쓰러뜨리면 2단계, 검은 별똥별은 사라진다
+    console.log('inf', a, b, c, d, e)
+    if (a.lv !== 1 || a.mode !== 'play' || b.n !== 2 || c.sirens !== 2 || !d.dark || e.lv !== 2 || e.dark) errors.push(`[inf] ${JSON.stringify({ a, b, c, d, e })}`)
+  })
+
+  await run('guard', { width: 900, height: 700 }, async page => {   // 부정 플레이 봉인(?guard) — 진짜 프레임으로 돌리며 상자 고르기 · 일시정지엔 표시가 없고, 프레임 사이에 체력을 고치면 표시
+    await page.goto(URL + '?guard'); await page.waitForTimeout(600)
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1 })) }); await page.reload(); await page.waitForTimeout(600)
+    await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForTimeout(1500)
+    await page.evaluate(() => { window.__mjg.G.queue.push('level', 'level') }); await page.waitForTimeout(700)   // 상자 둘 — 다음 step 이 연다
+    for (let i = 0; i < 2; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(600) }
+    await page.keyboard.press('KeyP'); await page.waitForTimeout(200); await page.keyboard.press('KeyP'); await page.waitForTimeout(800)
+    const ok = await page.evaluate(() => ({ bad: window.__mjg.G.bad || null, mode: window.__mjg.mode, lvl: window.__mjg.G.weapons.map(w => w.lv).join() }))
+    await page.evaluate(() => { window.__mjg.pl.hp = 99999 }); await page.waitForTimeout(300)
+    const bad = await page.evaluate(() => window.__mjg.G.bad)
+    console.log('guard', { ok, bad })
+    if (ok.bad || ok.mode !== 'play' || !bad?.includes('seal')) errors.push('[guard] ' + JSON.stringify({ ok, bad }))
+  })
+  await run('acct', { width: 390, height: 844 }, async page => {   // 계정 · 랭킹 — Supabase 를 흉내 낸다(로그인 토큰 · 랭킹 · 닉네임 · 기록 올리기)
+    const row = (rank, nick, ch, me) => ({ rank, nick, ch, lv: 9 - rank, bosses: 30 - rank, bt: 2000, t: 2400, kills: 9000, lvl: 300, weapons: 'sasu9 ramen8', passives: 'manju5', slain: 'siren3 chef2', winter: true, at: '2026-11-17T10:00:00Z', me })
+    const sent = []; let body = null
+    await page.route('**/*.supabase.co/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); sent.push(u.split('/').pop())
+      if (u.includes('top_ranks')) return j([row(1, 'A', 'usagi'), row(2, '치이카와팬', 'chiikawa', true)]); if (u.includes('my_rank')) return j([row(2, '치이카와팬', 'chiikawa', true)])
+      if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('submit_rank')) { body = r.request().postDataJSON(); return j({ r: 'ok', rank: 2 }) } if (u.includes('start_run')) return j('tok-1'); if (u.includes('delete_me')) return j('ok'); if (u.includes('saves?select')) return j([])
+      return r.fulfill({ status: 204 }) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, diff: 'inf', seen: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
+    await page.reload(); await page.waitForTimeout(800)
+    const pill = await page.locator('.acct .nm').textContent()
+    await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400)
+    const rows = await page.locator('.list.rank li').count(), mine = await page.locator('.panel.rank .mine li.me').count()
+    await page.locator('.list.rank li').first().click(); await page.waitForTimeout(150); const info = await page.locator('.modal .lvl-badge').textContent()
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100); const closed = await page.locator('.modal').count(), still = await page.evaluate(() => window.__mjg.mode)
+    await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForTimeout(300)   // start_run 이 tok 을 돌려줄 때까지
+    await page.evaluate(() => { const M = window.__mjg; M.G.loop.lv = 2; M.finish(false) }); await page.waitForTimeout(500)
+    const line = await page.locator('.rankline').textContent()
+    const ck = body && require('crypto').createHash('sha256').update(['tok-1', body.ch, body.lv, body.bosses, body.bt, body.t, body.kills, body.lvl, body.weapons, body.hit0, body.v, 'mjg|r7Q'].join('|')).digest('hex')   // 체크섬 — SQL(submit_rank)과 같은 순서
+    if (!body || body.ck !== ck) errors.push('[acct] 체크섬 ' + JSON.stringify({ body, ck }))
+    console.log('acct', { pill, rows, mine, info, closed, still, line, sent: [...new Set(sent)] })
+    await page.reload(); await page.waitForTimeout(800)   // 계정 지우기 — 닉네임을 똑같이 써야 눌리고, 지우면 로그아웃
+    await page.locator('.acct summary').click(); await page.locator('.acct button.del').click(); await page.waitForTimeout(100)
+    const go = page.locator('.modal .btn.danger'), off0 = await go.isDisabled()
+    await page.locator('.modal input').fill('치이카와'); const off1 = await go.isDisabled()
+    await page.locator('.modal input').fill('치이카와팬'); const on = !(await go.isDisabled()); await go.click(); await page.waitForTimeout(400)
+    const del = { off0, off1, on, sent: sent.includes('delete_me'), out: await page.locator('button.acct').count(), auth: await page.evaluate(() => localStorage.getItem('mjg.auth')), modal: await page.locator('.modal').count() }
+    console.log('acct delete', del)
+    if (!off0 || !off1 || !on || !del.sent || del.out !== 1 || del.auth || del.modal) errors.push('[acct] 계정 지우기 ' + JSON.stringify(del))
+    if (pill !== '치이카와팬' || rows !== 2 || mine !== 1 || !/8/.test(info) || closed || still !== 'rank' || !line.includes('#2') || !sent.includes('start_run') || !sent.includes('submit_rank')) errors.push('[acct] ' + JSON.stringify({ pill, rows, mine, info, closed, still, line, sent }))
+  })
+
+  await run('privacy', { width: 390, height: 844 }, async page => {   // 개인정보 처리방침 — 처음 화면 링크 · ?lang=en&privacy 로 바로(그 말로)
+    await page.locator('.fine .linkish', { hasText: '개인정보 처리방침' }).click(); await page.waitForTimeout(200)
+    const ko = { h: await page.locator('#ui .panel .h').textContent(), n: await page.locator('#ui ul.pv li').count(), mode: await page.evaluate(() => window.__mjg.mode) }
+    await page.screenshot({ path: OUT + 'privacy.png' }); await page.keyboard.press('Escape'); await page.waitForTimeout(150); ko.back = await page.evaluate(() => window.__mjg.mode)
+    await page.goto(new globalThis.URL('?lang=en&privacy', URL).href); await page.waitForTimeout(800)
+    const en = { h: await page.locator('#ui .panel .h').textContent(), q: await page.evaluate(() => location.search), han: await page.evaluate(() => (document.querySelector('#ui').innerText.match(/[가-힣]+/g) || []).slice(0, 4)) }
+    await page.screenshot({ path: OUT + 'privacy-en.png' }); await page.evaluate(() => localStorage.removeItem('mjg.v1'))
+    console.log('privacy', { ko, en })
+    if (ko.h !== '개인정보 처리방침' || ko.n < 15 || ko.mode !== 'privacy' || ko.back !== 'title' || en.h !== 'Privacy Policy' || !/^\?privacy=?$/.test(en.q) || en.han.length) errors.push('[privacy] ' + JSON.stringify({ ko, en }))
+  })
+
   await run('lang', { width: 1280, height: 800 }, async page => {
     const han = () => page.evaluate(() => (document.querySelector('#ui').innerText.replace(/한국어/g, '').match(/[가-힣]+/g) || []).slice(0, 6))
     for (const code of ['ja', 'en', 'zh-CN', 'zh-TW']) {
@@ -420,7 +491,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     }
     // 나라별 홍보 링크 /en/ · /ja/ · /zh-cn/ · /zh-tw/ — 게임(/?lang=…)으로 넘어가 그 말로 정하고 기억, 주소의 ?lang= 은 지운다
     for (const [dir, code] of [['en', 'en'], ['ja', 'ja'], ['zh-cn', 'zh-CN'], ['zh-tw', 'zh-TW']]) {
-      await page.evaluate(() => localStorage.clear()); await page.goto(URL + dir + '/'); await page.waitForURL(u => u.pathname === '/'); await page.waitForTimeout(600)
+      await page.evaluate(() => localStorage.clear()); await page.goto(URL + dir + '/'); await page.waitForURL(u => u.pathname === new globalThis.URL(URL).pathname); await page.waitForTimeout(600)
       const via = await page.evaluate(() => ({ lang: document.documentElement.lang, saved: JSON.parse(localStorage.getItem('mjg.v1') || '{}').lang, search: location.search, han: (document.querySelector('#ui').innerText.replace(/한국어/g, '').match(/[가-힣]+/g) || []).length }))
       if (via.lang !== code || via.saved !== code || via.search || via.han) errors.push(`[lang] /${dir}/ ` + JSON.stringify(via))
     }
