@@ -104,6 +104,10 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-16', [
+    ['new', 'shirt', tr`의상이 생겼어요! 상점 「의상」 탭에서 사요 — 한 번 사면 모든 캐릭터가 입어요`],
+    ['new', 'hard', tr`어려움을 클리어하면 그 캐릭터의 특별한 업적 의상을 받아요`],
+    ['new', 'sasu', tr`무기 스킨이 생겼어요! 손에 든 무기 모양이 바뀌어요`],
+    ['new', 'awaken', tr`스킬 스킨이 생겼어요! 스킬 색이 바뀌고 반짝반짝 — 각성해 본 스킬은 그냥 받아요`],
     ['new', 'globe', tr`이제 다른 나라 말로도 놀 수 있어요! 처음 화면 오른쪽 위에서 골라요 — 한국어 · 日本語 · English · 简体中文 · 繁體中文`],
     ['fix', 'party', tr`패치노트를 그림과 쉬운 말로 바꿨어요`],
     ['fix', 'awaken', tr`각성 상자에서도 Enter · Space 키로 받을 수 있어요`],
@@ -309,7 +313,8 @@ try { Object.assign(save, JSON.parse(localStorage.getItem(LS)) || {}) } catch {}
 if (!DIFF[save.diff]) save.diff = 'normal'
 save.up ||= {}; save.coin = Math.max(0, save.coin | 0); save.stone = Math.max(0, save.stone | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금 · 가진 부활석
 const STONE = 1000   // 부활석 값(상점) — 쓰러졌을 때 하나 써서 다시 일어난다(판마다 DIFF.revive 번까지)
-save.ach ||= { clear: save.clears || 0 }   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
+save.ach ||= { clear: save.clears || 0 }
+save.owned ||= []; save.wear ||= {}; save.skin ||= {}   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
 const persist = () => { try { localStorage.setItem(LS, JSON.stringify(save)) } catch {} }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
@@ -580,6 +585,8 @@ function fluff(g, S, cy, n = 50) {   // 복슬복슬한 테두리 — 바깥으�
 }
 /** o: W · H 몸, fur 털, limb 발 색, armFill 팔 색, arms 'cheek'(볼에 손) | 'none', fluffy 복슬 테두리,
  *     back 몸 뒤(꼬리 · 집게), cap 몸 안 무늬, ears 몸 테두리 위에 이어 붙는 것(귀 · 갈기), face, front 몸 앞, hold 보는 쪽 손에 든 것 */
+/** 칠하는 색만 바꾼 붓(테두리는 그대로) — 의상을 입으면 귀를 옷 색으로 그릴 때 */
+const tintCtx = (g, col) => new Proxy(g, { get: (t, k) => { const v = t[k]; return typeof v === 'function' ? v.bind(t) : v }, set: (t, k, v) => { t[k] = k === 'fillStyle' && v !== OUT ? col : v; return true } })
 function mochi(g, o, p = {}) {
   const W = o.W || 25, H = o.H || 24, hw = W / 2, t = -1 - H, mid = o.mid || 0.42, S = mochiSegs(W, H, mid, o.wide, o.thin, o.bw, o.neck, o.jw), P = segPath(S), foot = p.foot || 0, arm = p.arm || 0, limb = o.limb || o.fur, af = o.armFill || limb
   const thin = !!o.thin, L = thin ? 1 : 0, bob = p.bob || 0, J = o.neck && headJoin(W, H, o.neck, o.jw)   // 주인공 — 짧고 가는 팔다리, 몸을 다리 길이만큼 띄운다
@@ -590,7 +597,7 @@ function mochi(g, o, p = {}) {
     g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = edge ? OUT : col; g.lineWidth = edge ? w + LW * 2 : w
     g.beginPath(); g.moveTo(q[0], q[1]); g.quadraticCurveTo(q[2], q[3], q[4], q[5]); g.stroke()
   }
-  const hold = thin && o.hold && !p.bare, hx = thin ? ax + 1.7 : ax, hy = thin ? ay + 1.8 - arm * 0.6 : ay - arm * 1.1   // 쥔 손 자리
+  const hd = p.wskin?.hold || o.hold, hold = thin && hd && !p.bare, hx = thin ? ax + 1.7 : ax, hy = thin ? ay + 1.8 - arm * 0.6 : ay - arm * 1.1   // 쥔 손 자리
   const legs = edge => { for (const s of [-1, 1]) { const ph = s * foot, up = Math.max(0, ph) * 0.9, dx = ph * 0.8; tube([s * 3.1, -2.6 - bob, s * 3.1 + dx * 0.5, L - 1.2 - bob - up * 0.5, s * 3.1 + dx, L - 0.95 - up - bob], 1.9, limb, edge) } }   // 짧은 두 다리 — 걸을 때 번갈아 들어 가는 쪽으로 내딛는다
   const arms = edge => {
     for (const s of [-1, 1]) {
@@ -599,23 +606,28 @@ function mochi(g, o, p = {}) {
       const sw = -s * arm; tube([s * ax, ay, s * (ax + 1.1) + sw * 0.5, ay + 0.6, s * (ax + 1.5) + sw * 1.1, ay + 1.8 - Math.abs(sw) * 0.3], 1.35, af, edge)   // 늘어뜨린 팔 — 발과 엇갈려 흔든다
     }
   }
+  const O = p.outfit, q = O && { W, H, hw, t, y: f => t + H * f, mid, ay, ax, P, look: p.look || 0, neck: ay - 0.5, fur: o.fur }   // neck — 목(팔이 붙는 높이), 옷은 여기서부터   // 의상 — 몸 크기를 넘겨 몸에 맞게 그린다
   g.save(); g.translate(0, -L)
-  if (!thin) o.back?.(g, p)
+  if (!thin) { o.back?.(g, p); O?.back?.(g, q, p) }
   if (!thin && o.feet !== false) for (const s of [-1, 1]) { const lift = Math.max(0, s * foot); blob(g, s * (3.3 + lift * 0.5), -0.9 - lift * 1.4, 2.3, 1.35, limb, LW) }   // 작은 발 — 걸을 때 번갈아 든다
   g.save(); g.translate(0, bob)
-  if (thin) { o.back?.(g, p); legs(true); arms(true) }   // 주인공은 뒤(꼬리 · 갈기 · 집게)도 몸과 함께 오르내린다
+  if (thin) { o.back?.(g, p); O?.back?.(g, q, p); legs(true); arms(true) }   // 주인공은 뒤(꼬리 · 갈기 · 집게)도 몸과 함께 오르내린다
   g.fillStyle = o.fur; g.fill(P)
   if (o.cap) { g.save(); g.clip(P); o.cap(g, p, P); g.restore() }
+  if (O?.body) { g.save(); g.clip(P); O.body(g, q, p); g.restore() }   // 옷 — 몸 테두리 안에(테두리는 위에 다시 긋는다)
   g.lineWidth = LW; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke(P)
   if (o.fluffy) fluff(g, S, t + H / 2)
   if (thin) legs(false)
-  o.ears?.(g, p, P)
+  const ears = () => o.ears?.(O?.earCol ? tintCtx(g, O.earCol) : g, p, P)   // 의상을 입어도 그 친구의 귀 모양 그대로 — 후드면 옷 색으로(earCol)
+  if (!O?.noEars && !O?.earsOver) ears()
   if (thin) arms(false)
   else if (o.arms === 'cheek') for (const s of [-1, 1]) blob(g, s * 7.6, t + H * 0.62 - s * arm * 0.5, 1.7, 2.1, af, 0.6)   // 볼 아래에 댄 두 손
   else if (o.arms !== 'none') for (const s of [-1, 1]) bump(g, s * ax, ay - s * arm * 1.1, 1.7, 2.4, s * 0.45, af, s > 0 ? -1.7 : Math.PI - 1.9, s > 0 ? 1.9 : Math.PI + 1.7)   // 팔 — 몸 옆에 붙은 작은 혹, 발과 엇갈려 오르내린다
   g.save(); g.translate(p.look || 0, 0); o.face(g, p); g.restore()
-  o.front?.(g, p)
-  if (o.hold && !p.bare) { o.hold(g, hx, hy); thin ? blob(g, hx + 0.1, hy + 0.1, 1.15, 1.25, af, 0.6) : blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
+  O?.head?.(g, q, p)   // 모자 · 머리띠 — 귀 · 얼굴 위에
+  if (O?.earsOver && !O.noEars) ears()   // 모자는 귀가 뚫고 나온다
+  if (p.wskin && o.frontHold) p.wskin.front?.(g, p); else o.front?.(g, p)   // 무기 스킨을 끼우면 원래 든 것(앞에 그린 잔 · 책) 자리에 스킨을
+  if (hd && !p.bare) { hd(g, hx, hy); thin ? blob(g, hx + 0.1, hy + 0.1, 1.15, 1.25, af, 0.6) : blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
   g.restore(); g.restore()
 }
 /** 사스마타 — (0, 0) 에서 +x 로 자루 L(뒤쪽은 하얀 손잡이), 끝은 Y 로 갈라져 바깥으로 휘며 가늘어지는 두 갈래 · 갈래 양옆에 하얀 가시 셋씩.
@@ -644,11 +656,11 @@ function sasuShape(g, L, col) {
   g.strokeStyle = OUT; g.lineWidth = 0.35; g.beginPath(); g.moveTo(grip, -0.62); g.lineTo(grip, 0.62); g.stroke()   // 손잡이 경계
   g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 0.32; g.lineCap = 'round'; g.beginPath(); g.moveTo(grip + 0.8, -0.28); g.lineTo(L - 0.5, -0.28); g.stroke()   // 자루 윤기
 }
-function guitar(g) {   // (0, 0) 이 몸통, 목은 +x
-  for (const [c, lw] of [[OUT, 2.8], ['#8a5a3c', 1.4]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(2.6, 0); g.lineTo(12, 0); g.stroke() }
-  blob(g, 13, 0, 1.5, 1.2, '#8a5a3c', 0.8)
+function guitar(g, bodyCol = '#f0a75a', neckCol = '#8a5a3c') {   // (0, 0) 이 몸통, 목은 +x(무기 스킨은 색만 바꾼다)
+  for (const [c, lw] of [[OUT, 2.8], [neckCol, 1.4]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(2.6, 0); g.lineTo(12, 0); g.stroke() }
+  blob(g, 13, 0, 1.5, 1.2, neckCol, 0.8)
   const body = () => { g.beginPath(); g.ellipse(-2.4, 0, 3.7, 3.4, 0, 0, TAU); g.ellipse(1.4, 0, 2.8, 2.5, 0, 0, TAU) }
-  g.strokeStyle = OUT; g.lineWidth = 1.8; body(); g.stroke(); g.fillStyle = '#f0a75a'; body(); g.fill()
+  g.strokeStyle = OUT; g.lineWidth = 1.8; body(); g.stroke(); g.fillStyle = bodyCol; body(); g.fill()
   g.fillStyle = '#5a3a26'; g.beginPath(); g.arc(0.3, 0, 1, 0, TAU); g.fill()
 }
 const topEar = (g, x, y, r, fill, rot) => bump(g, x, y, r, r * 0.96, rot, fill, Math.PI * 1.02, Math.PI * 1.98)   // 머리 위 둥근 귀
@@ -677,11 +689,12 @@ function rakko(g, p) {
   const H = 26, y = f => at(H, f), fur = '#faf0d6', black = '#2f2a2a'
   mochi(g, {
     fur, W: 26, H, mid: 0.42, thin: true, neck: 0.68, jw: 0.84, fluffy: true, limb: black, arms: 'none',
-    back: (g, p) => {   // 하얀 망토 — 몸 뒤에서 양옆과 아래로 살짝 보이고, 뒤쪽 자락이 펄럭인다
+    back: (g, p) => {   // 하얀 망토 — 몸 뒤에서 양옆과 아래로 살짝 보이고, 뒤쪽 자락이 펄럭인다(의상을 입으면 뺀다)
+      if (p.outfit) return
       const v = (p.foot || 0) * 0.4, C = new Path2D(); C.moveTo(-8, y(0.66)); C.lineTo(-11.2 - v, y(1.03)); C.quadraticCurveTo(-5.6, y(1.07), 0, y(1.04)); C.quadraticCurveTo(5.6, y(1.07), 11.2 - v, y(1.03)); C.lineTo(8, y(0.66)); C.closePath()
       g.fillStyle = '#fff'; g.fill(C); g.lineWidth = 0.6; g.strokeStyle = OUT; g.lineJoin = 'round'; g.stroke(C)
       const w = (p.foot || 0) * 0.6; g.beginPath(); g.moveTo(-7.6, y(0.66)); g.quadraticCurveTo(-15.6, y(0.66) + w, -16.4, y(1) - w); g.lineTo(-14, y(0.92)); g.lineTo(-12.6, y(1.02) + w * 0.5); g.quadraticCurveTo(-10.4, y(0.9), -8.4, y(0.98)); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.65; g.strokeStyle = OUT; g.stroke() },   // 크게 펄럭이는 망토   // 망토 자락
-    cap: g => { const P = new Path2D(); P.moveTo(-14, y(0.58)); P.quadraticCurveTo(0, y(0.7), 14, y(0.58)); P.lineTo(14, y(0.74)); P.quadraticCurveTo(0, y(0.86), -14, y(0.74)); P.closePath(); g.fillStyle = '#fff'; g.fill(P); g.strokeStyle = OUT; g.lineWidth = 0.6; g.stroke(P) },   // 하얀 목도리
+    cap: (g, p) => { if (p.outfit) return; const P = new Path2D(); P.moveTo(-14, y(0.58)); P.quadraticCurveTo(0, y(0.7), 14, y(0.58)); P.lineTo(14, y(0.74)); P.quadraticCurveTo(0, y(0.86), -14, y(0.74)); P.closePath(); g.fillStyle = '#fff'; g.fill(P); g.strokeStyle = OUT; g.lineWidth = 0.6; g.stroke(P) },   // 하얀 목도리
     ears: g => { for (const s of [-1, 1]) topEar(g, s * 10.4, y(0.2), 1.6, black, s * 1.05) },
     face: (g, p) => {
       g.save(); g.translate(-6.2, y(0.25)); g.rotate(0.62)   // 네 갈래 반짝이 모양 흉터 — 오른쪽 위로 긴 한 갈래
@@ -701,7 +714,7 @@ function rakko(g, p) {
       if (p.hurt) catMouth(g, y(0.5), 1.1)
       else { catMouth(g, y(0.5), 0); g.fillStyle = OUT; g.beginPath(); g.ellipse(0, y(0.495), 0.45, 0.3, 0, 0, TAU); g.fill(); g.lineWidth = 0.45; g.beginPath(); g.moveTo(-0.55, y(0.56)); g.quadraticCurveTo(0, y(0.58), 0.55, y(0.56)); g.stroke() }   // ω 입 · 작은 코 · 아래 웃는 입
     },
-    front: g => blob(g, 0, y(0.79), 1.3, 0.95, black, 0.5),   // 목도리 매듭
+    front: (g, p) => { if (!p.outfit) blob(g, 0, y(0.79), 1.3, 0.95, black, 0.5) },   // 목도리 매듭 — 목도리 · 망토 · 매듭은 의상을 입으면 숨긴다
     hold: (g, x, y) => {
       g.save(); g.translate(x, y); g.rotate(-1.35)   // 칼을 세워 든다
       g.beginPath(); g.moveTo(1.8, -1); g.lineTo(14.6, -1); g.lineTo(16.6, 0); g.lineTo(14.6, 1); g.lineTo(1.8, 1); g.closePath(); g.fillStyle = '#d6dde6'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.65; g.stroke()
@@ -725,6 +738,7 @@ function kurimanju(g, p) {
     },
     ears: g => { for (const s of [-1, 1]) topEar(g, s * 8.6, y(0.13), 1.6, fur, s * 0.9) },   // 밤색 머리 끝 옆의 작은 귀
     face: (g, p) => { dotEyes(g, y(0.44), 4.4, 1.3, p); hatch(g, y(0.52), 8.2, 0.9); catMouth(g, y(0.52), p.hurt ? 1.1 : 0.4) },
+    frontHold: true,   // 앞에 그린 것이 든 무기(무기 스킨이면 뺀다)
     front: g => {
       g.lineWidth = 0.65; g.strokeStyle = OUT; g.beginPath(); g.arc(14.4, -7.6, 1.3, -Math.PI / 2, Math.PI / 2); g.stroke()
       g.fillStyle = '#ffc93d'; g.beginPath(); g.rect(11, -9.8, 3.4, 4.4); g.fill(); g.stroke()
@@ -750,6 +764,7 @@ function kani(g, p) {
       if (!p.hurt) { g.strokeStyle = OUT; g.lineWidth = 0.5; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 3, y(0.3)); g.lineTo(s * 5, y(0.27)); g.stroke() } }
       dotEyes(g, y(0.4), 4.2, 1.4, p); hatch(g, y(0.48), 7.6, 0.9); catMouth(g, y(0.49), p.hurt ? 1.1 : 0.55)
     },
+    frontHold: true,   // 앞에 그린 것이 든 무기(무기 스킨이면 뺀다)
     front: g => { g.save(); g.translate(-11.4, -5); g.rotate(-0.15); g.fillStyle = '#8fd14f'; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6); g.restore() },   // 초록 헌책
   }, p)
 }
@@ -1390,8 +1405,8 @@ function sprite(w, h, ox, oy, paint, k = K) {
   const c = mk(w * k, h * k), g = c.getContext('2d'); g.scale(k, k); g.translate(ox, oy); g.lineJoin = g.lineCap = 'round'; paint(g)
   return { c, w, h, ox, oy }
 }
-const artSprite = (id, k = K, p = {}) => { const [w, h, paint] = ART[id]; return sprite(w, h, w / 2, h - 3, g => paint(g, p), k) }
-const charSprites = id => ({ walk: WALK.map(p => artSprite(id, K, { ...p, look: LOOK })), idle: [artSprite(id, K, { look: LOOK }), artSprite(id, K, { look: LOOK, blink: true })], hurt: artSprite(id, K, { look: LOOK, hurt: true }) })
+const artSprite = (id, k = K, p = {}) => { const [w0, h0, paint] = ART[id], d = p.outfit || p.wskin ? 16 : 0, w = w0 + d, h = h0 + d; return sprite(w, h, w / 2, h - 3, g => paint(g, p), k) }   // 의상을 입으면 날개 · 고리가 잘리지 않게 둘레를 넓힌다
+const charSprites = (id, outfit = outfitOf(wornId(id), id), wskin = WSKIN[wornW(id)]) => ({ walk: WALK.map(p => artSprite(id, K, { ...p, look: LOOK, outfit, wskin })), idle: [artSprite(id, K, { look: LOOK, outfit, wskin }), artSprite(id, K, { look: LOOK, blink: true, outfit, wskin })], hurt: artSprite(id, K, { look: LOOK, hurt: true, outfit, wskin }) })   // 입은 의상 · 무기 스킨까지
 function flip(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.scale(-1, 1); g.drawImage(s.c, -c.width, 0); return { ...s, c, ox: s.w - s.ox } }
 function white(s) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.drawImage(s.c, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); return { ...s, c } }
 const put = (c, s, x, y, k = 1) => c.drawImage(s.c, x - s.ox * k, y - s.oy * k, s.w * k, s.h * k)
@@ -1616,6 +1631,10 @@ const ICO = {
     g.beginPath(); g.moveTo(-9.5, 6); g.quadraticCurveTo(-7, 4, -7, -1); g.quadraticCurveTo(-7, -8.6, 0, -8.6); g.quadraticCurveTo(7, -8.6, 7, -1); g.quadraticCurveTo(7, 4, 9.5, 6); g.closePath(); ink(g, '#ffd23f', 1.5)
     el(g, -3, -3, 1.2, 2.4, 0.3); g.fillStyle = '#fff6c2'; g.fill()
   },
+  shirt: g => {   // 의상 — 분홍 티셔츠 · 노란 별
+    g.beginPath(); g.moveTo(-4, -9); g.quadraticCurveTo(0, -6.4, 4, -9); g.lineTo(10.5, -5.2); g.lineTo(7.6, 0.2); g.lineTo(5.4, -1.2); g.lineTo(5.4, 9.5); g.lineTo(-5.4, 9.5); g.lineTo(-5.4, -1.2); g.lineTo(-7.6, 0.2); g.lineTo(-10.5, -5.2); g.closePath(); ink(g, '#ffb3cf', 1.5)
+    starP(g, 0, 2.4, 3.6, 1.6); ink(g, '#ffd23f', 1)
+  },
   globe: g => {   // 다른 나라 말 — 하늘색 지구 · 초록 땅
     el(g, 0, 0, 10.5); ink(g, '#9fdcff', 1.5); g.save(); el(g, 0, 0, 10.5); g.clip(); g.fillStyle = '#8cd47e'
     el(g, -4, -3.5, 4.6, 3.4, 0.5); g.fill(); el(g, 4.6, 4.2, 3.8, 2.6, -0.4); g.fill(); el(g, 6, -6, 2, 1.4); g.fill(); g.restore()
@@ -1676,10 +1695,11 @@ function trimRect(cs) {
 }
 const crop = (c, r) => { const o = mk(r.w, r.h); o.getContext('2d').drawImage(c, -r.x, -r.y); return o }
 const PORT = {}   // 메뉴 · 도감 그림 — 크게 그려 빈 둘레를 자른 것(캐릭터는 같은 틀의 걷는 그림 _walk 도)
-function portrait(id) {
-  const P = PORT[id] ||= (() => {
+function portrait(id, oid = CHARS.some(c => c.id === id) ? wornId(id) : null, wid = CHARS.some(c => c.id === id) ? wornW(id) : null) {   // 캐릭터는 입은 의상 · 무기 스킨으로(주면 그것으로)
+  const outfit = outfitOf(oid, id), wskin = wid ? WSKIN[wid] : undefined
+  const P = PORT[id + (oid ? ':' + oid : '') + (wid ? ':' + wid : '')] ||= (() => {
     const m = id === 'momonga' ? x => { const o = mk(x.width, x.height), g = o.getContext('2d'); g.scale(-1, 1); g.drawImage(x, -x.width, 0); return o } : x => x   // 모몽가는 꼬리가 오른쪽에 보이게(게임에선 보는 쪽 반대)
-    const idle = artSprite(id, 3).c, walk = CHARS.some(c => c.id === id) ? WALK.map(p => artSprite(id, 3, p).c) : [], r = trimRect([idle, ...walk])
+    const idle = artSprite(id, 3, { outfit, wskin }).c, walk = CHARS.some(c => c.id === id) ? WALK.map(p => artSprite(id, 3, { ...p, outfit, wskin }).c) : [], r = trimRect([idle, ...walk])
     return { idle: m(crop(idle, r)), walk: walk.map(w => m(crop(w, r))) }
   })()
   const c = mk(P.idle.width, P.idle.height); c.getContext('2d').drawImage(P.idle, 0, 0); c.className = 'pt'; c._idle = P.idle; c._walk = P.walk; return c
@@ -1725,6 +1745,442 @@ function sprites() {
   SPR.gem = [gem('#7fd3ff'), gem('#8cf28a'), gem('#ff8fd0')]
 }
 
+// ---------------------------------------------------------------- 의상 — 꾸미기만(능력치는 그대로). 캐릭터마다 셋: 저가(상점 · 수수한 그림) · 고가(상점 · 원작 의상 + 이펙트) · 업적(어려움 클리어 · 원작 의상 + 화려한 이펙트)
+//   그림은 mochi() 가 몸을 그리는 차례에 끼워 그린다 — back(몸 뒤 · 망토) · body(몸 안에 오려 그림 · 옷) · head(얼굴 뒤에 · 모자). q = 몸 크기(W · H · hw · t 머리 끝 · y(f) 위에서 f 만큼 · mid 머리와 몸 경계 · P 몸 테두리)
+//   save.owned = 산 의상 id, save.wear[캐릭터] = 입은 의상 id(없으면 기본). 업적 의상은 그 캐릭터로 어려움을 클리어하면(save.best[id].clears)
+const OUTFIT_COST = { cheap: 5000, rich: 50000 }
+const crude = (g, fill, lw = 1.15) => { g.fillStyle = fill; g.fill(); g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }   // 저가 — 칠만 하고 굵은 선(수수하게)
+const inHead = (g, q, fn) => { g.save(); g.clip(q.P); fn(); g.restore() }   // 머리 · 몸 테두리 안에만
+// 고가 · 업적 의상 그리기 도우미
+const suit = (g, q, col) => { g.fillStyle = col; g.fillRect(-20, q.neck - 0.4, 40, 40) }   // 목 아래 몸 전체 옷
+const faceHole = (q, oy = 0.41, round) => { if (round) return [q.look, q.y(0.47), q.hw * 0.77, q.H * 0.355]; const fy = q.y(oy); return [q.look, fy, q.hw * 0.88, Math.min(q.H * 0.25, q.neck - 0.1 - fy)] }   // 후드 얼굴 구멍 — 눈썹부터 턱까지 · 볼터치까지 크게. round = 동그란 구멍(한 벌 옷 — 아래가 목 밑까지 내려온다)
+const chin = q => { const [, fy, , ry] = faceHole(q, 0, true); return fy + ry }   // 동그란 구멍의 아래 끝 — 단추 · 배 무늬는 그 밑에
+function hoodRing(g, q, col, oy, round) {   // 얼굴만 뚫린 후드(가발) — 머리를 덮고 얼굴은 보이게. 머리 테두리는 다시 긋는다
+  const [fx, fy, rx, ry] = faceHole(q, oy, round), bot = q.neck + 0.2, box = new Path2D()
+  box.rect(-q.hw - 3, q.t - 3, q.W + 6, bot - q.t + 3)
+  const R = new Path2D(); R.rect(-q.hw - 3, q.t - 3, q.W + 6, 60); R.ellipse(fx, fy, rx, ry, 0, 0, TAU)   // 칠할 판은 크게 — 머리 상자(box) 경계가 구멍 안을 지나며 선이 생기지 않게
+  g.save(); g.clip(q.P); g.clip(box); g.fillStyle = col; g.fill(R, 'evenodd'); g.restore()   // 목 밑으로 내려온 구멍은 몸 쪽(옷)에서 살색으로 채운다
+  g.save(); g.clip(box); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke(q.P); g.restore()
+  g.beginPath(); g.ellipse(fx, fy, rx, ry, 0, 0, TAU); g.lineWidth = 0.7; g.strokeStyle = OUT; g.stroke()
+}
+const heartP = (g, x, y, r) => { g.beginPath(); g.moveTo(x, y + r); g.bezierCurveTo(x - r * 1.6, y - r * 0.1, x - r, y - r * 1.4, x, y - r * 0.6); g.bezierCurveTo(x + r, y - r * 1.4, x + r * 1.6, y - r * 0.1, x, y + r); g.closePath() }
+const bow = (g, x, y, col) => { for (const s of [-1, 1]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + s * 3.2, y - 1.8); g.lineTo(x + s * 3.2, y + 1.8); g.closePath(); ink(g, col, 0.6) } blob(g, x, y, 0.9, 0.9, col, 0.6) }
+const ginkgo = (g, x, y) => { g.save(); g.translate(x, y); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 4.4, Math.PI * 1.15, Math.PI * 1.85); g.closePath(); ink(g, '#f2c94c', 0.6); g.strokeStyle = '#b8902a'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 2.2); g.stroke(); g.restore() }
+const pincer = (g, x, y, s, col, hi) => { g.save(); g.translate(x, y); g.scale(s, 1); g.beginPath(); g.arc(0, 0, 2.6, 0.9, Math.PI * 2 - 0.2); g.lineTo(0.6, -0.4); g.closePath(); ink(g, col, 0.7); g.fillStyle = hi; g.beginPath(); g.arc(-0.8, -0.8, 0.8, 0, TAU); g.fill(); g.restore() }
+const flower = (g, x, y, col, mid) => { for (let k = 0; k < 5; k++) { const a = k / 5 * TAU; blob(g, x + Math.cos(a) * 1.2, y + Math.sin(a) * 1.2, 1, 1, col, 0.35) } blob(g, x, y, 0.75, 0.75, mid, 0.3) }
+function wings(g, q, fill, edge, kind = 'feather') {   // 등 뒤 날개 둘 — 깃털(천사) · 둥근 잎(요정)
+  for (const s of [-1, 1]) {
+    g.save(); g.translate(s * 5.6, q.y(q.mid + 0.12)); g.scale(s, 1); g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(8, -10, 17, -9, 16, -3)
+    if (kind === 'feather') for (let i = 0; i < 4; i++) g.quadraticCurveTo(15.6 - i * 3.4, 4.6 - i * 0.4, 12.6 - i * 3.4, 2.6 - i * 0.3)
+    else g.bezierCurveTo(15, 4, 7, 6, 0, 2)
+    g.closePath(); g.fillStyle = fill; g.fill(); g.lineWidth = 0.75; g.strokeStyle = edge; g.stroke(); g.restore()
+  }
+}
+const tiara = (g, q, gem, col) => { const b = q.y(0.07); g.beginPath(); g.moveTo(-5, b); g.lineTo(-5.6, b - 2.4); g.lineTo(-2.6, b - 1.4); g.lineTo(0, b - 4.4); g.lineTo(2.6, b - 1.4); g.lineTo(5.6, b - 2.4); g.lineTo(5, b); g.closePath(); ink(g, '#d9dce3', 0.7); gem === 'heart' ? heartP(g, 0, b - 2, 1.2) : starP(g, 0, b - 2, 1.5, 0.6); ink(g, col, 0.4) }
+const gown = (col, hi, gem, brooch) => ({ earsOver: true,   // 신데렐라 드레스 — 퍼지는 치마 · 접힌 어깨선 · 퍼프 소매 · 브로치 · 티아라
+  back: (g, q) => { const y0 = q.neck + 1; g.beginPath(); g.moveTo(-9, y0); g.quadraticCurveTo(-15.5, -2, -17, 0.6); g.quadraticCurveTo(0, 3.4, 17, 0.6); g.quadraticCurveTo(15.5, -2, 9, y0); g.closePath(); ink(g, col, LW); g.strokeStyle = hi; g.lineWidth = 0.8; for (const x of [-10, -4, 4, 10]) { g.beginPath(); g.moveTo(x * 0.6, y0 + 2); g.lineTo(x * 1.2, 0.8); g.stroke() } },
+  body: (g, q) => { const y0 = q.neck - 0.4; g.fillStyle = col; g.fillRect(-20, y0, 40, 40); g.fillStyle = hi; g.fillRect(-20, y0, 40, 1.6); g.fillStyle = '#fff'; for (const [x, k] of [[-5, 0.35], [3, 0.6], [6, 0.25], [-2, 0.8]]) { starP(g, x, y0 + (-1 - y0) * k, 1.1, 0.35, 4); g.fill() } },
+  head: (g, q) => { for (const s of [-1, 1]) blob(g, s * q.ax, q.ay - 0.4, 2.2, 1.9, hi, LW); const by = q.neck + 1.8; gem === 'heart' ? heartP(g, 0, by, 1.7) : starP(g, 0, by, 1.9, 0.8); ink(g, brooch, 0.5); tiara(g, q, gem, brooch) },
+})
+const haloRing = (g, y, col, fluffy) => { if (fluffy) { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; blob(g, Math.cos(a) * 5.6, y + Math.sin(a) * 1.7, 1.5, 1.3, col, 0.4) } return } g.beginPath(); g.ellipse(0, y, 5.8, 1.7, 0, 0, TAU); g.strokeStyle = OUT; g.lineWidth = 2.4; g.stroke(); g.strokeStyle = col; g.lineWidth = 1.2; g.stroke() }
+const angel = (dress, wing, halo, white) => ({   // 천사 — 원피스 · 검은 리본 · 깃털 날개 · 고리
+  back: (g, q) => wings(g, q, wing, white ? '#b9b9cc' : OUT),
+  body: (g, q) => suit(g, q, dress),
+  head: (g, q) => { bow(g, 0, q.neck + 0.6, '#2a2a2a'); haloRing(g, q.t - 3.6, halo, white) },
+})
+const island = (crown, center) => ({ earsOver: true,   // 인어의 섬 — 꽃 화관 · 풀 치마(귀는 화관 위로)
+  back: (g, q) => { g.strokeStyle = '#5fa84a'; g.lineWidth = 1; g.lineCap = 'round'; for (let i = -6; i <= 6; i++) { g.beginPath(); g.moveTo(i * 1.9, q.y(0.8)); g.lineTo(i * 2.3, 0.6); g.stroke() } },
+  body: (g, q) => { const y0 = q.neck + 1.4; g.fillStyle = '#86c565'; g.fillRect(-20, y0, 40, 30); g.strokeStyle = '#5fa84a'; g.lineWidth = 0.7; for (let i = -7; i <= 7; i++) { g.beginPath(); g.moveTo(i * 2, y0); g.lineTo(i * 2 + 0.6, y0 + 7); g.stroke() } g.fillStyle = '#6fb256'; g.fillRect(-20, y0 - 0.6, 40, 1.6) },
+  head: (g, q) => { for (let i = 0; i < 7; i++) { const a = Math.PI * (1.08 + i * 0.14); flower(g, Math.cos(a) * (q.hw - 1.6), q.y(0.22) + Math.sin(a) * q.H * 0.2, Array.isArray(crown) ? crown[i % crown.length] : crown, center) } },
+})
+// 한 벌 후드 옷(얼굴만 뚫림) — 귀는 그 친구 귀 모양 그대로 옷 색으로. o = { col, belly, ears, earCol, inner, rim, extra(g, q) 몸 장식, top(g, q) 후드 위 장식, back(g, q) }
+function hoodSuit(o) {   // 귀는 그 친구의 귀 모양 그대로 옷 색으로(earCol) — 모자 위에 귀가 나와야 하면 earsOver
+  return {
+    earCol: o.col, earsOver: o.earsOver, back: o.back,
+    body: (g, q) => {
+      suit(g, q, o.col); const [fx, fy, rx, ry] = faceHole(q, 0, true)
+      g.save(); g.beginPath(); g.rect(-20, q.neck - 1.6, 40, 40); g.clip(); g.beginPath(); g.ellipse(fx, fy, rx, ry, 0, 0, TAU); g.fillStyle = q.fur; g.fill(); g.restore()   // 얼굴 구멍 중 목 밑 — 살색
+      if (o.belly) { g.beginPath(); g.ellipse(0, chin(q) + 2.2, 4.2, 1.9, 0, 0, TAU); g.fillStyle = o.belly; g.fill() } o.extra?.(g, q) },
+    head: (g, q) => { hoodRing(g, q, o.col, 0, true); if (o.rim) { const [fx, fy, rx, ry] = faceHole(q, 0, true); g.beginPath(); g.ellipse(fx, fy, rx, ry, 0, 0, TAU); g.lineWidth = 1.3; g.strokeStyle = o.rim; g.stroke(); g.lineWidth = 0.6; g.strokeStyle = OUT; g.stroke() } o.top?.(g, q) },
+  }
+}
+const frogEyes = (g, q) => { for (const s of [-1, 1]) { blob(g, s * 6.6, q.y(0.03), 1.7, 1.7, '#fff', 0.5); blob(g, s * 6.6, q.y(0.04), 0.75, 0.85, '#2a2a2a', 0) } }   // 개구리 레인코트 — 귀 위에 눈
+const snail = (g, q, c) => { for (const s of [-1, 1]) { g.strokeStyle = OUT; g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(s * 1.4, q.t + 1.6); g.lineTo(s * 2.6, q.t - 4.4); g.stroke(); g.strokeStyle = c; g.lineWidth = 0.7; g.stroke(); blob(g, s * 2.7, q.t - 4.8, 1.5, 1.5, c, LW) } }   // 달팽이 더듬이
+const buttons = (g, q, col = '#fff') => { for (let i = 0; i < 2; i++) blob(g, 0, chin(q) + 1.1 + i * 1.7, 0.7, 0.7, col, 0.5) }
+const pockets = (g, q, col) => { for (const s of [-1, 1]) { g.beginPath(); g.roundRect(s * 5.2 - 1.6, chin(q) - 0.6, 3.2, 2.6, 0.7); ink(g, col, 0.5); g.strokeStyle = OUT; g.lineWidth = 0.4; g.beginPath(); g.moveTo(s * 5.2 - 1.6, chin(q) + 0.2); g.lineTo(s * 5.2 + 1.6, chin(q) + 0.2); g.stroke() } }
+const tanukiTail = (g, q) => { g.save(); g.translate(-11.5, -6.5); g.rotate(-0.5); g.beginPath(); g.ellipse(0, 0, 3.4, 5.6, 0, 0, TAU); ink(g, '#a8784f', LW); g.save(); g.clip(); g.fillStyle = '#5a3d27'; for (const y of [-2.6, 0.6, 3.6]) g.fillRect(-4, y, 8, 1.3); g.restore(); g.restore() }
+const navelX = (g, q) => { const cy = chin(q) + 2.2; g.strokeStyle = '#8b5e3c'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-0.8, cy - 0.7); g.lineTo(0.8, cy + 0.7); g.moveTo(0.8, cy - 0.7); g.lineTo(-0.8, cy + 0.7); g.stroke() }
+function headLeaf(g, x, y, kind) {   // 너구리 머리 위 잎 — 단풍(빨강) · 은행(노랑) · 풀잎(초록)
+  g.save(); g.translate(x, y)
+  if (kind === 'ginkgo') { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 4.4, Math.PI * 1.15, Math.PI * 1.85); g.closePath(); ink(g, '#f2c94c', 0.6) }
+  else if (kind === 'maple') { starP(g, 0, -2.2, 3.8, 1.8); ink(g, '#e8643c', 0.6) }
+  else { g.rotate(-0.5); g.beginPath(); g.ellipse(0, -2.4, 1.9, 3.4, 0, 0, TAU); ink(g, '#7cb66a', 0.6); g.strokeStyle = '#4f8a3a'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(0, -5.4); g.lineTo(0, 0.6); g.stroke() }
+  g.restore()
+}
+const takoBand = (g, q) => {   // 문어옷 — 이마에 꼰 흰 머리띠, 오른쪽 위 매듭
+  const y0 = q.y(0.1); inHead(g, q, () => { g.beginPath(); g.rect(-16, y0 - 1.7, 32, 3.4); ink(g, '#fff', 0.6); g.strokeStyle = 'rgba(61,48,43,.35)'; g.lineWidth = 0.4; for (let x = -12; x <= 12; x += 2.2) { g.beginPath(); g.moveTo(x, y0 - 1.6); g.lineTo(x + 1.4, y0 + 1.6); g.stroke() } })
+  for (const [dx, dy, r] of [[q.hw - 2.6, y0 - 2.4, 0.4], [q.hw - 0.6, y0 - 3.4, -0.5], [q.hw - 3.8, y0 - 3.8, 0.9]]) { g.beginPath(); g.ellipse(dx, dy, 1.6, 1, r, 0, TAU); ink(g, '#fff', 0.55) }
+}
+function mushCap(g, q, col, kind) {   // 버섯 모자 — 표고(갈라진 별 무늬) · 새송이(작고 옅은) · 양송이(둥근 갈색)
+  const b = q.y(0.16), w = kind === 'eringi' ? q.hw + 0.6 : q.hw + 3.2, top = kind === 'eringi' ? q.t - 3 : q.t - 6.4
+  g.beginPath(); g.moveTo(-w, b); g.bezierCurveTo(-w, top, w, top, w, b); g.quadraticCurveTo(0, b + 2.4, -w, b); ink(g, col, LW)
+  g.strokeStyle = 'rgba(61,48,43,.35)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(-w + 1.4, b + 0.2); g.quadraticCurveTo(0, b + 1.8, w - 1.4, b + 0.2); g.stroke()
+  if (kind === 'shiitake') { g.strokeStyle = 'rgba(255,240,220,.85)'; g.lineWidth = 0.7; g.lineCap = 'round'; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.55; g.beginPath(); g.moveTo(0, (b + top) / 2 + 1); g.lineTo(Math.cos(a) * 5.4, (b + top) / 2 + 1 + Math.sin(a) * 3.4); g.stroke() } }
+  else { g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(-w * 0.4, (b + top) / 2, w * 0.25, 1.4, -0.3, 0, TAU); g.fill() }
+}
+function beanie(g, q, col, band) {   // 털모자 — 골이 진 접단 · 커다란 흰 방울(귀는 모자를 뚫고 나온다)
+  const b = q.y(0.2), top = q.t - 2.6
+  g.beginPath(); g.moveTo(-q.hw + 0.4, b); g.bezierCurveTo(-q.hw + 0.4, top, q.hw - 0.4, top, q.hw - 0.4, b); g.closePath(); ink(g, col, LW)
+  g.beginPath(); g.roundRect(-q.hw - 0.2, b - 2.6, q.W + 0.4, 3.6, 1.6); ink(g, band, LW); g.strokeStyle = 'rgba(61,48,43,.3)'; g.lineWidth = 0.4; for (let x = -q.hw + 1.6; x < q.hw - 1; x += 1.8) { g.beginPath(); g.moveTo(x, b - 2.2); g.lineTo(x, b + 0.6); g.stroke() }
+  const py = top + 1.4; for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; blob(g, Math.cos(a) * 2.4, py - 1.6 + Math.sin(a) * 2.2, 1.9, 1.9, '#fff', 0.45) } blob(g, 0, py - 1.6, 2.3, 2.3, '#fff', 0)
+}
+function fairy(cap, suitCol, bowCol) {   // 요정 — 꽃 모자(귀는 모자를 뚫고 나온다) · 투명한 날개 · 목 리본
+  return {
+    earsOver: true, back: (g, q) => wings(g, q, 'rgba(234,244,255,.7)', 'rgba(61,48,43,.55)', 'leaf'),
+    body: (g, q) => suit(g, q, suitCol),
+    head: (g, q) => {
+      const b = q.y(0.12); g.beginPath(); g.moveTo(-9.6, b); g.quadraticCurveTo(-9.4, q.t - 4, 0, q.t - 5.2); g.quadraticCurveTo(9.4, q.t - 4, 9.6, b); for (let i = 4; i >= -4; i--) g.quadraticCurveTo(i * 2.4 + 1.2, b + 2.4, i * 2.4 - 1.2, b); g.closePath(); ink(g, cap, LW)
+      g.strokeStyle = '#7cb66a'; g.lineWidth = 1.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, q.t - 5); g.quadraticCurveTo(1.4, q.t - 7.4, 2.6, q.t - 7.8); g.stroke()
+      bow(g, 0, q.neck + 0.6, bowCol)
+    },
+  }
+}
+const TONE = {   // 캐릭터마다 옷 색 [진한 · 옅은 · 리본] — 파자마 · 요정 · 신데렐라
+  chiikawa: ['#f7a8c4', '#fbc4d6', '#e26a93'], hachiware: ['#7bb8e0', '#a6d8f2', '#4f8fc0'], usagi: ['#f4d94a', '#f7ee9a', '#f0a030'], momonga: ['#b9a3e3', '#d9cdf5', '#8a6fc8'],
+  kurimanju: ['#a9d18e', '#cfe6b8', '#6aa84f'], rakko: ['#8fa6d8', '#c3d0ef', '#5d74b3'], shisa: ['#ffb347', '#ffd59a', '#e8862a'], kani: ['#86d6c6', '#c2ece3', '#3fa892'],
+}
+const LOOKS = {   // 캐릭터마다 [너구리 잎, 레인코트(색 · 귀 장식 · 주머니 · 덧붙임), 버섯(색 · 종류), 털모자(색 · 접단)]
+  chiikawa: ['leaf', ['#8ccf5f', 'frog', '#f2d24c'], ['#b98962', 'button'], ['#f5b3c1', '#ef9aab']],
+  hachiware: ['ginkgo', ['#f4f08a', 'snail', '#9b86e8', 'pack'], ['#d8cfc4', 'eringi'], ['#a9d3ef', '#8cbfe2']],
+  usagi: ['maple', ['#f5f5f2', null, '#b9b9c4', 'bow'], ['#7a4a2e', 'shiitake'], ['#f6d880', '#efc561']],
+  momonga: ['maple', ['#d9cdf5', null, '#ffffff', 'bow'], ['#b98962', 'button'], ['#d9cdf5', '#c3b2ec']],
+  kurimanju: ['ginkgo', ['#8ccf5f', 'frog', '#f2d24c'], ['#7a4a2e', 'shiitake'], ['#cfe6b8', '#b5d79a']],
+  rakko: ['leaf', ['#f4f08a', null, '#9fd8f0'], ['#d8cfc4', 'eringi'], ['#c3d0ef', '#a8b9e6']],
+  shisa: ['maple', ['#ffb347', null, '#ffe27a'], ['#b98962', 'button'], ['#ffd59a', '#ffc277']],
+  kani: ['leaf', ['#86d6c6', 'frog', '#ffffff'], ['#d8cfc4', 'eringi'], ['#c2ece3', '#a5e0d4']],
+}
+const KINDS = {   // 같은 종류는 한 번 사면 모든 캐릭터가 입는다 — of(캐릭터) 가 그 캐릭터에 맞춘 그림(색 · 장식)
+  pj: { tier: 'cheap', name: tr`파자마`, note: tr`파자마 파티즈 대신 무대에 섰을 때 입은 파자마(포셰트 갑옷 씨가 만들어 줬어요)`, of: ch => hoodSuit({ col: TONE[ch][1], extra: buttons }) },
+  tako: { tier: 'cheap', name: tr`문어옷`, note: tr`빨간 문어 옷 · 꼰 머리띠`, ...hoodSuit({ col: '#e8584f', belly: '#f6cfb0', top: takoBand }) },
+  tanu: { tier: 'cheap', name: tr`너구리옷`, note: tr`포셰트 갑옷 씨가 만든 너구리 옷 — 머리 위에 잎 하나`, of: ch => hoodSuit({ col: '#a8784f', belly: '#e8ddb5', back: tanukiTail, extra: navelX, top: (g, q) => headLeaf(g, 0.6, q.t + 0.6, LOOKS[ch][0]) }) },
+  rain: { tier: 'cheap', name: tr`레인코트`, note: tr`비 오는 날의 레인코트 — 후드에 귀가 달렸어요`, of: ch => { const rc = LOOKS[ch][1]; return hoodSuit({ col: rc[0], rim: '#bfe3f5', top: rc[1] === 'frog' ? frogEyes : rc[1] === 'snail' ? (g, q) => snail(g, q, '#d9d46a') : undefined,
+      extra: (g, q) => { pockets(g, q, rc[2]); if (rc[3] === 'bow') bow(g, 0, chin(q) + 1.6, '#e8473b') }, back: rc[3] === 'pack' ? (g, q) => { g.beginPath(); g.roundRect(-14, q.neck - 2.6, 6.4, 8.4, 2); ink(g, '#9b86e8', LW) } : undefined }) } },
+  kino: { tier: 'cheap', name: tr`버섯옷`, note: tr`버섯 갓을 쓴 하얀 버섯 옷`, of: ch => hoodSuit({ col: '#fbf3e4', earsOver: true, top: (g, q) => mushCap(g, q, ...LOOKS[ch][2]) }) },
+  knit: { tier: 'cheap', name: tr`털모자`, note: tr`커다란 방울이 달린 털모자`, of: ch => ({ earsOver: true, head: (g, q) => beanie(g, q, ...LOOKS[ch][3]) }) },
+  fairy: { tier: 'rich', name: tr`요정`, note: tr`나무 인형의 마법으로 요정이 됐을 때 — 꽃 모자 · 투명한 날개`, of: ch => { const t = TONE[ch]; return { fx: { k: ['spark', 'petal'], col: [t[1], '#ffffff', t[0]], rate: 5 }, ...fairy(t[0], t[1], t[2]) } } },
+}
+const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 캐릭터), 업적 = 캐릭터마다(ch)
+  // 일반 — 집에 있는 것으로 대충 만든 것(이펙트 없음)
+  paper: { tier: 'cheap', name: tr`신문지 모자`, note: tr`신문지를 접어 만든 배 모양 모자`, earsOver: true,
+    head: (g, q) => { const b = q.y(0.1); g.beginPath(); g.moveTo(-9.4, b); g.lineTo(-6.4, b - 6.4); g.lineTo(0, b - 8.6); g.lineTo(6.4, b - 6.4); g.lineTo(9.4, b); g.closePath(); crude(g, '#efefea'); g.strokeStyle = '#9a9a90'; g.lineWidth = 0.55; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-4.6, b - 2 - i * 1.6); g.lineTo(4.6, b - 2 - i * 1.6); g.stroke() } } },
+  towel: { tier: 'cheap', name: tr`머리띠 수건`, note: tr`흰 수건에 빨간 동그라미를 그린 머리띠`,
+    head: (g, q) => { const y0 = q.y(0.18); inHead(g, q, () => { g.beginPath(); g.rect(-15, y0 - 1.8, 30, 3.6); crude(g, '#ffffff', 0.8); blob(g, 0, y0, 1.6, 1.6, '#e8473b', 0.6) })
+      g.beginPath(); g.moveTo(-q.hw + 0.6, y0); g.lineTo(-q.hw - 3, y0 + 1.4); g.lineTo(-q.hw - 2.4, y0 + 3.2); g.closePath(); crude(g, '#ffffff', 0.9) } },
+  box: { tier: 'cheap', name: tr`골판지 갑옷`, note: tr`택배 상자를 잘라 만든 갑옷 — 테이프가 보여요`,
+    body: (g, q) => { const y0 = q.neck - 0.4; g.beginPath(); g.rect(-15, y0, 30, 20); crude(g, '#c9a06b', 0.8); g.fillStyle = '#e9d9b0'; g.fillRect(-1.3, y0, 2.6, 20); g.strokeStyle = 'rgba(61,48,43,.55)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-8, y0 + 2); g.lineTo(-4.5, y0 + 3.2); g.moveTo(5, y0 + 4.4); g.lineTo(8.4, y0 + 3.2); g.stroke() } },
+  bag: { tier: 'cheap', name: tr`비닐봉지 망토`, note: tr`장바구니 비닐봉지를 묶어 만든 망토`,
+    back: (g, q) => { const y0 = q.y(q.mid - 0.04); g.beginPath(); g.moveTo(-6, y0); g.quadraticCurveTo(-18, y0 + 5, -17, -1.2); g.quadraticCurveTo(0, 1.6, 17, -1.2); g.quadraticCurveTo(18, y0 + 5, 6, y0); g.closePath(); g.fillStyle = 'rgba(236,246,255,.92)'; g.fill(); g.lineWidth = 1; g.strokeStyle = 'rgba(61,48,43,.7)'; g.stroke()
+      g.strokeStyle = 'rgba(61,48,43,.3)'; g.lineWidth = 0.55; for (const x of [-12, -6, 6, 12]) { g.beginPath(); g.moveTo(x * 0.5, y0 + 3); g.lineTo(x, -1.4); g.stroke() } },
+    head: (g, q) => { const y0 = q.neck + 0.4; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(s * 2.2, y0, 2.3, 1.4, s * 0.5, 0, TAU); g.fillStyle = 'rgba(236,246,255,.95)'; g.fill(); g.lineWidth = 0.8; g.strokeStyle = 'rgba(61,48,43,.7)'; g.stroke() } blob(g, 0, y0, 1.1, 1.1, 'rgba(236,246,255,1)', 0.8) } },
+  cup: { tier: 'cheap', name: tr`종이컵 모자`, note: tr`다 마신 종이컵을 거꾸로 얹은 모자`,
+    head: (g, q) => { const b = q.y(0.06); g.save(); g.translate(1.2, b); g.rotate(0.16); g.beginPath(); g.moveTo(-4.6, 0); g.lineTo(-3.4, -6.6); g.lineTo(3.4, -6.6); g.lineTo(4.6, 0); g.closePath(); crude(g, '#ffffff'); g.fillStyle = '#ff9ab0'; g.fillRect(-4.1, -3.6, 8.2, 1.6); g.restore() } },
+  // 고급 — 원작에서 입고 나온 의상 + 이펙트
+  ramen: { tier: 'rich', name: tr`라멘집 일꾼`, note: tr`라멘집 「郎」에서 일할 때 — 머리를 덮은 흰 수건 · 남색 티셔츠 · 숙주가 산더미인 라멘`, earCol: '#ffffff',
+    fx: { k: ['steam'], col: ['rgba(255,255,255,.95)'], rate: 4 },
+    body: (g, q) => { const y0 = q.neck - 0.4, m = (q.neck - 1) / 2 + 0.6; g.fillStyle = '#2b3352'; g.fillRect(-20, y0, 40, m - y0 + 0.5); g.fillStyle = '#fafafa'; g.fillRect(-20, m, 40, 20); g.strokeStyle = 'rgba(61,48,43,.4)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(-20, m); g.lineTo(20, m); g.stroke(); g.fillStyle = '#fff'; g.fillRect(3.4, y0 + 1.2, 1.8, 1.8) },
+    head: (g, q) => {
+      const edge = () => { g.moveTo(-16, q.y(0.12)); g.quadraticCurveTo(0, q.y(0.17), 16, q.y(0.12)) }   // 하트 눈썹이 보이게 이마 위까지만
+      inHead(g, q, () => { g.beginPath(); edge(); g.lineTo(16, q.t - 4); g.lineTo(-16, q.t - 4); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.beginPath(); edge(); g.strokeStyle = 'rgba(61,48,43,.55)'; g.lineWidth = 0.6; g.stroke(); g.beginPath(); g.moveTo(-6, q.t + 1); g.quadraticCurveTo(-2, q.y(0.05), 3, q.y(0.08)); g.strokeStyle = 'rgba(61,48,43,.25)'; g.stroke() })   // 머리를 덮은 흰 수건
+      const bx = -6, by = q.neck + 5.4;   // 옆구리에 든 라멘 — 입을 가리지 않게
+      for (let i = 0; i < 6; i++) blob(g, bx - 4 + i * 1.6, by - 2.2 - Math.sin(i / 5 * Math.PI) * 2.8, 1.6, 1.4, '#f6efcf', 0.45); blob(g, bx + 1.4, by - 5.6, 1.4, 1.2, '#f6efcf', 0.45)   // 숙주 산더미
+      g.beginPath(); g.moveTo(bx - 5.8, by - 1.4); g.lineTo(bx + 5.8, by - 1.4); g.quadraticCurveTo(bx + 5.2, by + 3.4, bx, by + 3.6); g.quadraticCurveTo(bx - 5.2, by + 3.4, bx - 5.8, by - 1.4); ink(g, '#fff', LW); g.strokeStyle = '#e8473b'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(bx - 5, by - 0.3); g.lineTo(bx + 5, by - 0.3); g.stroke()   // 라멘 그릇
+    } },
+  crab: { tier: 'rich', name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
+    fx: { k: ['spark'], col: ['#ff9bb0', '#ffd0d8', '#ffffff'], rate: 5 },
+    head: (g, q) => { g.strokeStyle = OUT; g.lineWidth = 1.6; g.beginPath(); g.arc(0, q.y(0.2), 9.4, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); g.strokeStyle = '#f08a9a'; g.lineWidth = 0.8; g.stroke(); for (const s of [-1, 1]) pincer(g, s * 4.2, q.t - 1.2, s, '#f08a9a', '#f7b0ba') } },
+  chestnut: { tier: 'rich', name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
+    fx: { k: ['nut', 'leaf'], col: ['#b5673b', '#d9a441', '#86c565'], rate: 3, fall: true },
+    head: (g, q) => { const b = q.y(0.3); inHead(g, q, () => { g.beginPath(); g.moveTo(-16, b + 1); g.quadraticCurveTo(0, b - 3.6, 16, b + 1); g.lineTo(16, q.t - 4); g.lineTo(-16, q.t - 4); g.closePath(); g.fillStyle = '#d98b5f'; g.fill(); g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(-4.6, q.y(0.1), 3.4, 1.6, -0.4, 0, TAU); g.fill() })
+      g.lineWidth = 0.8; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-q.hw + 0.4, b + 0.6); g.quadraticCurveTo(0, b - 3.6, q.hw - 0.4, b + 0.6); g.stroke()
+      g.beginPath(); g.moveTo(-2.4, q.t + 0.6); g.quadraticCurveTo(0, q.t - 4.6, 2.4, q.t + 0.6); g.closePath(); ink(g, '#c27548', LW) } },
+  daifuku: { tier: 'rich', name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
+    fx: { k: ['dot'], col: ['#ffffff', '#fff6ec', '#ffe3e3'], rate: 6 },
+    body: (g, q) => { g.fillStyle = '#f6f0e4'; g.fillRect(-20, q.neck - 0.4, 40, 40); g.fillStyle = '#fff'; for (const [x, k] of [[-6, 0.3], [4, 0.45], [-2, 0.75], [7, 0.8]]) { g.beginPath(); g.arc(x, q.neck + (-1 - q.neck) * k, 0.7, 0, TAU); g.fill() } },
+    head: (g, q) => { const b = q.y(0.13); g.beginPath(); g.moveTo(-q.hw - 1.2, b); g.quadraticCurveTo(-q.hw - 1.4, q.t - 3.6, 0, q.t - 3.8); g.quadraticCurveTo(q.hw + 1.4, q.t - 3.6, q.hw + 1.2, b); g.quadraticCurveTo(0, b + 2.4, -q.hw - 1.2, b); ink(g, '#f6f0e4', LW)
+      g.beginPath(); g.moveTo(0, q.t - 9.6); g.bezierCurveTo(4.6, q.t - 9.4, 4.2, q.t - 4.4, 0, q.t - 3); g.bezierCurveTo(-4.2, q.t - 4.4, -4.6, q.t - 9.4, 0, q.t - 9.6); ink(g, '#e5322d', LW)
+      g.fillStyle = '#ffe36e'; for (const [x, y] of [[-1.6, -7.6], [1.4, -7.2], [-0.4, -5.6], [1.8, -5.4], [-2, -5.8]]) { g.beginPath(); g.arc(x, q.t + y, 0.35, 0, TAU); g.fill() }
+      for (const s of [-1, 0, 1]) { g.beginPath(); g.ellipse(s * 1.6, q.t - 9.8, 1.7, 0.8, s * 0.6, 0, TAU); ink(g, '#5da34a', 0.5) } } },
+  // 고급 — 생일 · 핼러윈 만화의 원작 의상(반짝임만, 발밑 빛은 업적에)
+  cinder: { tier: 'rich', name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
+    of: ch => { const t = TONE[ch]; return { fx: { k: ['spark', 'note', 'heart'], col: [t[1], '#ffffff', t[0], '#fff3a1'], rate: 5 }, ...gown(t[0], t[1], ['chiikawa', 'usagi', 'momonga', 'kani'].includes(ch) ? 'heart' : 'star', t[2]) } } },
+  prince: { tier: 'rich', name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
+    fx: { k: ['spark', 'star'], col: ['#ff9be0', '#9fd8ff', '#fff3a1', '#b6f0c2'], rate: 5 },
+    body: (g, q) => { suit(g, q, '#ffffff'); g.fillStyle = '#2e2e48'; g.fillRect(-0.9, q.neck - 0.4, 1.8, 30); for (let i = 0; i < 3; i++) blob(g, 2.2, q.neck + 1.4 + i * 2, 0.7, 0.7, '#e2b33c', 0.4) },
+    head: (g, q) => { hoodRing(g, q, '#5a3a28'); g.fillStyle = '#5a3a28'; g.beginPath(); for (let i = -3; i <= 3; i++) { const x = i * 2.4 + q.look; g.moveTo(x - 1.4, q.y(0.21)); g.quadraticCurveTo(x, q.y(0.29), x + 1.4, q.y(0.21)) } g.fill()
+      for (const s of [-1, 1]) { const ex = s * (q.ax + 0.6), ey = q.ay - 0.8; g.beginPath(); g.ellipse(ex, ey, 2.8, 1.5, s * 0.25, 0, TAU); ink(g, '#e2b33c', 0.6); g.strokeStyle = '#c8952a'; g.lineWidth = 0.5; for (let k = -2; k <= 2; k++) { g.beginPath(); g.moveTo(ex + k * 0.9, ey + 1); g.lineTo(ex + k * 0.9, ey + 2.4); g.stroke() } } } },
+  dark: { tier: 'rich', name: tr`검은 천사`, note: tr`핼러윈 만화의 검은 천사 — 회색 깃털 날개 · 어두운 고리`,
+    fx: { k: ['feather', 'spark'], col: ['#5e5e66', '#8a7fb0', '#d9ccff'], rate: 5, fall: true }, ...angel('#6b6b70', '#5e5e66', '#55555c') },
+  // 업적 — 인어의 섬 화관— 그 캐릭터로 어려움을 클리어하면. 영화 굿즈처럼 캐릭터마다 꽃 색이 다르고 발밑 빛 · 더 많은 반짝임
+  a_chiikawa: { ch: 'chiikawa', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 분홍 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'spark', 'heart'], col: ['#f7c6d9', '#e8d4f2', '#ffffff'], rate: 13, aura: 'rgba(255,190,215,.9)' }, ...island(['#f7c6d9', '#e8d4f2'], '#ffffff') },
+  a_hachiware: { ch: 'hachiware', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 파란 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'spark', 'bubble'], col: ['#6fa8e0', '#bfe0ff', '#ffffff'], rate: 13, aura: 'rgba(160,210,255,.9)' }, ...island('#a9d4f5', '#ffffff') },   // 머리색보다 옅은 파랑(묻히지 않게)
+  a_usagi: { ch: 'usagi', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 노란 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'spark', 'star'], col: ['#ffe27a', '#fff6c2', '#ffffff'], rate: 13, aura: 'rgba(255,236,150,.9)' }, ...island('#ffe27a', '#ffffff') },
+  a_momonga: { ch: 'momonga', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 보라 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'spark'], col: ['#b9a3e3', '#e3d9ff', '#ffffff'], rate: 13, aura: 'rgba(200,180,255,.9)' }, ...island('#b9a3e3', '#ffffff'), earsOver: false },   // 모몽가는 귀가 커서 화관이 귀 앞에(귀 끝은 그대로 보인다)
+  a_shisa: { ch: 'shisa', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 주황 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'spark'], col: ['#ffb347', '#ffe0b0', '#ffffff'], rate: 13, aura: 'rgba(255,200,140,.9)' }, ...island('#ffb347', '#ffffff') },
+  a_kani: { ch: 'kani', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 민트 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'bubble', 'spark'], col: ['#bfe8e2', '#ffffff', '#bfe9ff'], rate: 13, aura: 'rgba(190,240,230,.9)' }, ...island(['#ffffff', '#bfe8e2'], '#ffffff') },
+  a_kurimanju: { ch: 'kurimanju', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 연두 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'spark'], col: ['#ffd6e7', '#fff3a1', '#ffffff', '#d4e27a'], rate: 13, aura: 'rgba(255,240,180,.9)' }, ...island('#d4e27a', '#fff3a1') },
+  a_rakko: { ch: 'rakko', tier: 'ach', name: tr`섬 화관`, note: tr`인어의 섬에서 — 하얀 꽃 화관 · 풀 치마`,
+    fx: { k: ['petal', 'bubble'], col: ['#ffffff', '#fff3a1', '#bfe9ff'], rate: 13, aura: 'rgba(190,235,255,.9)' }, ...island('#f5f0dc', '#ffd23f') },
+  pantu: { tier: 'rich', name: tr`판투`, note: tr`핼러윈 만화의 판투(미야코섬의 신) — 온몸에 덩굴 · 돌 가면`,
+    fx: { k: ['dot', 'leaf'], col: ['#7a5b3a', '#93c47d', '#5e9a4b'], rate: 5 },
+    back: (g, q) => { g.beginPath(); const n = 26; for (let i = 0; i <= n; i++) { const a = Math.PI + i / n * Math.PI * 2, r = (i % 2 ? 1.5 : 3.2), x = Math.cos(a) * (q.hw + r), y = (q.t + -1) / 2 + Math.sin(a) * (q.H / 2 + r); i ? g.lineTo(x, y) : g.moveTo(x, y) } g.closePath(); ink(g, '#93c47d', LW) },
+    body: (g, q) => { g.fillStyle = '#93c47d'; g.fillRect(-20, q.neck - 0.4, 40, 30); g.strokeStyle = '#5e9a4b'; g.lineWidth = 0.7; g.lineCap = 'round'; for (let i = -6; i <= 6; i++) { g.beginPath(); g.moveTo(i * 2.2, q.neck); g.quadraticCurveTo(i * 2.2 + 1.2, q.neck + 3.4, i * 2.2 - 0.4, -1.4); g.stroke() } },
+    head: (g, q) => { g.save(); g.translate(q.hw + 0.6, q.y(0.32)); g.rotate(0.25); g.beginPath(); g.roundRect(-3.4, -4.4, 6.8, 8.8, 2.6); ink(g, '#a6a6a6', LW); g.fillStyle = '#5c5c5c'; for (const x of [-1.4, 1.4]) { g.beginPath(); g.ellipse(x, -1.2, 0.8, 1, 0, 0, TAU); g.fill() } g.fillRect(-1.6, 1.8, 3.2, 0.7); g.restore()
+      for (const s of [-1, 1]) { g.beginPath(); g.ellipse(s * 1.6, q.t - 2.2, 2, 0.9, s * -0.6, 0, TAU); ink(g, '#7cb66a', 0.5) } g.strokeStyle = '#5e9a4b'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(0, q.t + 0.6); g.lineTo(0, q.t - 1.8); g.stroke() } },
+  white: { tier: 'rich', name: tr`하얀 천사`, note: tr`핼러윈 만화의 하얀 천사 — 하얀 깃털 날개 · 폭신한 고리`,
+    fx: { k: ['feather', 'spark'], col: ['#ffffff', '#fff6d6', '#e6e6ff'], rate: 5, fall: true }, ...angel('#ffffff', '#ffffff', '#fff8e8', true) },
+}
+const TIER_ORD = { cheap: 0, rich: 1, ach: 2 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier])   // 일반 → 고급 → 업적
+const achWon = id => (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 어려움 클리어(어려움 기록은 열쇠가 캐릭터 id)
+const owns = oid => OUTFIT[oid].tier === 'ach' ? achWon(OUTFIT[oid].ch) : save.owned.includes(oid)
+const wornId = id => { const o = save.wear[id], k = o && OUTFIT[o]; return k && (!k.ch || k.ch === id) && owns(o) ? o : null }
+const LOOK_OF = {}, outfitOf = (oid, ch) => { const o = oid && OUTFIT[oid]; return !o ? undefined : o.of ? (LOOK_OF[oid + ':' + ch] ||= { ...o, ...o.of(ch) }) : o }   // 그 캐릭터가 입은 모습(종류는 캐릭터마다 색 · 장식)
+const TIER_NAME = { cheap: tr`일반`, rich: tr`고급`, ach: tr`업적` }
+
+// 의상 이펙트 — 몸 둘레에 떠오르는 작은 모양. fx = { k: [모양], col: [색], rate: 1초에 몇 개, aura: 발밑 빛(업적) }. F = { list, acc } — 게임 · 미리 보기가 따로
+function cfxStep(F, fx, x, y, dt, dir = 1) {
+  if (fx?.spot) { const [sx, sy, r] = fx.spot; F.acc += dt * fx.rate; while (F.acc >= 1) { F.acc--; F.list.push({ k: pickOf(fx.k), col: pickOf(fx.col), x: x + dir * (sx + (rnd() - 0.5) * r), y: y + sy + (rnd() - 0.5) * r, vx: (rnd() - 0.5) * 6, vy: -4 - rnd() * 8, t: 0, T: 0.45 + rnd() * 0.45, s: 0.5 + rnd() * 0.4, rot: rnd() * TAU }) } fx = null }   // 무기 스킨 — 든 무기 둘레에서 반짝
+  if (fx) { F.acc += dt * fx.rate; while (F.acc >= 1) { F.acc--; const a = rnd() * TAU, r = 7 + rnd() * 13; F.list.push({ k: pickOf(fx.k), col: pickOf(fx.col), x: x + Math.cos(a) * r * (fx.fall ? 1.3 : 1), y: fx.fall ? y - 40 + rnd() * 8 : y - 15 + Math.sin(a) * r * 0.75, vx: (rnd() - 0.5) * 10, vy: fx.fall ? 10 + rnd() * 10 : -12 - rnd() * 14, t: 0, T: 0.9 + rnd() * 0.6, s: (fx.aura ? 1.25 : 0.95) + rnd() * 0.7, rot: rnd() * TAU }) } }   // 업적 의상은 더 크게
+  for (const q of F.list) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += dt * 2.2 }
+  if (F.list.length && F.list[0].t > F.list[0].T) F.list = F.list.filter(q => q.t < q.T)
+}
+function cfxAura(c, fx, x, y, t) {   // 업적 의상 — 발밑에서 은은하게 숨 쉬는 빛
+  if (!fx?.aura) return
+  const g = c.createRadialGradient(x, y - 2, 2, x, y - 2, 30), a = 0.55 + 0.18 * Math.sin(t * 3)
+  g.addColorStop(0, fx.aura); g.addColorStop(1, 'rgba(255,255,255,0)'); c.globalAlpha = a; c.fillStyle = g; oval(c, x, y - 2, 30, 15); c.fill()
+  const u = t % 2 / 2; c.globalAlpha = (1 - u) * 0.8; c.strokeStyle = fx.col[0]; c.lineWidth = 1.6; oval(c, x, y - 2, 10 + u * 26, (10 + u * 26) * 0.5); c.stroke(); c.globalAlpha = 1   // 2초마다 퍼지는 반짝 고리
+}
+function cfxDraw(c, F) {
+  for (const q of F.list) {
+    c.globalAlpha = Math.max(0, Math.min(1, (1 - q.t / q.T) * 2, q.t * 6)); c.save(); c.translate(q.x, q.y); c.rotate(q.k === 'note' || q.k === 'steam' ? 0 : q.k === 'leaf' || q.k === 'feather' ? Math.sin(q.rot) * 0.8 : q.rot); c.scale(q.s, q.s); c.fillStyle = c.strokeStyle = q.col
+    switch (q.k) {
+      case 'spark': starP(c, 0, 0, 3.4, 0.9, 4); c.fill(); break
+      case 'star': starP(c, 0, 0, 3, 1.3); c.fill(); break
+      case 'heart': c.beginPath(); c.moveTo(0, 2.4); c.bezierCurveTo(-3.6, -0.2, -2.4, -3.4, 0, -1.4); c.bezierCurveTo(2.4, -3.4, 3.6, -0.2, 0, 2.4); c.fill(); break
+      case 'note': c.beginPath(); c.ellipse(-0.8, 1.6, 1.5, 1.1, -0.4, 0, TAU); c.fill(); c.fillRect(0.4, -3, 0.7, 4.6); c.fillRect(0.4, -3, 2.2, 0.8); break
+      case 'petal': c.beginPath(); c.ellipse(0, 0, 2.6, 1.2, 0, 0, TAU); c.fill(); break
+      case 'leaf': c.beginPath(); c.ellipse(0, 0, 3, 1.5, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(61,48,43,.35)'; c.lineWidth = 0.35; c.beginPath(); c.moveTo(-2.6, 0); c.lineTo(2.6, 0); c.stroke(); break
+      case 'feather': c.beginPath(); c.ellipse(0, 0, 3.4, 1.3, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(61,48,43,.4)'; c.lineWidth = 0.35; c.stroke(); c.beginPath(); c.moveTo(-3.8, 0.4); c.lineTo(3, 0); c.stroke(); break
+      case 'nut': c.beginPath(); c.arc(0, 0.4, 2, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-1, -1.2); c.lineTo(0, -2.8); c.lineTo(1, -1.2); c.fill(); c.fillStyle = 'rgba(255,255,255,.4)'; c.beginPath(); c.arc(-0.6, -0.2, 0.6, 0, TAU); c.fill(); break
+      case 'bat': c.beginPath(); c.moveTo(0, -0.6); c.quadraticCurveTo(-2.4, -2.6, -4.4, -0.8); c.quadraticCurveTo(-3, -0.2, -2.6, 1); c.quadraticCurveTo(-1.4, 0.2, 0, 1.4); c.quadraticCurveTo(1.4, 0.2, 2.6, 1); c.quadraticCurveTo(3, -0.2, 4.4, -0.8); c.quadraticCurveTo(2.4, -2.6, 0, -0.6); c.fill(); break
+      case 'steam': c.globalAlpha *= 0.5; c.beginPath(); c.arc(0, 0, 1.4 + q.t * 2.6, 0, TAU); c.fill(); break
+      case 'bubble': c.lineWidth = 0.6; c.beginPath(); c.arc(0, 0, 2.2, 0, TAU); c.stroke(); c.globalAlpha *= 0.6; c.beginPath(); c.arc(-0.7, -0.7, 0.6, 0, TAU); c.fill(); break
+      default: c.beginPath(); c.arc(0, 0, 1.4, 0, TAU); c.fill()
+    }
+    c.restore()
+  }
+  c.globalAlpha = 1
+}
+/** 옷장 미리 보기 — 입은 의상 · 무기 스킨으로 제자리걸음 + 이펙트(옷장 화면에 있는 동안) */
+function dressPreview(id, oid, wid) {
+  const S = 3.2, W = 190, H = 176, c = mk(W, H), o = outfitOf(oid, id), w = wid && WSKIN[wid], frames = WALK.map(p => artSprite(id, S, { ...p, look: LOOK, outfit: o, wskin: w })), F = { list: [], acc: 0 }, FW = { list: [], acc: 0 }
+  c.className = 'wr-pv'; let t = 0
+  c._tick = dt => {
+    t += dt; cfxStep(F, o?.fx, 0, 0, dt); cfxStep(FW, w?.fx, 0, 0, dt)
+    const g = c.getContext('2d'), s = frames[(t * 7 | 0) % 4]; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(S, 0, 0, S, W / 2, H - 14)
+    g.fillStyle = 'rgba(70,90,50,.18)'; oval(g, 0, -1, 12, 3); g.fill(); cfxAura(g, o?.fx, 0, 0, t); g.drawImage(s.c, -s.ox, -s.oy, s.w, s.h); cfxDraw(g, F); cfxDraw(g, FW)
+  }
+  c._tick(0)
+  return c
+}
+/** 스킬 스킨 미리 보기 — 왼쪽 원래 · 오른쪽 스킨. 같은 스킬 그림이 날아가 펑 터진다(스킨은 물든 그림 · 지나간 자리 · 터진 자리 반짝이) */
+function skinPreview(id) {
+  const k = SKIN[id], S = 2, W = 300, H = 130, c = mk(W, H), s0 = icoSpr(id, 4), s1 = tinted(s0, k.col), F = { list: [], acc: 0 }
+  c.className = 'wr-pv sk-pv'; let t = 0, boom = -1
+  c._tick = dt => {
+    t += dt; const n = t / 1.6 | 0, u = t % 1.6 / 1.6, fly = Math.min(1, u / 0.6), g = c.getContext('2d')
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(70,90,50,.15)'; g.fillRect(W / 2 - 1, 10, 2, H - 20); g.setTransform(S, 0, 0, S, 0, 0)
+    for (const skin of [false, true]) {
+      const ox = skin ? W / S / 2 : 0, x = ox + 16 + fly * 34, y = 37 - Math.sin(fly * Math.PI) * 12
+      if (u < 0.6) { const s = skin ? s1 : s0; g.save(); g.translate(x, y); g.rotate(fly * TAU); g.drawImage(s.c, -s.ox * 0.9, -s.oy * 0.9, s.w * 0.9, s.h * 0.9); g.restore(); if (skin && rnd() < dt * 25) skPuff(x, y, k, 1, F.list) }
+      else { const v = (u - 0.6) / 0.4; g.globalAlpha = 1 - v; g.fillStyle = skin ? k.col2 : 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(ox + 50, 37, 4 + v * 17, 0, TAU); g.fill(); g.strokeStyle = skin ? k.col : 'rgba(120,110,100,.6)'; g.lineWidth = 3 * (1 - v) + 0.6; g.stroke(); g.globalAlpha = 1 }
+    }
+    if (u >= 0.6 && boom !== n) { boom = n; skPuff(W / S / 2 + 50, 37, k, 10, F.list) }
+    cfxStep(F, null, 0, 0, dt); cfxDraw(g, F)
+  }
+  c._tick(0)
+  return c
+}
+/** 상점 — 강화(영구 강화 · 부활석) · 의상 · 무기 스킨 · 스킬 스킨 탭. 사기는 두 번 눌러야(실수로 비싼 것을 사지 않게).
+ *  강화는 다음 판부터 stats() 에 더해지고, 꾸미기(의상 · 스킨)는 능력치 그대로. 일반 · 고급 의상은 한 번 사면 모든 캐릭터가 입는다 */
+function shop(tab = 'up', ci = 0) {
+  mode = 'shop'; G = null; BOX = null; pauseBtn.hidden = true   // 결과 화면에서 와도 뒤는 처음 화면처럼
+  const have = h('p', { class: 'coin' }), modes = h('div', { class: 'wr-mode' }), tabs = h('div', { class: 'wr-tabs' }), view = h('div', { class: 'wr-view' }), list = h('ul'), msg = h('p', { class: 'wr-msg' }), note = h('p', { class: 'shop-note' })
+  let peek   // 입어 보기 — 줄을 누르면 미리 보기에만 입힌다(undefined = 안 함, null = 기본)
+  const put = (k, v) => { if (v) save.wear[k] = v; else delete save.wear[k]; peek = undefined; persist() }
+  const buy = (cost, done, label) => h('button', { type: 'button', class: 'btn buy', disabled: save.coin < cost, onclick: e => {
+    const b = e.currentTarget; if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = tr`한 번 더 누르면 사요`; return setTimeout(() => { if (b.isConnected) draw() }, 2500) }
+    if (save.coin < cost) return; save.coin -= cost; done(); persist(); msg.textContent = tr`「${label}」을(를) 샀어요!`; draw() } }, [ic('coin'), ` ${cost.toLocaleString()}`])
+  const btnState = (on, own, wearIt, lock, cost, done, label) => on ? h('button', { type: 'button', class: 'btn buy on', disabled: true }, tr`입는 중`)
+    : own ? h('button', { type: 'button', class: 'btn buy', onclick: () => { wearIt(); draw() } }, tr`입기`)
+    : lock ? h('button', { type: 'button', class: 'btn buy', disabled: true }, ...lock) : buy(cost, done, label)
+  const item = (cls, pic, name, mark, mcls, text, extra, act, id) => h('li', { class: cls + (id !== undefined && peek === id ? ' peek' : ''), onclick: id === undefined ? null : e => { if (e.target.closest('button')) return; peek = id; draw() } }, pic, h('div', {}, h('b', {}, name, mark && h('mark', { class: mcls }, mark)), h('span', {}, text), extra && h('em', {}, extra)), act)
+  const wearAll = oid => { for (const c of CHARS) { if (oid) save.wear[c.id] = oid; else delete save.wear[c.id] } peek = undefined; persist(); msg.textContent = tr`모두 「${oid ? OUTFIT[oid].name : tr`기본`}」을(를) 입었어요`; draw() }   // 일괄 착용 — 모든 캐릭터
+  const rows = {
+    up: () => [h('li', { class: 'stone' }, ic('stone'), h('div', {}, h('b', {}, tr`부활석`, h('small', {}, tr`${save.stone}개`)), h('span', {}, tr`쓰러지면 하나 써서 다시 일어나요 — 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지`)),
+      h('button', { type: 'button', class: 'btn buy', disabled: save.coin < STONE, onclick: () => { if (save.coin < STONE) return; save.coin -= STONE; save.stone++; persist(); draw() } }, [ic('coin'), ` ${STONE.toLocaleString()}`])),
+      ...Object.entries(SHOP).map(([id, u]) => {
+        const lv = save.up[id] || 0, full = lv >= u.max, cost = u.cost * (lv + 1)
+        return h('li', {}, ic(id), h('div', {}, h('b', {}, u.name, h('small', { 'aria-label': tr`${lv} / ${u.max}칸` }, '●'.repeat(lv) + '○'.repeat(u.max - lv))), h('span', {}, `${u.lab} ${u.val(u.per * lv)}`, full ? tr` (끝)` : ` → ${u.val(u.per * (lv + 1))}`)),
+          h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? tr`다 샀어요` : [ic('coin'), ` ${cost}`]))
+      })],
+    outfit: ch => [null, ...OUTFITS_OF(ch.id)].map(oid => { const o = oid && OUTFIT[oid], on = wornId(ch.id) === oid, own = !o || owns(oid), fx = outfitOf(oid, ch.id)?.fx
+      const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && [ic('hard'), tr` 어려움 클리어`], o && OUTFIT_COST[o.tier], () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
+      return item(`wr-${o ? o.tier : 'base'}${on ? ' on' : ''}`, portrait(ch.id, oid, wornW(ch.id)), o ? o.name : tr`기본`, o && TIER_NAME[o.tier], o?.tier, o ? o.note : tr`평소 모습`, fx && (o.tier === 'ach' ? tr`이펙트: 아주 화려하게 반짝반짝!` : tr`이펙트: 반짝반짝`),
+        own && o?.tier !== 'ach' ? h('div', { class: 'acts' }, act, h('button', { type: 'button', class: 'btn buy all', onclick: () => wearAll(oid) }, tr`모두 입기`)) : act, oid) }),
+    weapon: ch => [null, ...WSKINS_OF(ch.id)].map(wid => { const w = wid && WSKIN[wid], on = wornW(ch.id) === wid
+      return item(`wr-${w ? (w.tier === 'ach' ? 'ach' : 'rich') : 'base'}${on ? ' on' : ''}`, portrait(ch.id, wornId(ch.id), wid), w ? w.name : tr`기본 무기`, w && (w.tier === 'ach' ? tr`업적` : tr`상점`), w && (w.tier === 'ach' ? 'ach' : 'rich'), w ? w.note : tr`원래 들고 있던 무기`, null,
+        btnState(on, !w || ownsW(wid), () => put('w:' + ch.id, wid), w?.tier === 'ach' && [ic('normal'), tr` 보통 클리어`], WSKIN_COST, () => { save.owned.push(wid); put('w:' + ch.id, wid) }, w?.name), wid) }),
+    skill: () => Object.keys(SKIN).map(id => { const k = SKIN[id], own = ownsS(id), on = skOn(id)
+      const act = on ? h('button', { type: 'button', class: 'btn buy on', onclick: () => { save.skin[id] = false; persist(); draw() } }, tr`끄기`) : own ? h('button', { type: 'button', class: 'btn buy', onclick: () => { save.skin[id] = true; persist(); draw() } }, tr`켜기`) : buy(SKIN_COST, () => { save.owned.push('sk:' + id); save.skin[id] = true }, k.name)
+      return item(`wr-sk${on ? ' on' : ''}`, h('span', { class: 'sw', style: `--a:${k.col};--b:${k.col2}` }, ic(id)), k.name, WEAP[id].name, 'sk', k.note, !own && tr`각성해 본 스킬은 그냥 받아요`, act, id) }),
+  }
+  const draw = () => {
+    const ch = CHARS[ci], dress = tab === 'outfit' || tab === 'weapon'
+    have.replaceChildren(ic('coin'), tr` 모은 토벌 보상금 ${save.coin.toLocaleString()}`)
+    modes.replaceChildren(...[['up', 'manju', tr`강화`], ['outfit', 'shirt', tr`의상`], ['weapon', ch.w, tr`무기 스킨`], ['skill', 'awaken', tr`스킬 스킨`]].map(([k, pic, s]) => h('button', { type: 'button', class: k === tab ? 'on' : '', onclick: () => { tab = k; peek = undefined; msg.textContent = ''; draw() } }, ic(pic), ` ${s}`)))
+    tabs.hidden = !dress; view.hidden = tab === 'up'; view.classList.toggle('sk', tab === 'skill'); list.className = tab === 'up' ? 'list shop' : 'list wr'
+    if (tab === 'skill') { const sid = peek ?? Object.keys(SKIN)[0]; view.replaceChildren(skinPreview(sid), h('p', {}, h('b', {}, SKIN[sid].name), h('small', {}, tr`${WEAP[sid].name} — 왼쪽 원래 · 오른쪽 스킨`), h('small', { class: 'tip' }, tr`줄을 누르면 미리 볼 수 있어요`))) }
+    if (dress) {
+      tabs.replaceChildren(...CHARS.map((c, i) => h('button', { type: 'button', class: i === ci ? 'on' : '', 'aria-label': c.name, onclick: () => { ci = i; peek = undefined; msg.textContent = ''; draw() } }, portrait(c.id))))
+      const cur = tab === 'outfit' ? wornId(ch.id) : wornW(ch.id), T = tab === 'outfit' ? OUTFIT : WSKIN, nm = id => id ? T[id].name : tab === 'outfit' ? tr`기본` : tr`기본 무기`, trying = peek !== undefined && peek !== cur
+      const po = tab === 'outfit' && trying ? peek : wornId(ch.id), pw = tab === 'weapon' && trying ? peek : wornW(ch.id)
+      view.replaceChildren(dressPreview(ch.id, po, pw), h('p', {}, h('b', {}, ch.name), trying ? h('small', { class: 'try' }, tr`입어 보는 중: ${nm(peek)}`) : h('small', {}, tr`입는 중: ${nm(cur)}`), h('small', { class: 'tip' }, tr`줄을 누르면 입어 볼 수 있어요`)))
+      requestAnimationFrame(() => tabs.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'center' }))   // 고른 캐릭터가 보이게
+    }
+    list.replaceChildren(...rows[tab](ch))
+    note.textContent = tab === 'up' ? tr`판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요. 부활석은 쓰면 없어져요`
+      : tab === 'outfit' ? tr`의상은 꾸미기만 해요 — 능력치는 그대로예요. 일반 · 고급 의상은 한 번 사면 모든 캐릭터가 입을 수 있어요(「모두 입기」로 한꺼번에). 업적 의상은 그 캐릭터로 어려움을 클리어하면 받아요`
+      : tab === 'weapon' ? tr`무기 스킨은 손에 든 무기 모양만 바꿔요. 하나는 상점에서, 하나는 그 캐릭터로 보통 이상을 클리어하면 받아요`
+      : tr`스킬 스킨은 그 스킬의 색과 반짝이만 바꿔요 — 세기는 그대로예요. 상점에서 사거나, 그 스킬을 한 번 각성해 보면 그냥 받아요`
+  }
+  draw()
+  show(h('div', { class: 'panel guide pick wardrobe' }, h('p', { class: 'h' }, ic('coin'), tr` 상점`), have, modes, tabs,
+    h('div', { class: 'scroll' }, view, msg, list, note),
+    h('div', { class: 'row' }, btn(tr`← 처음으로`, title), btn(tr`토벌 시작!`, chars, 'main'))))
+}
+setInterval(() => { if (mode === 'shop') ui.querySelector('.wr-pv')?._tick?.(0.06) }, 60)   // 상점 미리 보기 — 걷기 · 이펙트
+
+// ---------------------------------------------------------------- 무기 스킨 · 스킬 스킨 — 꾸미기만(능력치는 그대로)
+//   무기 스킨: 캐릭터마다 둘 — 상점(WSKIN_COST) · 업적(그 캐릭터로 보통 이상 클리어). 든 무기를 바꿔 그린다(모몽가 · 시사는 스킨을 끼우면 손에 든다)
+//   스킬 스킨: 스킬마다 하나 — 상점(SKIN_COST), 그 스킬을 각성해 본 적이 있으면 그냥 받는다. 그 스킬의 색을 바꾸고 지나간 자리에 작은 반짝이를 남긴다
+//   save.wskin[캐릭터] = 낀 무기 스킨 id, save.skin[스킬] = 켰는지, save.owned 에 산 것('sk:스킬')
+const WSKIN_COST = 20000, SKIN_COST = 30000
+function stickSkin(g, x, y, col, stripe, ends, bolt) {   // 토벌봉 모양 막대
+  g.save(); g.translate(x, y); g.rotate(-1.3)
+  for (const [c, lw] of [[OUT, 2.8], [col, 1.6]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(-5, 0); g.lineTo(17, 0); g.stroke() }
+  if (stripe) { g.strokeStyle = stripe; g.lineWidth = 1.6; g.lineCap = 'butt'; for (let i = -4; i < 16; i += 3) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 1.4, 0); g.stroke() } }
+  for (const e of [-5, 17]) { blob(g, e, 0, 1.4, 1.4, ends, 0.6); if (bolt) { const s = Math.sign(e); g.strokeStyle = '#ffd23f'; g.lineWidth = 0.8; g.lineCap = 'round'; g.beginPath(); g.moveTo(e + s * 0.6, -1.4); g.lineTo(e + s * 2.4, -3); g.lineTo(e + s * 1.6, -1.2); g.lineTo(e + s * 3.6, -2.6); g.stroke() } }
+  g.restore()
+}
+function wand(g, x, y, col, top, topCol) {   // 끝에 하트 · 보석이 달린 지팡이
+  g.save(); g.translate(x, y); g.rotate(-1.25)
+  for (const [c, lw] of [[OUT, 2.4], [col, 1.2]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(-1.5, 0); g.lineTo(10, 0); g.stroke() }
+  g.translate(12, 0); g.rotate(1.25)
+  if (top === 'heart') { heartP(g, 0, 0, 2.6); ink(g, topCol, 0.7) }
+  else { g.beginPath(); g.moveTo(0, -3.4); g.lineTo(2.6, 0); g.lineTo(0, 3); g.lineTo(-2.6, 0); g.closePath(); ink(g, topCol, 0.7); g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.moveTo(0, -2.4); g.lineTo(1.1, -0.4); g.lineTo(-0.6, -0.4); g.fill() }
+  g.restore()
+}
+function cup(g, col, top, foam) {   // 쿠리만쥬 잔 자리 그대로 — 손잡이 없는 잔
+  g.lineWidth = 0.65; g.strokeStyle = OUT; g.fillStyle = col; g.beginPath(); g.rect(11, -9.8, 3.4, 4.4); g.fill(); g.stroke()
+  if (foam) for (const dx of [-1, 0, 1]) blob(g, 12.7 + dx * 1.1, -10.2, 1, 0.9, top, 0.45); else blob(g, 12.7, -10, 2.1, 1, top, 0.55)
+}
+function blade(g, x, y, col, guard, glow) {   // 세워 든 칼(랏코 칼과 같은 모양)
+  g.save(); g.translate(x, y); g.rotate(-1.35)
+  if (glow) { g.strokeStyle = 'rgba(160,220,255,.65)'; g.lineWidth = 4.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(2, 0); g.lineTo(15.6, 0); g.stroke() }
+  g.beginPath(); g.moveTo(1.8, -1); g.lineTo(14.6, -1); g.lineTo(16.6, 0); g.lineTo(14.6, 1); g.lineTo(1.8, 1); g.closePath(); g.fillStyle = col; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.65; g.stroke()
+  g.lineCap = 'round'
+  for (const [c, lw] of [[OUT, 2.3], [guard, 1.1]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(1.4, -2.6); g.lineTo(1.4, 2.6); g.stroke() }
+  for (const [c, lw] of [[OUT, 2.3], ['#6b4a2f', 1.1]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-3.2, 0); g.lineTo(0.6, 0); g.stroke() }
+  g.restore()
+}
+function ladle(g, x, y, col, shine) {   // 라멘 국자
+  g.save(); g.translate(x, y); g.rotate(-1.2)
+  for (const [c, lw] of [[OUT, 2.4], ['#a8784f', 1.2]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(-2, 0); g.lineTo(11, 0); g.stroke() }
+  g.beginPath(); g.ellipse(13.2, 0.8, 2.8, 2.2, 0.3, 0, TAU); ink(g, col, 0.7); if (shine) { g.fillStyle = '#fff'; starP(g, 12.4, 0, 0.9, 0.3, 4); g.fill() }
+  g.restore()
+}
+function tome(g, col, mark, magic) {   // 카니 책 자리 · 방향 그대로(왼손 · 하얀 책장이 오른쪽)
+  g.save(); g.translate(-11.4, -5); g.rotate(-0.15); g.fillStyle = col; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6)
+  starP(g, -0.45, 0, 1.25, 0.5); ink(g, mark, 0.35)
+  if (magic) { g.fillStyle = '#fff6a8'; for (const [a, b] of [[-3.2, -3.8], [2.6, -4.2]]) { starP(g, a, b, 0.9, 0.3, 4); g.fill() } }
+  g.restore()
+}
+const sasuHold = col => (g, x, y) => { g.save(); g.translate(x, y); g.rotate(-1.2); g.translate(-5, 0); sasuShape(g, 17, col); g.restore() }
+const guitarHold = (body, neck, deco) => (g, x, y) => { g.save(); g.translate(x - 4, y + 2.4); g.rotate(-0.75); guitar(g, body, neck); deco?.(g); g.restore() }
+const WSKIN = {
+  w_chiikawa: { ch: 'chiikawa', tier: 'shop', name: tr`민트 사스마타`, note: tr`시원한 민트색 사스마타`, hold: sasuHold('#7fe0c0') },
+  v_chiikawa: { ch: 'chiikawa', tier: 'ach', name: tr`별빛 사스마타`, note: tr`금빛으로 반짝이는 사스마타`, hold: (g, x, y) => { sasuHold('#ffd23f')(g, x, y); g.save(); g.translate(x, y); g.rotate(-1.2); starP(g, 14.6, 0, 2.6, 1.1); ink(g, '#fff6a8', 0.6); g.restore() } },
+  w_hachiware: { ch: 'hachiware', tier: 'shop', name: tr`하늘 기타`, note: tr`하늘색 몸통에 하얀 별 하나`, hold: guitarHold('#9fd8ff', '#5a7fa0', g => { starP(g, -2.4, 0, 1.6, 0.7); ink(g, '#fff', 0.4) }) },
+  v_hachiware: { ch: 'hachiware', tier: 'ach', name: tr`반짝이 기타`, note: tr`금빛으로 빛나는 무대용 기타`, hold: guitarHold('#ffd23f', '#c8952a', g => { g.fillStyle = '#fff'; for (const [a, b] of [[-3.4, -1.4], [-1, 1.4], [2, -0.8]]) { starP(g, a, b, 0.9, 0.3, 4); g.fill() } }) },
+  w_usagi: { ch: 'usagi', tier: 'shop', name: tr`사탕 지팡이`, note: tr`빨강 하양 줄무늬 사탕 막대`, hold: (g, x, y) => stickSkin(g, x, y, '#fff', '#e8473b', '#ffb3c7') },
+  v_usagi: { ch: 'usagi', tier: 'ach', name: tr`번개봉`, note: tr`양 끝에서 번개가 튀는 파란 토벌봉`, hold: (g, x, y) => stickSkin(g, x, y, '#7fc8ff', null, '#fff36e', true) },
+  w_momonga: { ch: 'momonga', tier: 'shop', name: tr`하트 지팡이`, note: tr`끝에 분홍 하트가 달린 작은 지팡이`, hold: (g, x, y) => wand(g, x, y, '#ffb3cf', 'heart', '#ff7aa8') },
+  v_momonga: { ch: 'momonga', tier: 'ach', name: tr`보석 지팡이`, note: tr`커다란 보석이 반짝이는 지팡이`, hold: (g, x, y) => wand(g, x, y, '#d9dce3', 'gem', '#7fd8ff') },
+  w_kurimanju: { ch: 'kurimanju', tier: 'shop', name: tr`녹차 잔`, note: tr`따끈한 녹차가 든 찻잔`, front: g => cup(g, '#9cc874', '#5f8f3f') },
+  v_kurimanju: { ch: 'kurimanju', tier: 'ach', name: tr`황금 잔`, note: tr`거품이 넘치는 황금 잔`, front: g => cup(g, '#ffd23f', '#fffbe6', true) },
+  w_rakko: { ch: 'rakko', tier: 'shop', name: tr`벚꽃 검`, note: tr`분홍 칼날의 검`, hold: (g, x, y) => blade(g, x, y, '#ffc2d6', '#ff7aa8') },
+  v_rakko: { ch: 'rakko', tier: 'ach', name: tr`전설의 검`, note: tr`푸르게 빛나는 칼날 · 금빛 손잡이`, hold: (g, x, y) => blade(g, x, y, '#bfe9ff', '#ffd23f', true) },
+  w_shisa: { ch: 'shisa', tier: 'shop', name: tr`국자`, note: tr`라멘집에서 쓰는 커다란 국자`, hold: (g, x, y) => ladle(g, x, y, '#d6dde6') },
+  v_shisa: { ch: 'shisa', tier: 'ach', name: tr`황금 국자`, note: tr`비법 국물을 뜨는 황금 국자`, hold: (g, x, y) => ladle(g, x, y, '#ffd23f', true) },
+  w_kani: { ch: 'kani', tier: 'shop', name: tr`그림책`, note: tr`별 그림이 있는 노란 그림책`, front: g => tome(g, '#ffe36e', '#e8473b') },
+  v_kani: { ch: 'kani', tier: 'ach', name: tr`마법서`, note: tr`금빛 별이 박힌 보라 마법서`, front: g => tome(g, '#7a5cc8', '#ffd23f', true) },
+}
+const WSPOT = { chiikawa: [15, -21, 13], hachiware: [10, -9, 13], usagi: [12, -14, 13], momonga: [14, -15, 11], kurimanju: [12.7, -8, 7], rakko: [14, -16, 13], shisa: [15, -14, 13], kani: [-11.6, -5.4, 7] }   // 반짝일 자리 [x, y, 퍼짐] — 든 무기 둘레
+for (const w of Object.values(WSKIN)) w.fx = w.tier === 'ach' ? { k: ['spark', 'spark', 'star'], col: ['#ffffff', '#ffd23f', '#fff6a8'], rate: 7, spot: WSPOT[w.ch] } : { k: ['spark'], col: ['#ffffff', '#fff6a8'], rate: 3.5, spot: WSPOT[w.ch] }   // 무기 스킨 반짝이 — 업적은 더 자주 · 금빛 별
+const WSKINS_OF = id => Object.keys(WSKIN).filter(k => WSKIN[k].ch === id)
+const normalWon = id => (save.best[`${id}.normal`]?.clears || 0) + (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 보통 · 어려움 클리어
+const ownsW = wid => WSKIN[wid].tier === 'ach' ? normalWon(WSKIN[wid].ch) : save.owned.includes(wid)
+const wornW = id => { const w = save.wear['w:' + id]; return w && WSKIN[w] && ownsW(w) ? w : null }
+// 스킬 스킨 — col 큰 색 · col2 둘째 색 · trail 지나간 자리 반짝이(cfxDraw 모양)
+const SKIN = {
+  sasu: { name: tr`얼음 사스마타`, note: tr`찌를 때 차가운 얼음빛 · 눈꽃 반짝`, col: '#9fd8ff', col2: '#e6f6ff', trail: { k: ['spark'], col: ['#ffffff', '#bfe9ff'] } },
+  book: { name: tr`꽃잎 책장`, note: tr`분홍 책장이 꽃잎을 흩날려요`, col: '#ffb3d1', col2: '#ffe3ee', trail: { k: ['petal'], col: ['#ffb3d1', '#ffe3ee'] } },
+  pile: { name: tr`보물 더미`, note: tr`금빛 책 더미 · 무너질 때 반짝`, col: '#ffd23f', col2: '#fff6c2', trail: { k: ['spark'], col: ['#ffd23f', '#ffffff'] } },
+  stick: { name: tr`벚꽃 회오리`, note: tr`휘두르면 벚꽃잎이 흩날려요`, col: '#ff9bc0', col2: '#ffe3ee', trail: { k: ['petal'], col: ['#ffb3d1', '#ffffff'] } },
+  yaha: { name: tr`무지개 충격파`, note: tr`무지개빛으로 퍼지는 충격파`, col: '#b98cff', col2: '#9fd8ff', trail: { k: ['star'], col: ['#ff9be0', '#9fd8ff', '#fff3a1', '#b6f0c2'] } },
+  ura: { name: tr`불꽃 기합`, note: tr`주황 불꽃으로 타오르는 기합`, col: '#ff8a5c', col2: '#ffd23f', trail: { k: ['dot'], col: ['#ff8a5c', '#ffd23f'] } },
+  weed: { name: tr`꽃 피우기`, note: tr`뽑힌 자리에 분홍 꽃이 펑`, col: '#ff9be0', col2: '#ffd6f0', trail: { k: ['petal'], col: ['#ff9be0', '#fff3a1'] } },
+  tears: { name: tr`별 눈물`, note: tr`보랏빛 별이 반짝이는 눈물`, col: '#c9b3ff', col2: '#efe7ff', trail: { k: ['star'], col: ['#c9b3ff', '#ffffff'] } },
+  guitar: { name: tr`별빛 음표`, note: tr`금빛으로 반짝이는 음표`, col: '#ffd23f', col2: '#fff6c2', trail: { k: ['spark'], col: ['#ffd23f', '#ffffff'] } },
+  nantoka: { name: tr`벚꽃 번개`, note: tr`분홍빛 번개 · 꽃잎 반짝`, col: '#ff7ab8', col2: '#ffe3ee', trail: { k: ['petal', 'spark'], col: ['#ff9bc0', '#ffffff'] } },
+  ramen: { name: tr`딸기 우유`, note: tr`분홍 딸기 우유 국물 · 보글보글 거품`, col: '#ffc2d6', col2: '#ff8fb0', trail: { k: ['bubble'], col: ['#ffffff', '#ffc2d6'] } },
+  curry: { name: tr`보라 매운맛`, note: tr`보랏빛으로 터지는 매운맛`, col: '#b98cff', col2: '#7a5cc8', trail: { k: ['dot'], col: ['#b98cff', '#e6d9ff'] } },
+  pochette: { name: tr`하트 포셰트`, note: tr`분홍 포셰트가 하트를 뿌려요`, col: '#ff7aa8', col2: '#ffd6e2', trail: { k: ['heart'], col: ['#ff7aa8', '#ffb3cf'] } },
+  momo: { name: tr`황금 발톱`, note: tr`금빛으로 반짝이는 「내놔!」`, col: '#ffd23f', col2: '#fff6c2', trail: { k: ['spark'], col: ['#ffd23f', '#ffffff'] } },
+  kanpai: { name: tr`우유 건배`, note: tr`하늘빛 우유 잔 · 보글보글 거품`, col: '#bfe9ff', col2: '#ffffff', trail: { k: ['bubble'], col: ['#ffffff', '#bfe9ff'] } },
+  sword: { name: tr`벚꽃 일섬`, note: tr`분홍 칼바람에 벚꽃잎이 날려요`, col: '#ff9bc0', col2: '#ffffff', trail: { k: ['petal'], col: ['#ffb3d1', '#ffffff'] } },
+}
+const ownsS = id => save.owned.includes('sk:' + id) || (save.awSeen || []).includes(id)   // 산 것 · 각성해 본 스킬
+const skOn = id => !!(SKIN[id] && save.skin[id] && ownsS(id))
+const TINT = new Map()   // 스킬 스킨 그림 — 원래 그림 위에 스킨 색을 반쯤 덮는다
+function tinted(s, col) {
+  const k = s.c, m = TINT.get(k) || TINT.set(k, new Map()).get(k)
+  if (!m.has(col)) { const c = mk(s.c.width, s.c.height), g = c.getContext('2d'); g.drawImage(s.c, 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = 0.55; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height); m.set(col, { ...s, c }) }
+  return m.get(col)
+}
+const skPut = (src, s) => { const k = G.sk[src]; return k ? tinted(s, k.col) : s }   // 그 스킬에 스킨을 켰으면 물든 그림
+function skPuff(x, y, k, n = 1, L = G.sfx.list) {   // 스킬 스킨 반짝이 — 지나간 자리 · 터진 자리
+  for (let i = 0; i < n; i++) L.push({ k: pickOf(k.trail.k), col: pickOf(k.trail.col), x: x + (rnd() - 0.5) * 12, y: y + (rnd() - 0.5) * 10, vx: (rnd() - 0.5) * 30, vy: -10 - rnd() * 20, t: 0, T: 0.5 + rnd() * 0.4, s: 0.9 + rnd() * 0.6, rot: rnd() * TAU })
+  if (L.length > 260) L.splice(0, L.length - 260)
+}
+
 // ---------------------------------------------------------------- 화면 · 입력
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ui = document.getElementById('ui'), pauseBtn = document.getElementById('pause')
 SND.button(document.getElementById('snd'))
@@ -1754,6 +2210,7 @@ addEventListener('keydown', e => {
   if ((k || e.code === 'Space') && mode === 'play') e.preventDefault()
   if (SND.open?.()) { if (e.code === 'Escape') SND.close(); return }   // 소리 창이 떠 있으면 Esc 로 닫기만
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
+  if (e.code === 'Escape' && !e.repeat && !['play', 'pause', 'sound', 'box', 'revive'].includes(mode)) { const home = [...ui.querySelectorAll('button')].find(b => b.onclick === title); if (home) { e.preventDefault(); return home.click() } }   // PC — 메뉴 화면에서 Esc = 「처음으로」
   if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat && (mode === 'pause' || mode === 'revive' || (mode === 'box' && BOX?.jack)) && !(tabbed && e.target.closest?.('#ui button'))) {   // 쉬는 창 · 일시정지 → 계속하기, 부활할까요 → 부활하기, 잭팟 → 셋 다 받기(Tab 으로 고른 단추는 그 단추)
     e.preventDefault(); return mode === 'pause' ? resume() : mode === 'revive' ? revive() : BOX.act('take')
   }
@@ -1806,10 +2263,14 @@ function newGame(ch) {
       // 각성한 스킬 · 각성 상자 리롤(따로 센다) · 각성 스킬로 막은 탄(업적)
   }
   S = null; addWeapon(ch.w); stats(); pl.hp = S.maxHp
+  G.cfx = { list: [], acc: 0 }; G.ofx = outfitOf(wornId(ch.id), ch.id)?.fx   // 의상 이펙트
+  G.wfx = { list: [], acc: 0 }; G.wsx = WSKIN[wornW(ch.id)]?.fx   // 무기 스킨 반짝이
+  G.sfx = { list: [], acc: 0 }; G.sk = Object.fromEntries(Object.keys(SKIN).filter(skOn).map(id => [id, SKIN[id]]))   // 켠 스킬 스킨
   cam.x = cam.y = 0; shake = 0; calm()
   say(tr`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
-function startGame(i) { if (LQ) { LQ = 0; size() } Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field', false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
+function startGame(i) { if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
+  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play('field', false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -1876,7 +2337,8 @@ const toward = (e, x = pl.x, y = pl.y) => { const dx = e.x - x, dy = e.y - y, d 
 const alive = e => e && !e.dead ? e : null
 const visible = () => G.foes.filter(e => !e.dead && !e.rush && onScreen(e))
 const slow = (e, T, k) => { if (e.boss) return; if (e.slow <= 0 || k <= e.sk) { e.sk = k; e.slow = Math.max(e.slow, T) } }   // T 초 동안 속도 k 배(보스는 안 걸린다)
-const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, ...o }) }
+const SKFX = new Set(['boom', 'bolt', 'beam', 'grab', 'swing'])
+const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, src: SRC, ...o }); const k = SRC && SKFX.has(o.k) && G.sk[SRC]; if (k) skPuff(o.x ?? pl.x, o.y ?? pl.y, k, 5) }   // 스킬 스킨 — 터진 자리에 반짝이
 const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < 360) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
 const num = (x, y, v, kind) => { if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
 const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
@@ -1907,7 +2369,7 @@ const SHOT = {
   },
   sasu(w, st, i, A, D) {
     const e = alive(w.list[i % (w.list.length || 1)]) || closest(1)[0], [dx, dy] = e ? toward(e) : pl.face, v = 520 * st.spd * S.speed
-    G.shots.push({ src: SRC, k: 'ball', col: SASU[G.ch.id] || '#d6dde6', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 13 * Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 70, life: 0.75, t: 0, hit: new Set() })
+    G.shots.push({ src: SRC, k: 'ball', col: G.sk.sasu?.col || SASU[G.ch.id] || '#d6dde6', x: pl.x, y: pl.y, vx: dx * v, vy: dy * v, r: 13 * Math.sqrt(A), dmg: D, pierce: st.pierce, kb: 70, life: 0.75, t: 0, hit: new Set() })
   },
   stick(w, st, i, A, D) {   // 가까운 적 쪽(첫 번째) · 그와 직각(두 번째, 조금 짧게)으로 휘두르고 양 끝이 터진다 — 예전엔 늘 양옆이라 위아래 적 · 보스를 거의 못 때렸다
     const cy = pl.y - 8
@@ -2383,8 +2845,8 @@ function step(dt) {
   cam.x += (pl.x - cam.x) * Math.min(1, dt * 8); cam.y += (pl.y - cam.y) * Math.min(1, dt * 8)
   regrid()
   if (!dead && !G.won) { spawner(dt); weapons(dt) }
-  foes(dt)
-  shots(dt)
+  SRC = null; foes(dt)   // 적이 만든 효과에 스킬 스킨이 묻지 않게
+  shots(dt); SRC = null
   if (!dead && !G.won) { helpers(dt); darkStep(dt) }
   // 바닥 경고 — 원이 다 차면 터지고(안에 있으면 맞는다), 돌격대는 줄지어 나온다
   for (const z of G.haz) {
@@ -2411,6 +2873,9 @@ function step(dt) {
   for (const it of G.items) { it.t += dt; if (it.k === 'coinbox' && it.t > WANDER.life) { it.dead = true; continue } if (!dead && (it.x - pl.x) ** 2 + (it.y - pl.y) ** 2 < (pl.r + 16) ** 2) { it.dead = true; USE[it.k](); fx({ k: 'flash', x: pl.x, y: pl.y - 20, R: 70, col: '#ffffff', T: 0.35 }) } }
   // 효과
   for (const p of G.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; p.vx *= 0.97; if (p.t > p.T) p.dead = true }
+  cfxStep(G.cfx, G.dying ? null : G.ofx, pl.x, pl.y, dt)   // 의상 이펙트
+  cfxStep(G.wfx, G.dying ? null : G.wsx, pl.x, pl.y, dt, pl.fx)   // 무기 스킨 반짝이
+  cfxStep(G.sfx, null, 0, 0, dt)   // 스킬 스킨 반짝이
   for (const f of G.fx) {
     f.t += dt; if (f.t > f.T) f.dead = true
     if (f.k === 'wave' && !f.done && !dead && Math.hypot(pl.x - f.x, (pl.y - f.y) / 0.8) <= f.R * Math.min(1, f.t / f.T)) { f.done = true; afflict(f.st) }   // 상태이상 물결이 나에게 닿으면
@@ -2429,6 +2894,7 @@ function sortY(a) { for (let i = 1; i < a.length; i++) { const e = a[i]; let j =
 function shots(dt) {
   for (const b of G.shots) {
     b.t += dt; SRC = b.src
+    if (G.sk[b.src] && rnd() < dt * 12) skPuff(b.x, b.y - 10, G.sk[b.src])   // 스킬 스킨 — 지나간 자리 반짝이
     switch (b.k) {
       case 'ball':   // 사스마타(꿰뚫는다) · 건배(옆 적에게 튕겨 간다)
         b.x += b.vx * dt; b.y += b.vy * dt
@@ -2652,14 +3118,14 @@ function world(c, ox, oy) {
   // 바닥 — 라멘 국물 · 우라! · 경고 원 · 돌진 길 · 풀뽑기 표시 · 카레 냄비
   for (const b of G.shots) if (b.k === 'zone') {
     const a = Math.min(1, (b.life - b.t) * 2)
-    c.globalAlpha = 0.42 * a; c.fillStyle = '#f5d36a'; oval(c, b.x, b.y, b.R, b.R * 0.8); c.fill()
-    c.globalAlpha = 0.8 * a; c.strokeStyle = '#c9a03a'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 0.6 * a; put(c, SPR.E.ramen, b.x, b.y)
+    const k = G.sk.ramen; c.globalAlpha = 0.42 * a; c.fillStyle = k?.col || '#f5d36a'; oval(c, b.x, b.y, b.R, b.R * 0.8); c.fill()
+    c.globalAlpha = 0.8 * a; c.strokeStyle = k?.col2 || '#c9a03a'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 0.6 * a; put(c, SPR.E.ramen, b.x, b.y)
     c.fillStyle = '#fff6d8'; for (let i = 0; i < 3; i++) { const q = (b.t * 0.7 + i / 3) % 1; c.globalAlpha = (1 - q) * 0.7 * a; oval(c, b.x + Math.sin(i * 2.1 + b.t * 2) * b.R * 0.4, b.y - q * 30, 3 + q * 4, 3 + q * 4); c.fill() }
     c.globalAlpha = 1
   }
   for (const w of G.weapons) if (w.id === 'ura' && w.R) {
-    c.globalAlpha = 0.12 + w.pulse * 1.2; c.fillStyle = '#ffd23f'; oval(c, pl.x, pl.y, w.R, w.R * 0.8); c.fill()
-    c.globalAlpha = 0.5; c.strokeStyle = '#ffb400'; c.lineWidth = 2; c.setLineDash([6, 6]); c.stroke(); c.setLineDash([]); c.globalAlpha = 1
+    const k = G.sk.ura; c.globalAlpha = 0.12 + w.pulse * 1.2; c.fillStyle = k?.col || '#ffd23f'; oval(c, pl.x, pl.y, w.R, w.R * 0.8); c.fill()
+    c.globalAlpha = 0.5; c.strokeStyle = k?.col2 || '#ffb400'; c.lineWidth = 2; c.setLineDash([6, 6]); c.stroke(); c.setLineDash([]); c.globalAlpha = 1
   }
   for (const z of G.haz) {
     if (z.k === 'rush') {   // 붉은 띠 · 초록 빈 줄
@@ -2682,10 +3148,10 @@ function world(c, ox, oy) {
     if (b.k === 'pile') {   // 무너질 범위는 옅은 초록 점선, 기울면서 쓰러진다 · 사라질 때 흐려진다
       c.globalAlpha = Math.min(1, (b.life - b.t) / 0.5 + (b.fall ? 1 : 0))
       c.strokeStyle = 'rgba(110,170,60,.25)'; c.lineWidth = 1.5; c.setLineDash([3, 5]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([])
-      c.save(); c.translate(b.x, b.y); if (b.fall) c.rotate(Math.min(1, (b.t - b.fall) / 0.25) * 0.8); put(c, SPR.pile, 0, 0); c.restore(); c.globalAlpha = 1
+      c.save(); c.translate(b.x, b.y); if (b.fall) c.rotate(Math.min(1, (b.t - b.fall) / 0.25) * 0.8); put(c, skPut('pile', SPR.pile), 0, 0); c.restore(); c.globalAlpha = 1
     }
-    else if (b.k === 'drop') { const u = b.t / b.T; c.strokeStyle = '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = 'rgba(110,190,80,.35)'; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill() }
-    else if (b.k === 'pot') { const u = b.t / b.T; c.strokeStyle = 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
+    else if (b.k === 'drop') { const u = b.t / b.T, k = G.sk.weed; c.strokeStyle = k?.col || '#4f9a35'; c.lineWidth = 2; c.setLineDash([4, 4]); oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.setLineDash([]); c.fillStyle = k?.col || 'rgba(110,190,80,.35)'; if (k) c.globalAlpha = 0.35; oval(c, b.x, b.y, b.R * u, b.R * 0.8 * u); c.fill(); c.globalAlpha = 1 }
+    else if (b.k === 'pot') { const u = b.t / b.T, k = G.sk.curry; c.strokeStyle = k?.col || 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = k ? k.col2 + '33' : 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = k?.col2 || '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
   }
   // 보석 · 줍는 것
   for (const g of G.gems) put(c, SPR.gem[g.v >= 20 ? 2 : g.v >= 3 ? 1 : 0], g.x, g.y)
@@ -2715,13 +3181,14 @@ function world(c, ox, oy) {
   // 날아가는 것
   for (const b of G.shots) {
     if (b.k === 'ball' && b.look === 'note') put(c, SPR.note, b.x, b.y - 14 + Math.sin(b.t * 18) * 2, 0.75)
-    else if (b.k === 'ball' && b.look === 'page') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx) + Math.sin(b.t * 16) * 0.35); c.scale(b.sc, b.sc * (0.45 + 0.55 * Math.abs(Math.cos(b.t * 13)))); put(c, SPR.page, 0, 0, 1.25); c.restore() }   // 팔랑이는 책장
-    else if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, SPR.E.kanpai, 0, 0, 0.8); c.restore() }
+    else if (b.k === 'ball' && b.look === 'page') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx) + Math.sin(b.t * 16) * 0.35); c.scale(b.sc, b.sc * (0.45 + 0.55 * Math.abs(Math.cos(b.t * 13)))); put(c, skPut('book', SPR.page), 0, 0, 1.25); c.restore() }   // 팔랑이는 책장
+    else if (b.k === 'ball' && b.look === 'cup') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.sin(b.t * 14) * 0.5); put(c, skPut('kanpai', SPR.E.kanpai), 0, 0, 0.8); c.restore() }
     else if (b.k === 'ball') { c.save(); c.translate(b.x, b.y - 12); c.rotate(Math.atan2(b.vy, b.vx)); put(c, SPR.sasu[b.col] ||= sprite(34, 18, 16, 9, g => { g.translate(-13.4, 0); sasuShape(g, 18, b.col) }), 0, 0, 1.2); c.restore() }   // 사스마타 — 캐릭터 색 else if (b.k === 'arc') { const u = b.u, hh = b.H * 4 * u * (1 - u); put(c, SPR.shadow, b.x, b.y, 0.35); tear(c, b.x, b.y - hh - 10, 6) }
-    else if (b.k === 'orb') put(c, SPR.note, b.x, b.y - 14, 0.8)
-    else if (b.k === 'boom') { c.save(); c.translate(b.x, b.y - 14); c.rotate(Math.sin(b.a) * 0.6); put(c, SPR.pochette, 0, 0, b.r / 10); c.restore() }
-    else if (b.k === 'ring' && b.t >= 0) { const u = Math.min(1, b.t / b.T); c.globalAlpha = 1 - Math.max(0, b.t - b.T) / 0.18; c.strokeStyle = '#ffd23f'; c.lineWidth = 6; oval(c, b.x, b.y, b.R * u, b.R * u * 0.8); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 1 }
+    else if (b.k === 'orb') put(c, skPut('guitar', SPR.note), b.x, b.y - 14, 0.8)
+    else if (b.k === 'boom') { c.save(); c.translate(b.x, b.y - 14); c.rotate(Math.sin(b.a) * 0.6); put(c, skPut('pochette', SPR.pochette), 0, 0, b.r / 10); c.restore() }
+    else if (b.k === 'ring' && b.t >= 0) { const u = Math.min(1, b.t / b.T); c.globalAlpha = 1 - Math.max(0, b.t - b.T) / 0.18; c.strokeStyle = G.sk.yaha?.col || '#ffd23f'; c.lineWidth = 6; oval(c, b.x, b.y, b.R * u, b.R * u * 0.8); c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 1 }
   }
+  cfxDraw(c, G.sfx)   // 스킬 스킨 반짝이 — 지나간 자리 · 터진 자리
   for (const b of G.eshots) {
     const y = b.y - 14, R = b.r * 2.2 + 8, pu = 0.5 + 0.5 * Math.sin(b.t * 16), v = Math.hypot(b.vx, b.vy) || 1   // 잘 보이게 — 꼬리 · 깜빡이는 빨간 테
     c.lineCap = 'round'; c.strokeStyle = 'rgba(255,70,90,.35)'; c.lineWidth = R * 1.2; c.beginPath(); c.moveTo(b.x - b.vx / v * R * 2.2, y - b.vy / v * R * 2.2); c.lineTo(b.x, y); c.stroke()
@@ -2781,43 +3248,45 @@ function drawMe(c) {
   const C = SPR[G.ch.id], j = pl.jump > 0 ? Math.sin(pl.jump / 0.3 * Math.PI) * 26 : 0, walking = pl.moving && !G.dying
   const s = G.dying || pl.hurtT > 0 ? C.hurt : walking ? C.walk[(G.t * 9 * Math.sqrt(S.move) | 0) % 4] : C.idle[G.t % 3.4 < 0.14 ? 1 : 0]   // 아프면 > < · 걸으면 네 장 · 서 있으면 가끔 깜빡
   const br = walking ? 0 : Math.sin(G.t * 3) * 0.025   // 서 있으면 숨 쉬듯
+  cfxAura(c, G.ofx, pl.x, pl.y, G.t)   // 업적 의상 — 발밑 빛
   if (pl.inv > 0) c.globalAlpha = 0.6   // 무적 — 깜빡이지 않고 반투명
   c.save(); c.translate(pl.x, pl.y - j)
   if (G.dying) c.rotate(Math.min(1, (1.2 - G.dying) * 2) * 1.4 * pl.fx)
   c.scale(pl.fx * (1 + br * 0.6), 1 - br)
   c.drawImage(s.c, -s.ox, -s.oy, s.w, s.h); c.restore(); c.globalAlpha = 1
+  cfxDraw(c, G.cfx); cfxDraw(c, G.wfx)   // 의상 이펙트 — 몸 둘레에 떠오르는 모양 · 무기 반짝이
   if (sick('charm')) txt(c, '♥', pl.x + Math.sin(G.t * 6) * 8, pl.y - 50, 16, '#ff6fd0')
 }
 function effect(c, f, ox, oy) {
   const u = Math.min(1, f.t / f.T)
   switch (f.k) {
     case 'ring': c.globalAlpha = 1 - u; c.strokeStyle = f.col; c.lineWidth = 4; oval(c, f.x, f.y, f.R * u, f.R * u * 0.8); c.stroke(); break
-    case 'boom': c.globalAlpha = (1 - u) * 0.75; c.fillStyle = f.col; oval(c, f.x, f.y - 4, f.R * (0.5 + 0.5 * u), f.R * (0.5 + 0.5 * u) * 0.8); c.fill(); c.globalAlpha = 1 - u; c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); break
+    case 'boom': c.globalAlpha = (1 - u) * 0.75; c.fillStyle = G.sk[f.src]?.col || f.col; oval(c, f.x, f.y - 4, f.R * (0.5 + 0.5 * u), f.R * (0.5 + 0.5 * u) * 0.8); c.fill(); c.globalAlpha = 1 - u; c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); break
     case 'flash': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = f.col; oval(c, f.x, f.y, f.R, f.R); c.fill(); c.globalCompositeOperation = 'source-over'; break
     case 'white': c.globalAlpha = (1 - u) * 0.8; c.fillStyle = '#fff'; c.fillRect(ox, oy, VW, VH); break
     case 'text': c.globalAlpha = 1 - Math.max(0, u - 0.6) / 0.4; txt(c, f.s, f.x, f.y - u * 18, 17, f.col); break
     case 'bolt': {   // 어떻게든 돼라! — 노란 별 번개
       c.globalAlpha = 1 - u; c.lineJoin = 'round'
-      for (const [col, lw] of [['#ffb400', 7], ['#fff7b0', 3]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); f.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke() }
-      star(c, f.x, f.y - 14, 12 * (1 + u * 0.5), '#ffe066'); break
+      const k = G.sk[f.src]; for (const [col, lw] of [[k?.col || '#ffb400', 7], [k?.col2 || '#fff7b0', 3]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); f.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke() }
+      star(c, f.x, f.y - 14, 12 * (1 + u * 0.5), k?.col || '#ffe066'); break
     }
     case 'beam': {   // 랏코 선생의 일섬
       const x1 = f.x + Math.cos(f.a) * f.L, y1 = f.y + Math.sin(f.a) * f.L
       c.globalAlpha = 1 - u; c.lineCap = 'round'
-      for (const [col, k] of [['rgba(127,200,255,.6)', 2], ['#fff', 0.8]]) { c.strokeStyle = col; c.lineWidth = f.W * k * (1 - u * 0.6); c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(x1, y1); c.stroke() }
+      for (const [col, k] of [[G.sk[f.src] ? G.sk[f.src].col + '99' : 'rgba(127,200,255,.6)', 2], ['#fff', 0.8]]) { c.strokeStyle = col; c.lineWidth = f.W * k * (1 - u * 0.6); c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(x1, y1); c.stroke() }
       break
     }
     case 'grab': {   // 내놔! — 쭉 뻗은 손
       c.globalAlpha = 1 - u; c.lineCap = 'round'
-      for (const [col, lw] of [[OUT, 7], ['#fff', 4]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x, f.y); c.stroke() }
-      oval(c, f.x, f.y, 7, 7); c.fillStyle = '#fff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke()
+      const gk = G.sk[f.src]; for (const [col, lw] of [[OUT, 7], [gk?.col || '#fff', 4]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); c.moveTo(f.x0, f.y0); c.lineTo(f.x, f.y); c.stroke() }
+      oval(c, f.x, f.y, 7, 7); c.fillStyle = gk?.col || '#fff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke()
       txt(c, tr`내놔!`, f.x, f.y - 14, 13, '#ffb3d1'); break
     }
     case 'swing': {   // 토벌봉 — 노란 봉, 양 끝에 불꽃
       const { ex, ey } = f
-      c.globalAlpha = (1 - u) * 0.6; c.strokeStyle = '#fff3c4'; c.lineWidth = 10 * (1 - u) + 2; c.lineCap = 'round'
+      const sk = G.sk[f.src]; c.globalAlpha = (1 - u) * 0.6; c.strokeStyle = sk?.col2 || '#fff3c4'; c.lineWidth = 10 * (1 - u) + 2; c.lineCap = 'round'
       c.beginPath(); c.moveTo(f.x - ex, f.y - ey); c.lineTo(f.x + ex, f.y + ey); c.stroke()
-      c.globalAlpha = 1 - u; c.strokeStyle = OUT; c.lineWidth = 5; c.stroke(); c.strokeStyle = '#ffd54a'; c.lineWidth = 3; c.stroke()
+      c.globalAlpha = 1 - u; c.strokeStyle = OUT; c.lineWidth = 5; c.stroke(); c.strokeStyle = sk?.col || '#ffd54a'; c.lineWidth = 3; c.stroke()
       for (const s of [-1, 1]) flame(c, f.x + s * ex, f.y + s * ey, 6 + 4 * (1 - u))
       break
     }
@@ -2907,7 +3376,7 @@ function title() {
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
-    h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), shop), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(tr`토벌 시작!`, chars, 'main')),
+    h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), () => shop()), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(tr`토벌 시작!`, chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? tr`토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : tr`몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, tr`비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ`),
     STATS.url && h('p', { class: 'fine' }, tr`게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)와 방문 통계(Google 애널리틱스)를 모아요 · `,
@@ -2984,6 +3453,8 @@ function guide() {
       step('awaken', tr`Lv 8 스킬이 있을 때 보스를 쓰러뜨리면 각성의 별이 떨어져요. 먹으면 스킬 하나가 각성!`),
       step('coinbox', tr`멀리 돌아다니면 가끔 떠돌이 보물상자가 나와요. 열면 보상금!`),
       step('coin', tr`판이 끝나면 보상금을 받아요. 상점에서 조금씩 세게 만들 수 있어요`),
+      step('shirt', tr`상점 「의상」 탭에서 옷을 사서 입어요 — 한 번 사면 모든 캐릭터가! 어려움을 클리어하면 특별한 업적 의상`),
+      step('sasu', tr`상점에서 무기 스킨 · 스킬 스킨도 바꿀 수 있어요 — 모양과 색만 바뀌어요`),
       step('stone', tr`부활석이 있으면 쓰러져도 다시 일어나요`, tr`한 판에 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지`),
       step('a_goblin', tr`업적 메달을 모아요. 금메달 하나마다 보상금 +1%`),
       step('normal', tr`난이도 — 처음이라면 쉬움부터!`, Object.entries(DIFF).map(([k, d]) => h('span', { class: 'df' }, ic(k), ` ${d.name}: ${d.note}`))),
@@ -3079,6 +3550,7 @@ function finish(win, quit = false) {
   const b = save.best[bestKey(G.ch.id, G.diff)] ||= { t: 0, kills: 0, lvl: 0, clears: 0 }, rec = !quit && G.t > b.t
   save.runs++; save.kills += G.kills
   report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
+  const dress = win && G.diff === 'hard' && !b.clears && OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach')   // 그 캐릭터로 처음 어려움 클리어 — 업적 의상
   if (win) { save.clears++; b.clears++ }
   const pay = bounty(win); save.coin += pay.sum
   const got = achieve(win, pay.sum)
@@ -3095,9 +3567,10 @@ function finish(win, quit = false) {
       h('p', {}, ic('coin'), h('span', {}, tr`토벌 보상금`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''}`)), h('b', {}, `+${pay.base.toLocaleString()}`)),
       h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 돌아다니면 가끔 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
       h('p', { class: 'sum' }, h('span', {}, tr`합계`), h('b', {}, `+${pay.sum.toLocaleString()}`))),
+    dress && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), h('span', {}, portrait(G.ch.id, dress), ` ${OUTFIT[dress].name}`), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`)),
     got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, tr`업적 달성!`), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? tr` — 보상금 +1%` : ''}`))),
     chips(), dmgTable(),
-    h('div', { class: 'row' }, btn(tr`처음으로`, title), btn(tr`상점`, shop), btn(tr`캐릭터 바꾸기`, chars), btn(tr`다시 하기`, () => startGame(pickCi), 'main'))))
+    h('div', { class: 'row' }, btn(tr`처음으로`, title), btn(tr`상점`, () => shop()), btn(tr`캐릭터 바꾸기`, chars), btn(tr`다시 하기`, () => startGame(pickCi), 'main'))))
 }
 /** 토벌 보상금 — 버틴 시간(10초에 1) · 처치(200에 1 — 뒤로 갈수록 처치가 크게 늘어서) · 보스 15 · 클리어 60, 난이도 배수(DIFF.coin) */
 function bounty(win) {
@@ -3128,25 +3601,6 @@ function achs() {
       }))),
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title, 'main'))))
 }
-/** 영구 강화 상점 — 칸마다 값이 오른다(n 번째 칸 = cost × n). 산 것은 다음 판부터 stats() 에 더해진다 */
-function shop() {
-  mode = 'shop'; G = null; BOX = null; pauseBtn.hidden = true   // 결과 화면에서 와도 뒤는 처음 화면처럼
-  const have = h('p', { class: 'coin' }), list = h('ul', { class: 'list shop' })
-  const draw = () => {
-    have.replaceChildren(ic('coin'), tr` 모은 토벌 보상금 ${save.coin.toLocaleString()}`)
-    const stone = h('li', { class: 'stone' }, ic('stone'), h('div', {}, h('b', {}, tr`부활석`, h('small', {}, tr`${save.stone}개`)), h('span', {}, tr`쓰러지면 하나 써서 다시 일어나요 — 판마다 ${Object.values(DIFF).map(d => `${d.name} ${d.revive}`).join(' · ')}번까지`)),
-      h('button', { type: 'button', class: 'btn buy', disabled: save.coin < STONE, onclick: () => { if (save.coin < STONE) return; save.coin -= STONE; save.stone++; persist(); draw() } }, [ic('coin'), ` ${STONE.toLocaleString()}`]))
-    list.replaceChildren(stone, ...Object.entries(SHOP).map(([id, u]) => {
-      const lv = save.up[id] || 0, full = lv >= u.max, cost = u.cost * (lv + 1)
-      return h('li', {}, ic(id), h('div', {}, h('b', {}, u.name, h('small', { 'aria-label': tr`${lv} / ${u.max}칸` }, '●'.repeat(lv) + '○'.repeat(u.max - lv))), h('span', {}, `${u.lab} ${u.val(u.per * lv)}`, full ? tr` (끝)` : ` → ${u.val(u.per * (lv + 1))}`)),
-        h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? tr`다 샀어요` : [ic('coin'), ` ${cost}`]))
-    }))
-  }
-  draw()
-  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, tr`상점`), have,
-    h('div', { class: 'scroll' }, h('p', { class: 'shop-note' }, tr`판이 끝나면 버틴 시간 · 처치 · 보스 · 클리어만큼 보상금(어려울수록 더). 강화는 조금씩 — 다 사도 같은 아이템 한 레벨 정도예요. 부활석은 쓰면 없어져요`), list), h('div', { class: 'row' }, btn(tr`← 처음으로`, title, 'main'))))
-}
-
 // ---------------------------------------------------------------- 돌리기
 let last = 0, lastMode = '', tnow = 0
 /** 자동 화질 — 판 처음(5~90초)의 가장 빠른 프레임 시간을 기준으로, 나중에 그보다 1.6배(적어도 26ms) 넘게 느려지면 한 단계씩(4초 간격) 픽셀을 줄이고 작은 적 그림자를 뺀다.
@@ -3172,4 +3626,4 @@ size()
 title()
 requestAnimationFrame(frame)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-window.__mjg = { render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+window.__mjg = { OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

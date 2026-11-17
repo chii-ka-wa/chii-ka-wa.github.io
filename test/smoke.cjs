@@ -20,6 +20,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const M = window.__mjg, t0 = performance.now(); let n = 0, rests = 0
     while (M.G && M.G.t < until && M.mode !== 'over') {
       if (opts.god) M.pl.inv = 1e9
+      const sr = opts.keep && M.G.final?.siren; if (sr) sr.hp = Math.max(sr.hp, sr.max * 0.5)   // 세이렌 보기 — 통계 점검 전에 쓰러지지 않게(빌드가 세면 일찍 잡힌다)
       if (M.mode === 'box') M.pick0()
       if (M.mode === 'pause') { if (opts.stopRest) break; rests++; M.resume() }   // 보스 격파 쉬는 창
       M.step(1 / 30); n++
@@ -104,9 +105,9 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const rage = await page.evaluate(() => { const M = window.__mjg, b = M.summon('dekatsuyo', true), s0 = b.spd; b.age = 61; M.step(1 / 30); const o = { rage: b.rage, spd: b.spd / s0 }; b.dead = true; return o })   // 보스를 오래 두면 화낸다
     if (!rage.rage || rage.spd < 1.4) errors.push('[desktop] 보스 화내기 ' + JSON.stringify(rage))
     const F = await page.evaluate(() => window.__mjg.FINAL_T)
-    r = await sim(page, F + 5, { god: true, walk: true }); console.log('final+5s', r)
+    r = await sim(page, F + 5, { god: true, walk: true, keep: true }); console.log('final+5s', r)
     await page.screenshot({ path: OUT + '7-siren.png' })
-    r = await sim(page, F + 60, { god: true, walk: true }); console.log('final+60s', r)
+    r = await sim(page, F + 60, { god: true, walk: true, keep: true }); console.log('final+60s', r)
     const fin = await page.evaluate(() => { const F = window.__mjg.G.final; return F && { siren: Math.round(F.siren.hp), max: Math.round(F.siren.max), dead: F.siren.dead, mer: F.mermaids.map(m => m.dead ? 'x' : Math.round(m.hp)) } })
     console.log('final', fin)
     await page.screenshot({ path: OUT + '8-siren2.png' })
@@ -242,7 +243,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
 
   await run('revive', { width: 390, height: 844 }, async page => {   // 부활석 — 쓰러지면 묻고, 누르면 체력 가득 · 화면 안 일반 몬스터 토벌 · 하나 줄어든다. 어려움은 한 판에 한 번(남아도 결과 화면)
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ diff: 'hard', stone: 3, noStats: true }))); await page.reload(); await page.waitForTimeout(500)
-    const h0 = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); const h = M.pl.hp; for (let i = 0; i < 400; i++) { M.G.queue.length = 0; M.pl.inv = 9; M.step(1 / 30) } return h })
+    const h0 = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); const h = M.pl.hp; for (let i = 0; i < 400; i++) { M.G.queue.length = 0; M.pl.inv = 9; M.step(1 / 30) } M.G.next = 1e15; return h })   // 부활 뒤 쓰러진 적의 보석으로 레벨 업 상자가 끼어들지 않게
     const die = () => page.evaluate(() => { const M = window.__mjg; M.pl.hp = 0; M.G.dying = 0.01; M.step(1 / 30); return M.mode })
     const m1 = await die(), foes0 = await page.evaluate(() => window.__mjg.G.foes.filter(e => !e.dead && !e.boss).length)
     await page.screenshot({ path: OUT + 'revive.png' }); await noEmoji(page, 'revive')
@@ -308,6 +309,40 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!seen || end.mode !== 'over' || end.kind !== 'time') errors.push(`[dark] 검은 별똥별 ${seen} · 끝 ${JSON.stringify(end)}`)
   })
 
+  await run('outfit', { width: 420, height: 900 }, async page => {   // 의상 — 일반은 두 번 눌러 산다(5,000) · 업적 의상은 어려움 클리어 전엔 잠김 · 입고 시작하면 이펙트
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ coin: 6000, noStats: true })) }); await page.reload(); await page.waitForTimeout(500)
+    await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.waitForTimeout(200); await noEmoji(page, 'outfit')
+    const buy = page.locator('.list.wr li.wr-cheap .btn.buy').first(); await buy.click(); await buy.click(); await page.waitForTimeout(200)
+    await page.locator('.list.wr li.wr-rich b').first().click(); await page.waitForTimeout(100)   // 입어 보기 — 줄을 누르면 미리 보기에만(산 것 · 입은 것은 그대로)
+    const peek = await page.evaluate(() => ({ try: document.querySelector('.wr-view small.try')?.textContent, dashed: !!document.querySelector('.list.wr li.wr-rich.peek'), wear: JSON.parse(localStorage.getItem('mjg.v1')).wear.chiikawa }))
+    if (!peek.try || !peek.dashed || peek.wear !== 'pj') errors.push('[outfit] 입어 보기 ' + JSON.stringify(peek))
+    await page.locator('.list.wr li.wr-cheap .btn.all').first().click(); await page.waitForTimeout(100)   // 일반 · 고급은 종류 하나 — 「모두 입기」면 모든 캐릭터가
+    const all = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); return { wear: s.wear, worn: window.__mjg.CHARS.map(c => window.__mjg.wornId(c.id)) } })
+    if (all.worn.some(w => w !== 'pj')) errors.push('[outfit] 모두 입기 ' + JSON.stringify(all))
+    const a = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); return { coin: s.coin, wear: s.wear.chiikawa, richOff: document.querySelector('.list.wr li.wr-rich .btn.buy').disabled, achOff: document.querySelector('.list.wr li.wr-ach .btn.buy').disabled } })
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100)   // PC — 메뉴에서 Esc = 처음으로
+    const esc = await page.evaluate(() => window.__mjg.mode); if (esc !== 'title') errors.push('[outfit] Esc ' + esc)
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); s.best = { chiikawa: { t: 1, kills: 1, lvl: 1, clears: 1 } }; localStorage.setItem('mjg.v1', JSON.stringify(s)) }); await page.reload(); await page.waitForTimeout(500)
+    await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.locator('.list.wr li.wr-ach .btn.buy').click(); await page.waitForTimeout(100)
+    const b = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); for (let i = 0; i < 30; i++) { M.pl.inv = 9; M.step(1 / 30) } return { wear: JSON.parse(localStorage.getItem('mjg.v1')).wear.chiikawa, fx: M.G.cfx.list.length } })
+    if (a.coin !== 1000 || a.wear !== 'pj' || !a.richOff || !a.achOff || b.wear !== 'a_chiikawa' || !(b.fx > 0)) errors.push('[outfit] 의상 ' + JSON.stringify({ a, b }))
+  })
+
+  await run('skins', { width: 420, height: 900 }, async page => {   // 무기 스킨(상점 20,000 · 업적은 보통 클리어) · 스킬 스킨(상점 30,000 · 각성해 본 스킬은 그냥) — 켜면 게임에서 G.sk 에
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ coin: 55000, noStats: true, awSeen: ['yaha'] })) }); await page.reload(); await page.waitForTimeout(500)
+    await page.evaluate(() => window.__mjg.shop('weapon', 0)); await page.waitForTimeout(150); await noEmoji(page, 'skins')
+    let b = page.locator('.list.wr li.wr-rich .btn.buy'); await b.click(); await b.click(); await page.waitForTimeout(150)
+    const w = await page.evaluate(() => ({ wear: JSON.parse(localStorage.getItem('mjg.v1')).wear['w:chiikawa'], achOff: document.querySelector('.list.wr li.wr-ach .btn.buy').disabled }))
+    await page.evaluate(() => window.__mjg.shop('skill', 0)); await page.waitForTimeout(150)
+    const yaha = await page.evaluate(() => [...document.querySelectorAll('.list.wr li')].findIndex(li => li.querySelector('img.ico')?.src) >= 0 && document.querySelectorAll('.list.wr li .btn.buy').length)
+    await page.locator('.list.wr li').nth(4).locator('b').click(); await page.waitForTimeout(150)   // 스킬 스킨 미리 보기 — 줄을 누르면 그 스킬의 원래 · 스킨이 나란히
+    const pv = await page.evaluate(() => ({ cv: !!document.querySelector('.wr-view.sk canvas.sk-pv'), name: document.querySelector('.wr-view.sk b')?.textContent, want: window.__mjg.SKIN.yaha.name }))
+    if (!pv.cv || pv.name !== pv.want) errors.push('[skins] 스킬 미리 보기 ' + JSON.stringify(pv))
+    b = page.locator('.list.wr li').first().locator('.btn.buy'); await b.click(); await b.click(); await page.waitForTimeout(150)
+    const k = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); const M = window.__mjg; M.startGame(0); for (let i = 0; i < 30; i++) { M.pl.inv = 9; M.step(1 / 30) } return { coin: s.coin, skin: s.skin, sk: Object.keys(M.G.sk), wfx: M.G.wfx.list.length } })   // 무기 스킨 반짝이(wfx)
+    if (w.wear !== 'w_chiikawa' || !w.achOff || k.coin !== 5000 || !k.sk.includes('sasu') || k.sk.includes('yaha') || !(k.wfx > 0)) errors.push('[skins] 스킨 ' + JSON.stringify({ w, k, yaha }))
+  })
+
   await run('awaken-key', { width: 1280, height: 800 }, async page => {   // 각성 상자 — 첫 카드가 골라져 있어 Enter · Space 로 받는다
     for (const key of ['Enter', 'Space']) {
       await page.evaluate(() => { const M = window.__mjg; M.startGame(1); const w = M.G.weapons[0]; w.lv = 8; w.st = M.wstat(w); M.G.queue.push('awaken'); M.pl.inv = 9; M.step(1 / 30) })
@@ -326,7 +361,11 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const left = { title: await han() }
       await page.locator('#ui .row .btn').nth(0).click(); left.guide = await han(); await page.locator('#ui .btn.main').last().click()
       await page.locator('#ui .row .btn').nth(1).click(); left.notes = await han(); await page.screenshot({ path: OUT + `lang-${code}.png` }); await page.locator('#ui .btn.main').last().click()
-      await page.locator('#ui .btn.main').first().click(); await page.waitForTimeout(200); left.chars = await han()
+      await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.waitForTimeout(150); left.wardrobe = await han()
+      await page.evaluate(() => window.__mjg.shop()); await page.waitForTimeout(100); left.shop = await han()
+      await page.evaluate(() => window.__mjg.shop('weapon', 0)); await page.waitForTimeout(100); left.wskin = await han()
+      await page.evaluate(() => window.__mjg.shop('skill', 0)); await page.waitForTimeout(100); left.skin = await han()
+      await page.evaluate(() => window.__mjg.startGame && document.querySelector('#ui .btn.main').click()); await page.waitForTimeout(200); left.chars = await han()
       await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.queue.push('level'); M.step(1 / 60) }); left.box = await han()
       await page.evaluate(() => window.__mjg.pick0()); await page.keyboard.press('Escape'); await page.waitForTimeout(100); left.pause = await han()
       const lang = await page.evaluate(() => [document.documentElement.lang, JSON.parse(localStorage.getItem('mjg.v1')).lang])
