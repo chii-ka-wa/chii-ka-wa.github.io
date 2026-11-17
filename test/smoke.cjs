@@ -177,6 +177,13 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     }
   })
 
+  await run('magnet', { width: 1280, height: 800 }, async page => {   // 자석 — 구슬이 360개(가득)여도 멀리 있는 것까지 다 온다(예전엔 적을 잡을 때마다 날아오던 먼 구슬이 처치 자리로 옮겨져 멈췄다)
+    await page.evaluate(() => { const M = window.__mjg; M.startGame(5); M.G.t = 300; for (let i = 0; i < 360; i++) { const a = i / 360 * 6.28; M.G.gems.push({ x: M.pl.x + Math.cos(a) * 6000, y: M.pl.y + Math.sin(a) * 6000, v: 1, pull: true, sp: 0, far: 1 }) } })
+    await sim(page, 312, { god: true })
+    const mg = await page.evaluate(() => ({ left: window.__mjg.G.gems.filter(g => g.far).length, kills: window.__mjg.G.kills }))
+    if (mg.left || !mg.kills) errors.push('[magnet] 자석으로 끌려오던 먼 구슬이 남음 ' + JSON.stringify(mg))
+  })
+
   await run('shop', { width: 390, height: 844 }, async page => {   // 토벌 보상금 · 영구 강화 상점 — 판이 끝나면 돈이 쌓이고, 사면 다음 판 능력치에 더해진다
     await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = 300; M.G.kills = 1000; let n = 0; while (M.mode !== 'over' && n++ < 6000) { if (M.mode === 'box') M.pick0(); if (M.mode === 'pause') M.resume(); M.pl.inv = 0; M.pl.hp = Math.min(M.pl.hp, 1); M.step(1 / 30) } })
     const res = await page.evaluate(() => ({ txt: document.querySelector('#ui .coin')?.textContent, coin: JSON.parse(localStorage.getItem('mjg.v1')).coin }))
