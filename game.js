@@ -519,6 +519,7 @@ const SND = (() => {
       ;[57, 60, 64, 69, 72, 76, 81, 84].forEach((n, i) => tone(mtof(n), t + 0.12 + i * 0.06, 1.2, 'triangle', 0.07))
       inst(mtof(76), t + 0.7, 0.55, 0.09, sfx, V); inst(mtof(81), t + 1.2, 1.4, 0.1, sfx, V); inst(mtof(72), t + 1.2, 1.4, 0.05, sfx, V)
     },
+    ice() { if (!ok('ice', 0.3)) return; const t = ac.currentTime; tone(2600, t, 0.14, 'triangle', 0.09, sfx, 1500); tone(3700, t + 0.03, 0.12, 'sine', 0.07, sfx, 2400); tone(1900, t + 0.06, 0.16, 'triangle', 0.05, sfx, 1200); hiss(t, 0.22, 0.14, 5200) },   // 얼음 깨짐 — 쨍그랑
     dark() { if (!ok('dark', 1)) return; const t = ac.currentTime; tone(70, t, 1.6, 'sawtooth', 0.16, sfx, 40, 3); hiss(t, 1.2, 0.18, 400) },
     end(win) { play(''); if (!ac || !save.sfx) return; const t = ac.currentTime; (win ? [72, 76, 79, 84, 88] : [72, 67, 64, 60]).forEach((n, i) => tone(mtof(n), t + i * (win ? 0.11 : 0.18), win ? 0.3 : 0.4, 'triangle', 0.18)) },
   }
@@ -2096,7 +2097,7 @@ const TIER_NAME = { cheap: tr`일반`, rich: tr`고급`, ach: tr`업적` }
 function cfxStep(F, fx, x, y, dt, dir = 1) {
   if (fx?.spot) { const [sx, sy, r] = fx.spot; F.acc += dt * fx.rate; while (F.acc >= 1) { F.acc--; F.list.push({ k: pickOf(fx.k), col: pickOf(fx.col), x: x + dir * (sx + (rnd() - 0.5) * r), y: y + sy + (rnd() - 0.5) * r, vx: (rnd() - 0.5) * 6, vy: -4 - rnd() * 8, t: 0, T: 0.45 + rnd() * 0.45, s: 0.5 + rnd() * 0.4, rot: rnd() * TAU }) } fx = null }   // 무기 스킨 — 든 무기 둘레에서 반짝
   if (fx) { F.acc += dt * fx.rate; while (F.acc >= 1) { F.acc--; const a = rnd() * TAU, r = 7 + rnd() * 13; F.list.push({ k: pickOf(fx.k), col: pickOf(fx.col), x: x + Math.cos(a) * r * (fx.fall ? 1.3 : 1), y: fx.fall ? y - 40 + rnd() * 8 : y - 15 + Math.sin(a) * r * 0.75, vx: (rnd() - 0.5) * 10, vy: fx.fall ? 10 + rnd() * 10 : -12 - rnd() * 14, t: 0, T: 0.9 + rnd() * 0.6, s: (fx.aura ? 1.25 : 0.95) + rnd() * 0.7, rot: rnd() * TAU }) } }   // 업적 의상은 더 크게
-  for (const q of F.list) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += dt * 2.2 }
+  for (const q of F.list) { q.t += dt; if (q.g) q.vy += q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += dt * (q.spin || 2.2) }   // g — 떨어지는 것(얼음 조각)
   if (F.list.length && F.list[0].t > F.list[0].T) F.list = F.list.filter(q => q.t < q.T)
 }
 function cfxAura(c, fx, x, y, t) {   // 업적 의상 — 발밑에서 은은하게 숨 쉬는 빛
@@ -2113,6 +2114,7 @@ function cfxDraw(c, F) {
       case 'star': starP(c, 0, 0, 3, 1.3); c.fill(); break
       case 'heart': c.beginPath(); c.moveTo(0, 2.4); c.bezierCurveTo(-3.6, -0.2, -2.4, -3.4, 0, -1.4); c.bezierCurveTo(2.4, -3.4, 3.6, -0.2, 0, 2.4); c.fill(); break
       case 'flame': c.beginPath(); c.moveTo(0, -3.4); c.quadraticCurveTo(2.4, -0.6, 1.4, 1.4); c.quadraticCurveTo(0, 2.4, -1.4, 1.4); c.quadraticCurveTo(-2.4, -0.6, 0, -3.4); c.fill(); break
+      case 'shard': c.beginPath(); c.moveTo(0, -3.2); c.lineTo(2.3, 1.2); c.lineTo(0.4, 2.6); c.lineTo(-2, 1.4); c.closePath(); c.fill(); c.lineWidth = 0.7; c.strokeStyle = '#ffffff'; c.stroke(); c.lineWidth = 0.35; c.strokeStyle = 'rgba(90,140,200,.8)'; c.stroke(); break   // 얼음 조각
       case 'note': c.beginPath(); c.ellipse(-0.8, 1.6, 1.5, 1.1, -0.4, 0, TAU); c.fill(); c.fillRect(0.4, -3, 0.7, 4.6); c.fillRect(0.4, -3, 2.2, 0.8); break
       case 'petal': c.beginPath(); c.ellipse(0, 0, 2.6, 1.2, 0, 0, TAU); c.fill(); break
       case 'leaf': c.beginPath(); c.ellipse(0, 0, 3, 1.5, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(61,48,43,.35)'; c.lineWidth = 0.35; c.beginPath(); c.moveTo(-2.6, 0); c.lineTo(2.6, 0); c.stroke(); break
@@ -3328,7 +3330,13 @@ function winter(dt, dead) {
     if (!G.fire && !W.warm) { W.hot = pl.moving ? W.hot + dt : 0; if (W.hot >= STORM.warm) { W.warm = true; tip(tr`몸에 열이 나서 받는 피해가 원래대로 줄었어요!`, '#ffb36b') } }
     if (W.on <= 0) { W.on = 0; W.fade = 0.6; G.storms++; tip(tr`눈보라가 그쳤어요 — 쌓인 눈도 녹아요`, '#d6f0ff') }
   }
-  if (pl.moving) { if (pl.idleT > 2) for (let i = 0, n = Math.min(14, 4 + pl.idleT * 1.5 | 0); i < n; i++) G.cfx.list.push({ k: i % 3 ? 'bubble' : 'spark', col: i % 3 ? '#9fc4ea' : '#ffffff', x: pl.x + (rnd() - 0.5) * 22, y: pl.y - 4 - rnd() * 24, vx: (rnd() - 0.5) * 110, vy: -20 - rnd() * 60, t: 0, T: 0.35 + rnd() * 0.3, s: 0.8 + rnd() * 0.6, rot: rnd() * TAU }); pl.idleT = 0; pl.iced = false }   // 움직이면 쌓인 눈을 털어 낸다(눈 조각이 튄다)
+  if (pl.moving) {   // 움직이면 쌓인 눈을 털어 내고(눈 조각), 얼어 있었으면 얼음이 깨진다(얼음 조각 · 금 · 쨍그랑)
+    const it = pl.idleT, deep = it >= ICE.after
+    if (it > 2) for (let i = 0, n = Math.min(14, 4 + it * 1.5 | 0); i < n; i++) G.cfx.list.push({ k: i % 3 ? 'bubble' : 'spark', col: i % 3 ? '#9fc4ea' : '#ffffff', x: pl.x + (rnd() - 0.5) * 22, y: pl.y - 4 - rnd() * 24, vx: (rnd() - 0.5) * 110, vy: -20 - rnd() * 60, t: 0, T: 0.35 + rnd() * 0.3, s: 0.8 + rnd() * 0.6, rot: rnd() * TAU })
+    if (it > 3) for (let i = 0, n = deep ? 16 : 5; i < n; i++) { const a = rnd() * TAU, v = (deep ? 90 : 60) + rnd() * 110; G.cfx.list.push({ k: 'shard', col: ['rgba(200,232,255,.95)', 'rgba(160,210,255,.95)', 'rgba(235,248,255,.95)'][i % 3], x: pl.x + Math.cos(a) * 8, y: pl.y - 14 + Math.sin(a) * 9, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6 - 90 - rnd() * 70, g: 520, t: 0, T: 0.55 + rnd() * 0.35, s: (deep ? 1.3 : 1) + rnd() * 0.9, rot: rnd() * TAU, spin: (rnd() - 0.5) * 18 }) }
+    if (deep) { fx({ k: 'crack', x: pl.x, y: pl.y - 14, T: 0.4 }); SND.ice(); shake = Math.max(shake, 3) }
+    pl.idleT = 0; pl.iced = false
+  }
   else pl.idleT += dt
   if (pl.idleT >= ICE.after && Math.floor(G.t / 1.6) !== pl.shiver) {   // 부르르 할 때마다 머리 위 눈이 조금 떨어진다
     pl.shiver = Math.floor(G.t / 1.6)
@@ -3575,6 +3583,11 @@ function snowCap(c, x, top, a, f) {   // 머리 위에 쌓이는 눈 — 동글�
 function effect(c, f, ox, oy) {
   const u = Math.min(1, f.t / f.T)
   switch (f.k) {
+    case 'crack': {   // 얼음 깨짐 — 몸에서 사방으로 뻗는 하얀 금 · 퍼지는 푸른 고리
+      c.globalAlpha = 1 - u; c.lineCap = c.lineJoin = 'round'
+      for (const [col, lw] of [['rgba(90,140,200,.9)', 3.6], ['#ffffff', 1.8]]) { c.strokeStyle = col; c.lineWidth = lw * (1 - u * 0.6); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.4, L = (18 + (i % 3) * 8) * (0.7 + u * 0.6), k = 0.8; c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(f.x + Math.cos(a) * L * 0.45 + Math.cos(a + 1.2) * 3, f.y + (Math.sin(a) * L * 0.45 + Math.sin(a + 1.2) * 3) * k); c.lineTo(f.x + Math.cos(a) * L, f.y + Math.sin(a) * L * k); c.stroke() } }
+      c.strokeStyle = 'rgba(160,210,255,.9)'; c.lineWidth = 3 * (1 - u) + 0.5; oval(c, f.x, f.y, 12 + u * 34, (12 + u * 34) * 0.75); c.stroke(); break
+    }
     case 'ring': c.globalAlpha = 1 - u; c.strokeStyle = f.col; c.lineWidth = 4; oval(c, f.x, f.y, f.R * u, f.R * u * 0.8); c.stroke(); break
     case 'boom': c.globalAlpha = (1 - u) * 0.75; c.fillStyle = G.sk[f.src]?.col || f.col; oval(c, f.x, f.y - 4, f.R * (0.5 + 0.5 * u), f.R * (0.5 + 0.5 * u) * 0.8); c.fill(); c.globalAlpha = 1 - u; c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); if (G.sk[f.src]) { c.strokeStyle = G.sk[f.src].col2; c.lineWidth = 3; oval(c, f.x, f.y - 4, f.R * (0.7 + 0.6 * u), f.R * (0.7 + 0.6 * u) * 0.8); c.stroke() } break   // 스킨 — 바깥으로 퍼지는 고리 하나 더
     case 'flash': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = f.col; oval(c, f.x, f.y, f.R, f.R); c.fill(); c.globalCompositeOperation = 'source-over'; break
