@@ -3,18 +3,18 @@
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path')
 const ROOT = path.join(__dirname, '..'), LANG = process.env.OG_LANG || 'ko'
 const O = {   // 로고 두 줄 · 부제 · 오른쪽 위 한 줄 · 글꼴(일본 · 중국 글자는 게임이 불러오는 글꼴)
-  ko: ['먼작귀', '서바이버즈', '먼가 작고 귀여운 녀석들의 토벌 생존기', '비공식 팬게임 · 무료 · 브라우저에서 바로', 'Jua'],
-  en: ['Chiikawa', 'Survivors', 'A Subjugation Survival Tale of Something Small and Cute', 'Unofficial fan game · Free · Play in your browser', 'Jua'],
-  ja: ['ちいかわ', 'サバイバーズ', 'なんか小さくてかわいいやつらの討伐サバイバル', '非公式ファンゲーム・無料・ブラウザですぐ遊べる', 'Jua, "Zen Maru Gothic"'],
-  'zh-CN': ['吉伊卡哇', '幸存者', '小小可爱的家伙们的讨伐生存记', '非官方粉丝游戏 · 免费 · 浏览器直接玩', 'Jua, "Noto Sans SC"'],
-  'zh-TW': ['吉伊卡哇', '倖存者', '又小又可愛的傢伙們的討伐求生記', '非官方同人遊戲 · 免費 · 瀏覽器直接玩', 'Jua, "Noto Sans TC"'],
+  ko: ['먼작귀', '서바이버즈', '먼가 작고 귀여운 녀석들의 토벌 생존기', '비공식 팬게임 · 무료 · 브라우저에서 바로', 'Jua', '겨울 업데이트'],
+  en: ['Chiikawa', 'Survivors', 'A Subjugation Survival Tale of Something Small and Cute', 'Unofficial fan game · Free · Play in your browser', 'Jua', 'Winter Update'],
+  ja: ['ちいかわ', 'サバイバーズ', 'なんか小さくてかわいいやつらの討伐サバイバル', '非公式ファンゲーム・無料・ブラウザですぐ遊べる', 'Jua, "Zen Maru Gothic"', '冬のアップデート'],
+  'zh-CN': ['吉伊卡哇', '幸存者', '小小可爱的家伙们的讨伐生存记', '非官方粉丝游戏 · 免费 · 浏览器直接玩', 'Jua, "Noto Sans SC"', '冬季更新'],
+  'zh-TW': ['吉伊卡哇', '倖存者', '又小又可愛的傢伙們的討伐求生記', '非官方同人遊戲 · 免費 · 瀏覽器直接玩', 'Jua, "Noto Sans TC"', '冬季更新'],
 }[LANG]
 ;(async () => {
   const b = await chromium.launch(), p = await b.newPage({ viewport: { width: 1200, height: 630 } })
   await p.addInitScript(l => { if (l) localStorage.setItem('mjg.v1', JSON.stringify({ lang: l, noStats: true })) }, LANG === 'ko' ? '' : LANG)   // 게임이 그 말 글꼴을 불러오게
   await p.goto('http://127.0.0.1:8765/'); await p.waitForTimeout(800)
   const out = await p.evaluate(async ([O, KO]) => {
-    const [L1, L2, SUB, TAG, FAM] = O; await document.fonts.load(`80px ${FAM}`, O.join(''))
+    const [L1, L2, SUB, TAG, FAM, WIN] = O; await document.fonts.load(`80px ${FAM}`, O.join(''))
     const M = window.__mjg, ink = '#4a3b35', mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c }
     const field = (g, w, h, seed) => {   // 풀밭 — 옅은 풀 무더기 · 데이지
       let s = seed; const r = () => (s = (s * 16807) % 2147483647) / 2147483647
@@ -23,6 +23,12 @@ const O = {   // 로고 두 줄 · 부제 · 오른쪽 위 한 줄 · 글꼴(일
       for (let i = 0; i < w * h / 6000; i++) { const x = r() * w, y = r() * h; g.strokeStyle = 'rgba(110,160,80,.55)'; g.lineWidth = 2; g.lineCap = 'round'; for (const d of [-5, 0, 5]) { g.beginPath(); g.moveTo(x + d, y); g.lineTo(x + d * 1.4, y - 10 - r() * 6); g.stroke() } }
       for (let i = 0; i < w * h / 14000; i++) { const x = r() * w, y = r() * h; g.fillStyle = ['#fff', '#ffe07a', '#e3c8ff'][i % 3]; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 3.4, 0, Math.PI * 2); g.fill() } g.fillStyle = '#f2b13a'; g.beginPath(); g.arc(x, y, 2.6, 0, Math.PI * 2); g.fill() }
     }
+    const snowfield = (g, w, h, seed) => {   // 겨울 — 눈밭 · 옅은 눈 무더기 · 작은 눈사람 · 내리는 눈(공유 썸네일)
+      let s = seed; const r = () => (s = (s * 16807) % 2147483647) / 2147483647
+      g.fillStyle = '#e6eff8'; g.fillRect(0, 0, w, h)
+      for (let i = 0; i < w * h / 9000; i++) { g.fillStyle = r() < 0.5 ? 'rgba(200,218,240,.5)' : 'rgba(255,255,255,.85)'; g.beginPath(); g.ellipse(r() * w, r() * h, 40 + r() * 80, 18 + r() * 34, 0, 0, Math.PI * 2); g.fill() }
+      for (let i = 0; i < 90; i++) { const z = 0.4 + 0.6 * r(), x = r() * w, y = r() * h, rr = 2 + z * 4; g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 1.4; g.strokeStyle = 'rgba(100,135,190,.55)'; g.stroke() }
+    }
     const logo = (g, txt, x, y, size, fill) => {   // 진한 테두리 글씨(게임 로고처럼)
       g.font = `${size}px ${FAM}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'
       g.fillStyle = ink; g.fillText(txt, x, y + size * 0.1); g.strokeStyle = ink; g.lineWidth = size * 0.16; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y)
@@ -30,13 +36,15 @@ const O = {   // 로고 두 줄 · 부제 · 오른쪽 위 한 줄 · 글꼴(일
     const put = (g, id, x, y, u, pose = {}) => { const a = M.art(id, 8, { look: 1.2, ...pose }), k = u / 8; g.drawImage(a.c, x - a.ox * u, y - a.oy * u, a.c.width * k, a.c.height * k) }   // 모두 같은 배율(u = 1 단위당 px), 발끝이 y
     const res = {}
     { // og.png
-      const c = mk(1200, 630), g = c.getContext('2d'); field(g, 1200, 630, 7)
+      const c = mk(1200, 630), g = c.getContext('2d'); snowfield(g, 1200, 630, 7)
       g.fillStyle = 'rgba(255,253,248,.82)'; g.beginPath(); g.roundRect(170, 46, 860, 300, 44); g.fill(); g.lineWidth = 6; g.strokeStyle = ink; g.stroke()
       logo(g, L1, 600, 178, 128, '#fff'); logo(g, L2, 600, 268, 78, '#ff8fab')
       g.font = `30px ${FAM}`; g.fillStyle = ink; g.textAlign = 'center'; g.fillText(SUB, 600, 318, 800)
       const ids = ['chiikawa', 'hachiware', 'usagi', 'momonga', 'kurimanju', 'rakko', 'shisa', 'kani'], walk = [{}, ...M.WALK]
-      ids.forEach((id, i) => { const x = 105 + i * 141, y = 598; g.fillStyle = 'rgba(70,90,50,.22)'; g.beginPath(); g.ellipse(x, y - 4, 50, 11, 0, 0, Math.PI * 2); g.fill(); put(g, id, x, y - 6, 5.3, walk[i % 5]) })
+      ids.forEach((id, i) => { const x = 105 + i * 141, y = 598; g.fillStyle = 'rgba(70,90,50,.22)'; g.beginPath(); g.ellipse(x, y - 4, 50, 11, 0, 0, Math.PI * 2); g.fill(); put(g, id, x, y - 6, 5.3, { ...walk[i % 5], outfit: M.outfitOf('knit', id) }) })   // 겨울 — 모두 털모자
       g.font = `24px ${FAM}`; g.fillStyle = '#fff'; g.strokeStyle = ink; g.lineWidth = 6; g.textAlign = 'right'; g.strokeText(TAG, 1180, 34); g.fillText(TAG, 1180, 34)
+      { g.font = `30px ${FAM}`; const tw = g.measureText(WIN).width, w = tw + 84, x = 24, y = 18, sn = M.ico('snow', 3)   // 겨울 업데이트 꼬리표 — 눈송이 그림 + 글
+        g.beginPath(); g.roundRect(x, y, w, 52, 26); g.fillStyle = '#bfe6ff'; g.fill(); g.lineWidth = 4; g.strokeStyle = ink; g.stroke(); g.drawImage(sn.c, x + 10, y + 6, 40, 40); g.fillStyle = ink; g.textAlign = 'left'; g.fillText(WIN, x + 58, y + 37) }
       res.og = c.toDataURL('image/png')
     }
     const icon = n => {   // 둥근 네모 풀색 바탕에 치이카와 얼굴
