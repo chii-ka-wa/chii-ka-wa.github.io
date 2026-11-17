@@ -13,7 +13,7 @@ const LANG = (() => {   // 주소에 ?lang=en 이 있으면(홍보 링크 chii-k
   if (hit) { s.lang = hit; try { localStorage.setItem('mjg.v1', JSON.stringify(s)) } catch {} history.replaceState(null, '', location.pathname + location.hash) }   // 주소에서는 지운다(언어 단추로 바꾼 뒤 다시 불러와도 고른 말이 이기게)
   return hit || (LANGS.some(x => x[0] === s.lang) ? s.lang : 'ko')
 })()
-const TR = LANG === 'ko' ? null : await import(`./i18n/${LANG}.js`).then(m => m.default, () => null)
+const TR = LANG === 'ko' ? null : await import(`./i18n/${LANG}.js${new URL(import.meta.url).search}`).then(m => m.default, () => null)   // ?v= — index.html 이 붙인 판 번호를 번역 파일에도(새 판이면 새로 받는다)
 function tr(s, ...v) {
   let k = s[0]; for (let i = 1; i < s.length; i++) k += `{${i - 1}}` + s[i]
   const r = TR?.[k]
