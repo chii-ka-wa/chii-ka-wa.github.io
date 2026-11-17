@@ -344,7 +344,9 @@ save.up ||= {}; save.coin = Math.max(0, save.coin | 0); save.stone = Math.max(0,
 const STONE = 1000   // 부활석 값(상점) — 쓰러졌을 때 하나 써서 다시 일어난다(판마다 DIFF.revive 번까지)
 save.ach ||= { clear: save.clears || 0 }
 save.owned ||= []; save.wear ||= {}; save.skin ||= {}; save.wwin ||= []   // wwin — 겨울 맵을 보통 이상으로 클리어한 캐릭터(겨울 무기 스킨)   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
-save.theme ||= 'winter'; const fieldSong = () => save.theme === 'winter' ? 'winter' : 'field'   // 처음 화면 · 토벌 배경음 — 겨울이면 겨울 곡   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
+save.theme ||= 'winter'; const fieldSong = () => save.theme === 'winter' ? 'winter' : 'field'   // 처음 화면 · 토벌 배경음 — 겨울이면 겨울 곡
+const pageColor = () => { const c = save.theme === 'winter' ? '#e6eff8' : '#cdeaa8'; document.documentElement.style.setProperty('--page', c); document.querySelector('meta[name=theme-color]')?.setAttribute('content', c) }   // 화면 밖 바탕 · 휴대폰 주소창 색 — 바닥 색(겨울 눈밭 · 풀밭)
+pageColor()   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
 const persist = () => { try { if (SECURE) { save._s = sign(save); localStorage.setItem('mjg.k', '1') } const j = JSON.stringify(save); localStorage.setItem(LS, j); if (SECURE) localStorage.setItem(LS + '.bak', j) } catch {} }   // 진짜 주소면 서명 · 바로 전 저장도
 if (TAMPER) persist()   // 되돌린 것을 바로 저장
 if (SECURE) {   // 개발자 도구 단축키 · 오른쪽 클릭 메뉴 막기(메뉴로 여는 것까지는 못 막는다) · 콘솔 경고
@@ -1872,7 +1874,7 @@ function sprites() {
 // ---------------------------------------------------------------- 의상 — 꾸미기만(능력치는 그대로). 캐릭터마다 셋: 저가(상점 · 수수한 그림) · 고가(상점 · 원작 의상 + 이펙트) · 업적(어려움 클리어 · 원작 의상 + 화려한 이펙트)
 //   그림은 mochi() 가 몸을 그리는 차례에 끼워 그린다 — back(몸 뒤 · 망토) · body(몸 안에 오려 그림 · 옷) · head(얼굴 뒤에 · 모자). q = 몸 크기(W · H · hw · t 머리 끝 · y(f) 위에서 f 만큼 · mid 머리와 몸 경계 · P 몸 테두리)
 //   save.owned = 산 의상 id, save.wear[캐릭터] = 입은 의상 id(없으면 기본). 업적 의상은 그 캐릭터로 어려움을 클리어하면(save.best[id].clears)
-const OUTFIT_COST = { cheap: 5000, rich: 50000 }   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 20,000)
+const OUTFIT_COST = { cheap: 5000, rich: 50000 }, priceOf = oid => OUTFIT[oid].cost ?? OUTFIT_COST[OUTFIT[oid].tier] ?? 0   // priceOf — 상점 줄 순서(싼 것부터)   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 20,000)
 const crude = (g, fill, lw = 1.15) => { g.fillStyle = fill; g.fill(); g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }   // 저가 — 칠만 하고 굵은 선(수수하게)
 const inHead = (g, q, fn) => { g.save(); g.clip(q.P); fn(); g.restore() }   // 머리 · 몸 테두리 안에만
 // 고가 · 업적 의상 그리기 도우미
@@ -2084,7 +2086,7 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
   fire: { tier: 'ach', name: tr`불꽃 옷`, note: tr`몸이 따끈따끈한 불꽃 옷 — 눈보라를 만나도 받는 피해가 늘지 않아요`, won: () => (save.ach.winter || 0) > 0, lock: ['snow', tr` 겨울 어려움 클리어`],
     fx: { k: ['flame', 'spark', 'flame'], col: ['#ff7a2f', '#ffd23f', '#fff3a1'], rate: 13, aura: 'rgba(255,150,60,.9)' }, ...hoodSuit({ col: '#ff8a3d', belly: '#ffd96b', top: flameTop }) },
 }
-const TIER_ORD = { cheap: 0, rich: 1, ach: 2 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier])   // 일반 → 고급 → 업적
+const TIER_ORD = { cheap: 0, rich: 1, ach: 2 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier] || priceOf(a) - priceOf(b))   // 일반 → 고급 → 업적
 const achWon = id => (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 어려움 클리어(어려움 기록은 열쇠가 캐릭터 id)
 const owns = oid => { const o = OUTFIT[oid]; return o.tier === 'ach' ? (o.won ? o.won() : achWon(o.ch)) : save.owned.includes(oid) }   // 업적 — 그 캐릭터 어려움 클리어(won 이 있으면 그 조건)
 const wornId = id => { const o = save.wear[id], k = o && OUTFIT[o]; return k && (!k.ch || k.ch === id) && owns(o) ? o : null }
@@ -2181,7 +2183,7 @@ function shop(tab = 'up', ci = 0) {
           h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? tr`다 샀어요` : [ic('coin'), ` ${cost}`]))
       })],
     outfit: ch => [null, ...OUTFITS_OF(ch.id)].map(oid => { const o = oid && OUTFIT[oid], on = wornId(ch.id) === oid, own = !o || owns(oid), fx = outfitOf(oid, ch.id)?.fx
-      const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && (o.lock ? [ic(o.lock[0]), o.lock[1]] : [ic('hard'), tr` 어려움 클리어`]), o && (o.cost ?? OUTFIT_COST[o.tier]), () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
+      const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && (o.lock ? [ic(o.lock[0]), o.lock[1]] : [ic('hard'), tr` 어려움 클리어`]), o && priceOf(oid), () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
       return item(`wr-${o ? o.tier : 'base'}${on ? ' on' : ''}`, portrait(ch.id, oid, wornW(ch.id)), o ? o.name : tr`기본`, o && TIER_NAME[o.tier], o?.tier, o ? o.note : tr`평소 모습`, fx && (o.tier === 'ach' ? tr`이펙트: 아주 화려하게 반짝반짝!` : tr`이펙트: 반짝반짝`),
         own && !o?.ch ? h('div', { class: 'acts' }, act, h('button', { type: 'button', class: 'btn buy all', onclick: () => wearAll(oid) }, tr`모두 입기`)) : act, oid) }),
     weapon: ch => [null, ...WSKINS_OF(ch.id)].map(wid => { const w = wid && WSKIN[wid], on = wornW(ch.id) === wid
@@ -3703,7 +3705,7 @@ function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) 
   return h('div', { class: 'theme', role: 'radiogroup', 'aria-label': tr`테마` }, [['winter', 'snow', tr`겨울`], ['grass', 'clover', tr`풀밭`]].map(([k, pic, name]) =>
     h('button', { type: 'button', role: 'radio', 'aria-checked': String(save.theme === k), class: save.theme === k ? 'on' : '', onclick: e => {
       if (save.theme === k) return
-      save.theme = k; persist(); sprites(); SND.play(fieldSong())
+      save.theme = k; persist(); sprites(); SND.play(fieldSong()); pageColor()
       for (const b of e.currentTarget.parentNode.children) { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)) }
     } }, ic(pic), ` ${name}`)))
 }
