@@ -112,6 +112,8 @@ const PATCH = [
     ['fix', 'coin', tr`기록 고르기에서 「이 기기」를 골라도 한 번 더 묻던 것 · 마지막으로 한 때를 시 · 분 · 초까지`],
     ['fix', 'book', tr`카니가 다른 친구들처럼 책을 앞손에 들어요`],
     ['up', 'coinbox', tr`떠돌이 보물상자가 훨씬 자주 나와요 — 멀리 돌아다니면 10초마다 나올 수 있어요`],
+    ['up', 'inf', tr`랭킹 화면이 보기 쉬워졌어요 — 그 판에 입은 의상 · 무기 스킨으로 나오고, 넓은 화면에선 표처럼 · 0단계는 「세이렌 전」`],
+    ['fix', 'clock', tr`무한 모드 후반에 구형 기기에서 느려지던 것 — 느려지면 눈 · 반짝이 · 작은 숫자를 알아서 줄여요(게임 내용은 그대로)`],
     ['new', 'license', tr`이용약관이 생겼어요 — 처음 로그인할 때 동의를 받아요(처음 화면 맨 아래)`],
   ]],
   ['2026-11-17', [
@@ -592,11 +594,11 @@ function delBox() {
 }
 // ---- 무한 랭킹 — 판을 시작할 때 start_run(서버가 이 판의 일회용 값 tok 을 준다), 끝나면 submit_rank(서버가 실제 흐른 시간 · 그럴듯한지 · 체크섬을 본다)
 //   체크섬 ck = SHA-256(tok | 기록 | 소금) — 요청을 손으로 고쳐 보내면 서버가 다시 계산한 값과 어긋난다(supabase/account.sql 의 submit_rank 와 같은 순서 · 소금)
-const CK_SALT = 'mjg|r7Q'
+const CK_SALT = '__CK_SALT__'   // 진짜 값은 배포할 때 GitHub Actions 비밀 CK_SALT 로 넣는다(test/build.cjs) — 저장소에 두지 않는다(공개 저장소라 예전 값이 새어 나갔다). 서버는 ck_key 표
 const runCk = async (tok, a) => { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode([tok, a.ch, a.lv, a.bosses, a.bt, a.t, a.kills, a.lvl, a.weapons, a.hit0, a.v, CK_SALT].join('|'))); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('') } catch { return '' } }
 const rankArgs = () => ({ ch: G.ch.id, lv: G.loop.lv, bosses: G.bosses, bt: Math.round(G.bossT), t: Math.round(G.t), kills: G.kills, lvl: G.lvl,
   weapons: G.weapons.map(w => w.id + (G.aw.has(w.id) ? 9 : Math.min(8, w.lv))).join(' '), passives: Object.entries(G.passives).map(([k, n]) => k + n).join(' '),
-  slain: Object.entries(G.slain).map(([k, n]) => k + n).join(' '), winter: !!G.winter, v: PATCH_ID, hit0: G.hit0 == null ? -1 : Math.round(G.hit0) })   // hit0 — 처음 맞은 때(-1 = 한 번도 안 맞음)
+  slain: Object.entries(G.slain).map(([k, n]) => k + n).join(' '), winter: !!G.winter, v: PATCH_ID, hit0: G.hit0 == null ? -1 : Math.round(G.hit0), outfit: wornId(G.ch.id), wskin: wornW(G.ch.id) })   // 의상 · 무기 스킨 — 랭킹 그림(체크섬엔 안 넣는다)   // hit0 — 처음 맞은 때(-1 = 한 번도 안 맞음)
 function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기 / 로그인 안내
   const el = h('div', { class: 'rankline' }), set = (...k) => el.replaceChildren(...k)
   if (!auth) { set(h('span', {}, tr`로그인하면 다음 판부터 랭킹에 올라가요`), btn(tr`로그인`, loginBox)); return el }
@@ -619,34 +621,39 @@ const icSafe = id => { try { return ic(id) } catch { return null } }   // 랭킹
 async function ranking(only = null) {
   mode = 'rank'; G = null
   const list = h('ol', { class: 'list rank scroll' }, h('li', { class: 'wait' }, tr`불러오는 중…`)), mine = h('div', { class: 'mine' })
+  const head = h('li', { class: 'head', 'aria-hidden': 'true' }, h('span', {}), h('span', {}), h('span', {}, tr`닉네임`), h('span', {}, tr`단계`), h('span', {}, tr`버틴 시간`), h('span', {}, tr`보스`))   // 넓은 화면만 — 표 머리줄
+  const ghost = (txt, b) => h('li', { class: 'ghost' }, h('span', {}, txt), b || h('span', {}))   // 내 기록 자리 · 빈 목록 — 목록 줄과 같은 모양의 점선 줄
   show(h('div', { class: 'panel wide pick rank' },
-    h('p', { class: 'h' }, ic('inf'), tr` 무한 랭킹`),
-    h('div', { class: 'dex-nav' }, h('button', { type: 'button', class: only ? '' : 'on', onclick: () => ranking() }, tr`전체 TOP100`),
+    h('p', { class: 'h' }, ic('inf'), tr` 무한 랭킹`), h('p', { class: 'sub' }, only ? tr`${CHARS.find(c => c.id === only)?.name ?? only} TOP 10` : tr`전체 TOP 100 · 한 사람당 최고 기록 하나`),
+    h('div', { class: 'dex-nav' }, h('button', { type: 'button', class: only ? '' : 'on', onclick: () => ranking() }, tr`전체`),
       CHARS.map(c => h('button', { type: 'button', class: only === c.id ? 'on' : '', onclick: () => ranking(c.id) }, ic(c.w), ` ${c.name}`))),
     mine, list,
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title))))
   const [rows, me] = await Promise.all([rpc('top_ranks', { only_ch: only }), auth ? rpc('my_rank', { only_ch: only }) : null])
   if (mode !== 'rank') return
   if (!rows) return list.replaceChildren(h('li', { class: 'wait' }, tr`랭킹을 불러오지 못했어요 — 인터넷 연결을 확인해 주세요`))
-  list.replaceChildren(...(rows.length ? rows.map(rankRow) : [h('li', { class: 'wait' }, tr`아직 기록이 없어요 — 첫 번째가 되어 보세요!`)]))
-  if (!auth) mine.replaceChildren(h('span', {}, tr`로그인하면 내 기록도 올라가요`), btn(tr`로그인`, loginBox))
-  else if (me?.[0]) mine.replaceChildren(rankRow(me[0]))
-  else mine.replaceChildren(h('span', {}, NICK ? tr`무한 모드를 해 보면 여기에 내 기록이 나와요` : tr`닉네임을 정하면 랭킹에 올라가요`), NICK ? '' : btn(tr`닉네임 정하기`, () => nickBox()))
+  list.replaceChildren(...(rows.length ? [head, ...rows.map(rankRow)] : [ghost(tr`아직 기록이 없어요 — 첫 번째가 되어 보세요!`)]))
+  if (!auth) mine.replaceChildren(ghost(tr`로그인하면 내 기록도 여기에 올라가요`, btn(tr`로그인`, loginBox)))
+  else if (me?.[0]) { mine.dataset.t = tr`내 기록`; mine.replaceChildren(rankRow(me[0])) }   // 위 꼬리표 「내 기록」(목록 순서와 헷갈리지 않게)
+  else mine.replaceChildren(NICK ? ghost(tr`무한 모드를 해 보면 여기에 내 기록이 나와요`) : ghost(tr`닉네임을 정하면 랭킹에 올라가요`, btn(tr`닉네임 정하기`, () => nickBox())))
 }
+/** 랭킹 그림 — 그 판에 입은 의상 · 무기 스킨으로(서버 값 — 없거나 그 캐릭터 것이 아니면 기본 모습) */
+const rankPortrait = r => { const o = OUTFIT[r.outfit], w = WSKIN[r.wskin]; return portrait(r.ch, o && (!o.ch || o.ch === r.ch) ? r.outfit : null, w && (!w.ch || w.ch === r.ch) ? r.wskin : null) }
 function rankRow(r) {
   return h('li', { class: r.me ? 'me' : '', onclick: () => rankInfo(r) },
     h('span', { class: `rk ${RK_COL[r.rank] || ''}` }, r.rank),
-    portrait(r.ch, null, null),
+    rankPortrait(r),
     h('div', {}, h('b', {}, r.nick), h('span', { class: 'wp' }, r.weapons.split(' ').map(w => icSafe(w.replace(/\d+$/, ''))))),
-    h('div', { class: 'sc' }, h('span', { class: 'lvpill' }, `∞ ${r.lv}`), h('small', {}, tr`보스 ${r.bosses} · ${fmt(r.t)}`)))
+    h('div', { class: 'sc' }, h('span', { class: 'lvpill' + (r.lv ? '' : ' zero') }, r.lv ? [h('span', { class: 'long' }, `∞ ${tr`${r.lv}단계`}`), h('span', { class: 'short' }, `∞ ${r.lv}`)] : tr`세이렌 전`),   // 0단계 = 세이렌을 아직 못 쓰러뜨림
+      h('span', { class: 't' }, fmt(r.t)), h('span', { class: 'bs' }, h('i', {}, tr`보스`), ' ', String(r.bosses))))   // 넓은 화면은 머리줄에 「보스」가 있어 숫자만
 }
 function rankInfo(r) {   // 자세히 — 작은 결과 화면처럼
   const ch = CHARS.find(c => c.id === r.ch), ws = r.weapons.split(' ').map(w => [w.replace(/\d+$/, ''), +w.match(/\d+$/)[0]]), lvOf = v => v === 9 ? '★' : `Lv${v}`
   const chip = (id, txt, w) => h('span', { class: `chip${w ? ' w' : ''}` }, icSafe(id), ` ${txt}`), stat = (k, v) => h('div', {}, h('small', {}, k), h('b', {}, v))
   const row = (k, ...kids) => kids.flat().length > 0 && h('div', { class: 'brow' }, h('small', {}, k), h('div', { class: 'build' }, ...kids))
-  const close = modal('rinfo', portrait(r.ch, null, null),
+  const close = modal('rinfo', rankPortrait(r),
     h('p', { class: 'h' }, `#${r.rank} ${r.nick}`), h('p', { class: 'sub' }, `${ch?.name ?? r.ch} · ${new Date(r.at).toLocaleDateString(LANG)} · ${r.winter ? tr`겨울` : tr`풀밭`}`),
-    h('p', { class: 'lvl-badge inf' }, ic('inf'), tr` ${r.lv}단계`),
+    r.lv ? h('p', { class: 'lvl-badge inf' }, ic('inf'), tr` ${r.lv}단계`) : h('p', { class: 'lvl-badge inf zero' }, tr`세이렌 전`),
     h('div', { class: 'stats' }, stat(tr`버틴 시간`, fmt(r.t)), stat(tr`처치`, r.kills.toLocaleString()), stat(tr`보스`, r.bosses), stat(tr`레벨`, r.lvl)),
     row(tr`메인`, ws.slice(0, 1).map(([id, v]) => chip(id, `${WEAP[id]?.name ?? id} ${lvOf(v)}`, 1))),
     row(tr`보조`, ws.slice(1).map(([id, v]) => chip(id, `${WEAP[id]?.name ?? id} ${lvOf(v)}`, 1))),
@@ -2694,7 +2701,8 @@ function skZone(c, x, y, R, k, t, a = 1) {   // 스킬 스킨 장판 — 둘레�
   for (let i = 0; i < 3; i++) { const q = t * 1.6 + i * TAU / 3, r = 3.4 + Math.sin(t * 6 + i) * 1.2; c.globalAlpha = a; c.fillStyle = '#fff'; starP(c, x + Math.cos(q) * R, y + Math.sin(q) * R * 0.8, r * 1.6, r * 0.5, 4); c.fill(); c.strokeStyle = k.col; c.lineWidth = 1; c.stroke() }
   c.globalAlpha = 1
 }
-function skPuff(x, y, k, n = 1, L = G.sfx.list) {   // 스킬 스킨 반짝이 — 지나간 자리 · 터진 자리
+function skPuff(x, y, k, n = 1, L = G.sfx.list) {   // 스킬 스킨 반짝이 — 지나간 자리 · 터진 자리(가벼운 화질이면 안 만든다)
+  if (LQ) return
   for (let i = 0; i < n; i++) L.push({ k: pickOf(k.trail.k), col: pickOf(k.trail.col), x: x + (rnd() - 0.5) * 12, y: y + (rnd() - 0.5) * 10, vx: (rnd() - 0.5) * 30, vy: -10 - rnd() * 20, t: 0, T: 0.5 + rnd() * 0.4, s: 0.9 + rnd() * 0.6, rot: rnd() * TAU })
   if (L.length > 170) L.splice(0, L.length - 170)   // 반짝이는 많아도 170개까지(느려지지 않게)
 }
@@ -2708,7 +2716,7 @@ if (TR) {   // index.html 의 한국어 이름표 · 탭 제목도 그 말로(�
 }
 let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2, LQ = 0   // LQ = 자동 화질 단계(0 · 1 · 2) — 느려지면 내려간다
 function size(drag) {   // drag === true — 배율 막대를 끄는 중: 배율만 바꾸고 그림은 놓을 때(change) 다시 그린다(다시 그리기는 0.3~0.6초)
-  const r = cv.getBoundingClientRect(), d0 = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height))), d = Math.max(Math.min(1, d0), d0 * [1, 0.8, 0.62][LQ])   // 자동 화질이 내려가면 픽셀을 줄인다(화면 1배보다는 안 낮춘다)
+  const r = cv.getBoundingClientRect(), d0 = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height))), d = Math.max(Math.min(1, d0), d0 * [1, 0.75, 0.5][LQ])   // 자동 화질이 내려가면 픽셀을 줄인다(화면 1배보다는 안 낮춘다)
   cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d)); DPR = cv.width / Math.max(1, r.width)
   SC = Math.max(Math.min(cv.width, cv.height), Math.sqrt(cv.width * cv.height) / 1.15) / VIEW * save.zoom; VW = cv.width / SC; VH = cv.height / SC   // 짧은 쪽 또는 넓이 기준 중 큰 배율 — 세운 휴대폰에서도 캐릭터가 너무 작지 않게
   const k = clamp(Math.round(SC * 2) / 2, 1, 4)   // 그림을 화면 배율에 맞는 크기로 다시 그린다 — 확대해도 흐려지지 않게
@@ -2867,9 +2875,11 @@ const alive = e => e && !e.dead ? e : null
 const visible = () => G.foes.filter(e => !e.dead && !e.rush && onScreen(e))
 const slow = (e, T, k) => { if (e.boss) return; if (e.slow <= 0 || k <= e.sk) { e.sk = k; e.slow = Math.max(e.slow, T) } }   // T 초 동안 속도 k 배(보스는 안 걸린다)
 const SKFX = new Set(['boom', 'bolt', 'beam', 'grab', 'swing'])
-const fx = o => { if (G.fx.length < 220) G.fx.push({ t: 0, src: SRC, ...o }); const k = SRC && SKFX.has(o.k) && G.sk[SRC]; if (k) skBurst(o, k) }   // 스킬 스킨 — 터진 자리에 반짝이
-const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < 360) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
-const num = (x, y, v, kind) => { if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
+const FX_KEEP = new Set(['hand', 'shout', 'wave', 'duel'])   // 꼭 보여야 하는 것 — 효과가 많아도 늘 넣는다(피하는 데 필요한 정보)
+const fx = o => { if (G.fx.length < (LQ > 1 ? 110 : 220) || FX_KEEP.has(o.k)) G.fx.push({ t: 0, src: SRC, ...o }); const k = SRC && SKFX.has(o.k) && G.sk[SRC]; if (k) skBurst(o, k) }   // 스킬 스킨 — 터진 자리에 반짝이
+const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < (LQ > 1 ? 180 : 360)) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
+const num = (x, y, v, kind) => { if (LQ > 1 && kind !== 'crit') return   // 가장 가벼운 화질이면 치명타만
+  if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
 const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
 const tip = (s, col = '#fff', T = 2.8) => { G.tip = { s, t: 0, T, col } }   // 작은 안내 — 가운데 글자 아래(눈보라 등)
 /** 각성 스킬(SRC)이 날아오는 것 b 를 AW.p 확률로 막는다 — 탄 하나에 스킬마다 한 번만 굴린다. 막으면 true */
@@ -3408,11 +3418,12 @@ function ouch(d, src) {
 function fall(src) { pl.hp = 0; G.dying = 1.2; G.killer = killerName(src); say(tr`와아…`, 1.5, '#ff6b6b'); SND.voice(G.ch.id, 'cry') }   // 쓰러짐 — 맞아서 · 얼어서
 
 // ---- 경험치 · 줍는 것
+const GEM_MAX = 150
 function gem(x, y, v) {
-  if (G.gems.length >= 360) {   // 너무 많으면 가장 먼(두고 온) 것을 여기로 옮겨 합친다 — 경험치는 그대로. 끌려오는 것(자석)은 빼고 — 옮기면 화면 안에 멈춰 버린다. 다 끌려오는 중이면 잠깐 360을 넘긴다
-    let far = null, fd = -1
-    for (const g of G.gems) { if (g.pull) continue; const d = (g.x - pl.x) ** 2 + (g.y - pl.y) ** 2; if (d > fd) { fd = d; far = g } }
-    if (far) { Object.assign(far, { x, y, v: far.v + v, sp: 0 }); return }
+  if (G.gems.length >= GEM_MAX) {   // 바닥에 너무 많으면 새로 만들지 않고 떨어진 자리에서 가장 가까운 보석에 더한다 — 경험치 · 자리는 그대로(기획: 모든 기기 같게, 그리기가 무거워서). 끌려오는 것(자석)은 빼고
+    let near = null, nd = Infinity
+    for (const g of G.gems) { if (g.pull) continue; const d = (g.x - x) ** 2 + (g.y - y) ** 2; if (d < nd) { nd = d; near = g } }
+    if (near) { near.v += v; return }
   }
   G.gems.push({ x: x + (rnd() - 0.5) * 8, y: y + (rnd() - 0.5) * 8, v, pull: false, sp: 0 })
 }
@@ -3589,8 +3600,7 @@ function step(dt) {
   for (const it of G.items) { it.t += dt; if (it.k === 'coinbox' && it.t > WANDER.life) { it.dead = true; continue } if (!dead && (it.x - pl.x) ** 2 + (it.y - pl.y) ** 2 < (pl.r + 16) ** 2) { it.dead = true; USE[it.k](); fx({ k: 'flash', x: pl.x, y: pl.y - 20, R: 70, col: '#ffffff', T: 0.35 }) } }
   // 효과
   for (const p of G.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; p.vx *= 0.97; if (p.t > p.T) p.dead = true }
-  cfxStep(G.cfx, G.dying ? null : G.ofx, pl.x, pl.y, dt)   // 의상 이펙트
-  cfxStep(G.wfx, G.dying ? null : G.wsx, pl.x, pl.y, dt, pl.fx)   // 무기 스킨 반짝이
+  if (!LQ) { cfxStep(G.cfx, G.dying ? null : G.ofx, pl.x, pl.y, dt); cfxStep(G.wfx, G.dying ? null : G.wsx, pl.x, pl.y, dt, pl.fx) }   // 의상 이펙트 · 무기 스킨 반짝이(가벼운 화질이면 빼기 — 보이기만)
   cfxStep(G.sfx, null, 0, 0, dt)   // 스킬 스킨 반짝이
   for (const f of G.fx) {
     f.t += dt; if (f.t > f.T) f.dead = true
@@ -3821,13 +3831,21 @@ function boxKey(e) {
 // ---------------------------------------------------------------- 그리기
 function txt(c, s, x, y, size, col = '#fff', mw) { c.font = `${size}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineJoin = 'round'; c.lineWidth = size * 0.24; c.strokeStyle = OUT; c.strokeText(s, x, y, mw); c.fillStyle = col; c.fillText(s, x, y, mw) }   // mw — 이보다 넓으면 가로로 줄인다(다른 나라 말은 길 수 있다)
 function oval(c, x, y, rx, ry) { c.beginPath(); c.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, TAU) }
+function groundLite(c, ox, oy) {   // 바닥 색 + 칸마다 큰 얼룩 셋(움직이는 게 보이게 — 자리는 칸 번호로 정해져 있다)
+  const W = save.theme === 'winter'; c.fillStyle = W ? '#e6eff8' : '#cdeaa8'; c.fillRect(ox, oy, VW, VH)
+  c.fillStyle = W ? '#d6e3f1' : '#bde094'; c.beginPath()
+  for (let tx = Math.floor(ox / TILE); tx * TILE < ox + VW; tx++) for (let ty = Math.floor(oy / TILE); ty * TILE < oy + VH; ty++)
+    for (let i = 0; i < 3; i++) { const h = Math.sin(tx * 12.9 + ty * 78.2 + i * 37.7) * 43758.5, u = h - Math.floor(h), v = (h * 7.3) - Math.floor(h * 7.3), x = tx * TILE + u * TILE, y = ty * TILE + v * TILE; c.moveTo(x + 46, y); c.ellipse(x, y, 46, 22, 0, 0, TAU) }
+  c.fill()
+}
 function render() {
   const c = ctx
   if (!SPR) return
   c.setTransform(1, 0, 0, 1, 0, 0)
   const sx = shake ? (rnd() - 0.5) * shake : 0, sy = shake ? (rnd() - 0.5) * shake : 0, ox = cam.x + sx - VW / 2, oy = cam.y + sy - VH / 2
   c.setTransform(SC, 0, 0, SC, -ox * SC, -oy * SC)
-  for (let tx = Math.floor(ox / TILE); tx * TILE < ox + VW; tx++) for (let ty = Math.floor(oy / TILE); ty * TILE < oy + VH; ty++) c.drawImage(SPR.ground, tx * TILE, ty * TILE, TILE + 0.6, TILE + 0.6)
+  if (LQ) groundLite(c, ox, oy)   // 가벼운 화질 — 바닥은 색 + 큰 무늬만(무늬 그림을 화면 가득 늘려 그리는 게 구형 폰에서 무겁다)
+  else for (let tx = Math.floor(ox / TILE); tx * TILE < ox + VW; tx++) for (let ty = Math.floor(oy / TILE); ty * TILE < oy + VH; ty++) c.drawImage(SPR.ground, tx * TILE, ty * TILE, TILE + 0.6, TILE + 0.6)
   if (G) world(c, ox, oy)
   else parade(c, ox, oy)
   c.setTransform(DPR, 0, 0, DPR, 0, 0)
@@ -3892,16 +3910,16 @@ let snowX = 0, snowY = 0, snowLast = 0
 function snow(c, ox, oy) {   // 겨울 테마 — 내리는 눈(옆바람에 비스듬히). 눈보라면 훨씬 많고 빠르게 · 눈발 줄 · 하얀 안개. 위치는 시간 · 카메라로만(흐른 양만 쌓아 두어 세기가 바뀌어도 튀지 않는다)
   const w = cv.width / DPR + 20, h = cv.height / DPR + 20, k = SC / DPR, fr = v => v - Math.floor(v), st = G?.winter ? G.storm.k : 0, dt = Math.min(0.1, Math.max(0, tnow - snowLast))
   snowLast = tnow; snowX += dt * (16 + 150 * st); snowY += dt * (1 + 1.7 * st)
-  const n = Math.round((LQ ? 65 : 130) * (1 + 1.4 * st)), P = []
+  const n = LQ ? 0 : Math.round(130 * (1 + 1.4 * st)), P = []   // 가벼운 화질(LQ)이면 눈송이 · 눈발은 빼고 눈보라 안개만(기획 — 보이는 것만 기기마다 다르게)
   c.beginPath()
   for (let i = 0; i < n; i++) {
     const u = fr(Math.sin(i * 12.99) * 43758.5), v = fr(Math.sin(i * 78.23) * 24634.6), z = 0.4 + 0.6 * fr(Math.sin(i * 39.35) * 9631.7), r = 1.2 + z * 2.6
     const pz = k * (1 + 0.1 * z), x = fr((u * w + Math.sin(tnow * 0.9 + i) * 14 * z + snowX * z - ox * pz) / w) * w - 10, y = fr((v * h + snowY * (20 + 38 * z) - oy * pz) / h) * h - 10   // 눈은 바닥 바로 위 — 바닥과 같이(가까운 눈은 10% 더) 밀린다. 바닥보다 덜 밀리면 걸을 때 바닥에 비해 눈이 거꾸로 날아가 보인다
     c.moveTo(x + r, y); c.arc(x, y, r, 0, TAU); if (st > 0.05 && i % 2) P.push(x, y, z)
   }
-  c.fillStyle = '#fff'; c.fill(); c.lineWidth = 1; c.strokeStyle = 'rgba(100,135,190,.6)'; c.stroke()
+  if (n) { c.fillStyle = '#fff'; c.fill(); c.lineWidth = 1; c.strokeStyle = 'rgba(100,135,190,.6)'; c.stroke() }
   if (st > 0.05) {
-    c.beginPath(); for (let i = 0; i < P.length; i += 3) { const L = (10 + 18 * P[i + 2]) * st; c.moveTo(P[i], P[i + 1]); c.lineTo(P[i] - L * 0.8, P[i + 1] - L * 0.55) }
+    if (P.length) c.beginPath(); for (let i = 0; i < P.length; i += 3) { const L = (10 + 18 * P[i + 2]) * st; c.moveTo(P[i], P[i + 1]); c.lineTo(P[i] - L * 0.8, P[i + 1] - L * 0.55) }
     c.strokeStyle = `rgba(255,255,255,${0.75 * st})`; c.lineWidth = 1.4; c.lineCap = 'round'; c.stroke()
     c.fillStyle = `rgba(232,243,255,${0.2 * st})`; c.fillRect(0, 0, w, h)   // 하얀 안개
   }
@@ -3977,7 +3995,7 @@ function world(c, ox, oy) {
     else if (b.k === 'pot') { const u = b.t / b.T, k = G.sk.curry; if (k) skZone(c, b.x, b.y, b.R, k, b.t); c.strokeStyle = k?.col || 'rgba(200,140,30,.85)'; c.lineWidth = 2.5; oval(c, b.x, b.y, b.R, b.R * 0.8); c.stroke(); c.fillStyle = k ? k.col2 + '33' : 'rgba(235,185,60,.2)'; c.fill(); c.strokeStyle = k?.col2 || '#a8701c'; c.lineWidth = 4; c.beginPath(); c.arc(b.x, b.y - 12, 16, -Math.PI / 2, -Math.PI / 2 + u * TAU); c.stroke(); put(c, SPR.E.curry, b.x + Math.sin(b.t * 40) * u * 1.5, b.y - 12) }
   }
   // 보석 · 줍는 것
-  for (const g of G.gems) put(c, SPR.gem[g.v >= 20 ? 2 : g.v >= 3 ? 1 : 0], g.x, g.y)
+  for (const g of G.gems) if (Math.abs(g.x - cam.x) < VW / 2 + 20 && Math.abs(g.y - cam.y) < VH / 2 + 20) put(c, SPR.gem[g.v >= 20 ? 2 : g.v >= 3 ? 1 : 0], g.x, g.y)   // 화면 안만(바닥에 쌓인 것까지 매 프레임 그리면 구형 폰이 느려진다)
   for (const it of G.items) { put(c, SPR.shadow, it.x, it.y, 0.5); c.globalAlpha = 0.35 + 0.2 * Math.sin(it.t * 5); c.fillStyle = '#fff'; oval(c, it.x, it.y - 12, 16, 16); c.fill(); c.globalAlpha = 1; put(c, SPR.E[it.k], it.x, it.y - 12 + Math.sin(it.t * 4) * 2) }
   // 그림자 → 몸(y 순, 화면 안만)
   const vis = e => Math.abs(e.x - cam.x) < VW / 2 + 90 && Math.abs(e.y - cam.y) < VH / 2 + 140
@@ -4061,8 +4079,8 @@ function drawFoe(c, e) {
     c.fillStyle = gl; oval(c, e.x, cy, R, R); c.fill()
     c.globalAlpha = 0.8; for (let i = 0; i < 3; i++) { const a = G.t * 0.8 + i * TAU / 3; put(c, SPR.note, e.x + Math.cos(a) * 70, cy - 6 + Math.sin(a) * 34 + Math.sin(G.t * 3 + i) * 3, 0.65) } c.globalAlpha = 1
   }
-  if (e.flash > 0 && !e.boss) put(c, (L ? v.WL : v.WR)[f], e.x, y, k)   // 맞으면 하얗게 — 한 장만 그린다(겹쳐 그리면 적이 많을 때 무겁다)
-  else { put(c, (L ? v.L : v.R)[f], e.x, y, k); if (e.flash > 0) { c.globalAlpha = 0.45; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 } }   // 보스는 모양이 보이게 옅게 겹친다
+  if (e.flash > 0 && !e.boss && LQ < 2) put(c, (L ? v.WL : v.WR)[f], e.x, y, k)   // 맞으면 하얗게 — 한 장만 그린다(겹쳐 그리면 적이 많을 때 무겁다)
+  else { put(c, (L ? v.L : v.R)[f], e.x, y, k); if (e.flash > 0 && LQ < 2) { c.globalAlpha = 0.45; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 } }   // 보스는 모양이 보이게 옅게 겹친다
   if (e.shield > G.t) { c.fillStyle = 'rgba(255,255,255,.25)'; oval(c, e.x, e.y - e.r * 1.1, e.r + 20, (e.r + 20) * 1.07); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke() }   // 페이즈가 바뀌는 2초 — 방울 방패(공격이 왜 안 들어가는지 보이게)
   if (e.boss && e.kind === 'siren' && guarded(e)) { c.globalAlpha = 0.35 + 0.15 * Math.sin(G.t * 4); c.strokeStyle = '#7fd8ff'; c.lineWidth = 3; oval(c, e.x, e.y - e.r * 1.1, e.r * 1.5, e.r * 1.6); c.stroke(); c.globalAlpha = 1 }
   if (e.slow > 0 && !e.boss) { c.globalAlpha = 0.5; c.fillStyle = '#f5d36a'; oval(c, e.x, e.y, e.r, e.r * 0.4); c.fill(); c.globalAlpha = 1 }
@@ -4090,7 +4108,7 @@ function drawMe(c) {
   if (ice) frostOn(c, s, ice)
   c.restore(); c.globalAlpha = 1
   if (cold || ice) frostAround(c, s, it, cold, ice, dx, burst)
-  cfxDraw(c, G.cfx); cfxDraw(c, G.wfx)   // 의상 이펙트 — 몸 둘레에 떠오르는 모양 · 무기 반짝이
+  if (!LQ) { cfxDraw(c, G.cfx); cfxDraw(c, G.wfx) }   // 의상 이펙트 — 몸 둘레에 떠오르는 모양 · 무기 반짝이
   if (sick('charm')) txt(c, '♥', pl.x + Math.sin(G.t * 6) * 8, pl.y - 50, 16, '#ff6fd0')
 }
 const FROST = mk(8, 8)   // 얼어붙기 그림판 — 한 장을 다시 쓴다
@@ -4311,7 +4329,7 @@ function title() {
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
   show(h('div', { class: 'panel home' }, themePick(), h('div', { class: 'corner' }, acctPick(), langPick()),
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
-    h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
+    h('h1', { class: 'logo' }, tr`먼작귀`, ' ', h('span', {}, tr`서바이버즈`)),   // 사이 띄어쓰기 — 글자로는 「먼작귀 서바이버즈」(구글 브랜드 인증이 홈페이지의 앱 이름과 맞춰 본다)
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
     AUTH_ERR && h('p', { class: 'hint' }, tr`로그인하지 못했어요 — 잠시 뒤 다시 해 보세요`),
     SUSP ? h('p', { class: 'hint' }, tr`이 계정은 이용이 정지됐어요(번호 ${SUSP}) · 잘못 막혔다면 문의 메일로 알려 주세요`) : null,   // SUSP 는 숫자 — && 로 쓰면 0 이 글자로 찍힌다
@@ -4321,7 +4339,7 @@ function title() {
     h('p', { class: 'fine' }, tr`비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ`),
     STATS.url && h('p', { class: 'fine' }, tr`게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)와 방문 통계(Google 애널리틱스)를 모아요 · `,
       auth ? tr`로그인 중에는 통계를 보내요` : h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? tr`다시 보내기` : tr`보내지 않기` } }, save.noStats ? tr`다시 보내기` : tr`보내지 않기`)),
-    h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('button', { type: 'button', class: 'linkish', onclick: () => terms() }, tr`이용약관`), ' · ', h('button', { type: 'button', class: 'linkish', onclick: () => privacy() }, tr`개인정보 처리방침`))))
+    h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('a', { href: '?terms', class: 'linkish', onclick: e => { e.preventDefault(); terms() } }, tr`이용약관`), ' · ', h('a', { href: '?privacy', class: 'linkish', onclick: e => { e.preventDefault(); privacy() } }, tr`개인정보 처리방침`))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
 function pickChar(i) {
@@ -4626,8 +4644,9 @@ const AQ = { ema: 0, base: 1e9, at: 0 }
 function autoQ(raw) {
   if (mode !== 'play' || !G || raw > 250) return   // 탭을 다녀오면 한 번 크게 튄다 — 빼고
   AQ.ema = AQ.ema ? AQ.ema + (raw - AQ.ema) * 0.03 : raw
-  if (G.t > 5 && G.t < 90) AQ.base = Math.min(AQ.base, AQ.ema)
-  if (LQ < 2 && G.t - AQ.at > 4 && AQ.ema > Math.max(26, AQ.base * 1.6)) { LQ++; AQ.at = G.t; size(true) }   // 그림은 다시 그리지 않는다(멈칫하지 않게)
+  if (G.t > 5 && G.t < 90) AQ.base = Math.min(AQ.base, AQ.ema)   // 처음 프레임 — 30fps 로 묶인 기기를 알아보려고
+  const lock = AQ.base > 30 && AQ.base < 37, th = LQ ? Math.max(40, lock ? AQ.base * 1.6 : 0) : Math.max(25, lock ? AQ.base * 1.25 : 0)
+  if (LQ < 2 && G.t - AQ.at > 3 && AQ.ema > th) { LQ++; AQ.at = G.t; size(true) }   // 평균 프레임이 25ms(LQ1) · 40ms(LQ2)를 넘으면 — 절대값(기획: 처음부터 느린 구형 폰도 켜지게). 30fps 로 묶인 기기(처음부터 33ms)는 그만큼 올려서 괜히 안 내린다. 내려가기만 · 그림은 다시 그리지 않는다
 }
 function frame(ts) {
   if (last) autoQ(ts - last)
@@ -4648,4 +4667,4 @@ if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 �
   link().finally(() => { clearTimeout(t); done?.() })
 }
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

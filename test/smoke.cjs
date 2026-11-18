@@ -451,13 +451,13 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const pill = await page.locator('.acct .nm').textContent(), onStats = await page.locator('#ui .fine', { hasText: '로그인 중에는 통계를 보내요' }).count()
     if (onStats !== 1) errors.push('[acct] 로그인 중 통계 글 ' + onStats)
     await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400)
-    const rows = await page.locator('.list.rank li').count(), mine = await page.locator('.panel.rank .mine li.me').count()
-    await page.locator('.list.rank li').first().click(); await page.waitForTimeout(150); const info = await page.locator('.modal .lvl-badge').textContent()
+    const rows = await page.locator('.list.rank li:not(.head)').count(), mine = await page.locator('.panel.rank .mine li.me').count()
+    await page.locator('.list.rank li:not(.head)').first().click(); await page.waitForTimeout(150); const info = await page.locator('.modal .lvl-badge').textContent()
     await page.keyboard.press('Escape'); await page.waitForTimeout(100); const closed = await page.locator('.modal').count(), still = await page.evaluate(() => window.__mjg.mode)
     await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForTimeout(300)   // start_run 이 tok 을 돌려줄 때까지
     await page.evaluate(() => { const M = window.__mjg; M.G.loop.lv = 2; M.finish(false) }); await page.waitForTimeout(500)
     const line = await page.locator('.rankline').textContent()
-    const ck = body && require('crypto').createHash('sha256').update(['tok-1', body.ch, body.lv, body.bosses, body.bt, body.t, body.kills, body.lvl, body.weapons, body.hit0, body.v, 'mjg|r7Q'].join('|')).digest('hex')   // 체크섬 — SQL(submit_rank)과 같은 순서
+    const ck = body && require('crypto').createHash('sha256').update(['tok-1', body.ch, body.lv, body.bosses, body.bt, body.t, body.kills, body.lvl, body.weapons, body.hit0, body.v, /const CK_SALT = '([^']*)'/.exec(require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'))[1]].join('|')).digest('hex')   // 체크섬 — SQL(submit_rank)과 같은 순서
     if (!body || body.ck !== ck) errors.push('[acct] 체크섬 ' + JSON.stringify({ body, ck }))
     console.log('acct', { pill, rows, mine, info, closed, still, line, sent: [...new Set(sent)] })
     await page.reload(); await page.waitForTimeout(800)   // 계정 지우기 — 닉네임을 똑같이 써야 눌리고, 지우면 로그아웃

@@ -17,6 +17,7 @@ jobs:
       - run: npm i --no-save --no-audit --no-fund terser@5.51.0 javascript-obfuscator@5.9.1
       - run: node test/i18n.cjs
       - run: node test/build.cjs
+        env: { CK_SALT: '${{ secrets.CK_SALT }}' }   # 랭킹 체크섬 소금 — 저장소에 두지 않는다(서버 ck_key 와 같은 값)
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
       - id: d

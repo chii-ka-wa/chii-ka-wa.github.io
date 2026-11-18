@@ -132,6 +132,13 @@ alter table public.run_starts add column if not exists tok uuid not null default
 alter table public.run_starts enable row level security;
 revoke all on public.run_starts from anon, authenticated;
 
+-- 랭킹 체크섬 소금 — 저장소에 두지 않는다(저장소가 공개라 예전 값 'mjg|r7Q' 은 새어 나갔다). 처음 Run 하면 아무 값이 들어가고, GitHub 비밀 CK_SALT 와 같은 값으로 직접 바꾼다:
+--   update public.ck_key set v = '<GitHub 비밀 CK_SALT 와 같은 값>';      (이 줄은 저장소에 적지 말 것. 바꾸면 GitHub 비밀도 같이 바꾸고 다시 배포)
+create table if not exists public.ck_key (id int primary key default 1 check (id = 1), v text not null default gen_random_uuid()::text);
+insert into public.ck_key default values on conflict do nothing;
+alter table public.ck_key enable row level security;
+revoke all on public.ck_key from anon, authenticated;
+
 -- 4) 랭킹 — 계정 · 캐릭터마다 가장 좋은 무한 모드 기록 하나. 순서: 단계 ↓ → 잡은 보스 ↓ → 마지막 보스를 잡은 때 ↑ → 먼저 세운 기록
 create table if not exists public.ranks (
   uid      uuid not null references auth.users on delete cascade,
@@ -152,6 +159,9 @@ create table if not exists public.ranks (
 );
 alter table public.ranks drop constraint if exists ranks_check;   -- 예전 판의 「그럴듯한 기록만」(단계마다 60초 — 고수의 진짜 기록도 걸릴 수 있었다)
 create index if not exists ranks_order on public.ranks (lv desc, bosses desc, bt, at);
+alter table public.ranks add column if not exists real int;
+alter table public.ranks add column if not exists outfit text check (outfit is null or outfit ~ '^[a-z0-9_]{1,24}$');   -- 그 판에 입은 의상 · 무기 스킨(랭킹 그림 — 보이기만, 체크섬에 넣지 않는다)
+alter table public.ranks add column if not exists wskin text check (wskin is null or wskin ~ '^[a-z0-9_]{1,24}$');   -- 판 시작(start_run) → 올리기까지 실제 흐른 초(살펴보기용 — 기록 ÷ 3 에 가까우면 3배속으로 내내 · 빠르게 만든 기록일 수도)
 alter table public.ranks enable row level security;   -- 정책 없음 — 넣기 · 보기 모두 함수로만
 revoke all on public.ranks from anon, authenticated;
 
@@ -200,7 +210,8 @@ $$;
 --     세이렌 페이즈 전환 2초 × 2 는 넣지 않는다 — 예전 game.js 가 남은 기기의 기록을 정지시키지 않게) · 보스 < 단계 — 모두 게임 시간(t) 기준
 --   hit0 = 처음 맞은 때(초, -1 = 한 번도 안 맞음). 25분 넘게 한 대도 안 맞은 판은 받되 의심 목록 맨 위로(고수의 진짜 기록을 거절하지 않게)
 drop function if exists public.submit_rank(text, int, int, int, int, int, int, text, text, text, boolean, text);
-create or replace function public.submit_rank(ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, v text, hit0 int, ck text)
+drop function if exists public.submit_rank(text, int, int, int, int, int, int, text, text, text, boolean, text, int, text);
+create or replace function public.submit_rank(ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, v text, hit0 int, ck text, outfit text default null, wskin text default null)
 returns json language plpgsql security definer set search_path = public as $$
 declare old ranks; st timestamptz; tk uuid; res text := 'ok'; my int;
 begin
@@ -210,12 +221,16 @@ begin
   if st is null then return json_build_object('r', 'nostart'); end if;
   if not coalesce(submit_rank.lv between 0 and 500 and submit_rank.bosses between 0 and 100000 and submit_rank.bt >= 0 and submit_rank.t between 0 and 86400
     and submit_rank.kills between 0 and 10000000 and submit_rank.lvl between 1 and 5000 and submit_rank.hit0 >= -1, false) then return json_build_object('r', 'bad'); end if;
-  if ck is distinct from encode(sha256(convert_to(concat_ws('|', tk::text, submit_rank.ch, submit_rank.lv, submit_rank.bosses, submit_rank.bt, submit_rank.t, submit_rank.kills, submit_rank.lvl, submit_rank.weapons, submit_rank.hit0, submit_rank.v, 'mjg|r7Q'), 'UTF8')), 'hex') then
+  if split_part(submit_rank.weapons, ' ', 1) !~ ('^' || coalesce((json_build_object('chiikawa', 'sasu', 'hachiware', 'guitar', 'usagi', 'stick', 'momonga', 'momo', 'kurimanju', 'kanpai', 'rakko', 'sword', 'kani', 'book', 'shisa', 'ramen') ->> submit_rank.ch), '[a-z]{2,12}') || '[1-9]$') then
+    return json_build_object('r', 'bad'); end if;   -- 첫 스킬은 그 캐릭터 무기(새 캐릭터면 형식만 — 거절만, 대개 우리 버그)
+  if ck is distinct from encode(sha256(convert_to(concat_ws('|', tk::text, submit_rank.ch, submit_rank.lv, submit_rank.bosses, submit_rank.bt, submit_rank.t, submit_rank.kills, submit_rank.lvl, submit_rank.weapons, submit_rank.hit0, submit_rank.v, (select k.v from ck_key k)), 'UTF8')), 'hex') then
     perform report_cheat('ck', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t, 'v', submit_rank.v)::jsonb);
     return json_build_object('r', case when banned() then 'ban' else 'hold' end);
   end if;
   if not (submit_rank.bt <= submit_rank.t and submit_rank.kills <= 100 * submit_rank.t + 100 and submit_rank.lvl <= submit_rank.t / 4 + 20
-      and (submit_rank.lv = 0 or submit_rank.t >= 1500 + case when submit_rank.lv <= 1 then 0 else 132 + 72 * least(submit_rank.lv - 2, 3) + 12 * greatest(submit_rank.lv - 5, 0) end) and submit_rank.bosses >= submit_rank.lv)
+      and (submit_rank.lv = 0 or submit_rank.t >= 1500 + case when submit_rank.lv <= 1 then 0 else 132 + 72 * least(submit_rank.lv - 2, 3) + 12 * greatest(submit_rank.lv - 5, 0) end) and submit_rank.bosses >= submit_rank.lv
+      and submit_rank.bosses <= case when submit_rank.lv = 0 then 6 else 4 + 15 * submit_rank.lv end + 2   -- 그 단계까지 나올 수 있는 보스 수(25분 전 6 + 세이렌, 단계마다 보스 6 + 세이렌 min(3, k+1) × 3페이즈) + 여유 2
+      and submit_rank.bosses >= (select coalesce(sum((regexp_match(x, '(\d+)$'))[1]::int), 0) from unnest(string_to_array(coalesce(submit_rank.slain, ''), ' ')) x where x <> ''))   -- 잡은 보스 ≥ 종류별 마리 수 합
     or now() - st < make_interval(secs => submit_rank.t / 3.0 - 30) then
     perform report_cheat('rank', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 'bosses', submit_rank.bosses, 't', submit_rank.t, 'kills', submit_rank.kills, 'lvl', submit_rank.lvl,
       'real', round(extract(epoch from now() - st)), 'v', submit_rank.v)::jsonb);
@@ -228,24 +243,26 @@ begin
   select * into old from ranks r where r.uid = auth.uid() and r.ch = submit_rank.ch;
   if found and (old.lv, old.bosses, -old.bt) >= (submit_rank.lv, submit_rank.bosses, -submit_rank.bt) then res := 'kept';
   else
-    insert into ranks (uid, ch, lv, bosses, bt, t, kills, lvl, weapons, passives, slain, winter, v)
-      values (auth.uid(), ch, lv, bosses, bt, t, kills, lvl, weapons, nullif(passives, ''), nullif(slain, ''), winter, v)
+    insert into ranks (uid, ch, lv, bosses, bt, t, kills, lvl, weapons, passives, slain, winter, v, real, outfit, wskin)
+      values (auth.uid(), ch, lv, bosses, bt, t, kills, lvl, weapons, nullif(passives, ''), nullif(slain, ''), winter, v, round(extract(epoch from now() - st)),
+        case when submit_rank.outfit ~ '^[a-z0-9_]{1,24}$' then submit_rank.outfit end, case when submit_rank.wskin ~ '^[a-z0-9_]{1,24}$' then submit_rank.wskin end)
       on conflict on constraint ranks_pkey do update set lv = excluded.lv, bosses = excluded.bosses, bt = excluded.bt, t = excluded.t, kills = excluded.kills, lvl = excluded.lvl,
-        weapons = excluded.weapons, passives = excluded.passives, slain = excluded.slain, winter = excluded.winter, v = excluded.v, at = now();
+        weapons = excluded.weapons, passives = excluded.passives, slain = excluded.slain, winter = excluded.winter, v = excluded.v, real = excluded.real, outfit = excluded.outfit, wskin = excluded.wskin, at = now();
   end if;
   select x.rank into my from top_ranks() x where x.me;
   return json_build_object('r', res, 'rank', my);
 end $$;
 
+drop function if exists public.top_ranks(text); drop function if exists public.my_rank(text);   -- 돌려주는 칸(의상)이 늘어서 다시 만든다
 -- 랭킹 보기 — only_ch 가 없으면 모두에서 사람마다 가장 좋은 기록 하나씩 TOP 100, 있으면 그 캐릭터 TOP 10. me = 내 기록인지
 create or replace function public.top_ranks(only_ch text default null)
-returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean)
+returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean, outfit text, wskin text)
 language sql stable security definer set search_path = public as $$
   with best as (
     select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
     order by r.uid, r.lv desc, r.bosses desc, r.bt, r.at
   )
-  select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.at), p.nick, b.ch, b.lv, b.bosses, b.bt, b.t, b.kills, b.lvl, b.weapons, b.passives, b.slain, b.winter, b.at, b.uid = auth.uid()
+  select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.at), p.nick, b.ch, b.lv, b.bosses, b.bt, b.t, b.kills, b.lvl, b.weapons, b.passives, b.slain, b.winter, b.at, b.uid = auth.uid(), b.outfit, b.wskin
   from best b join players p on p.uid = b.uid
   order by b.lv desc, b.bosses desc, b.bt, b.at
   limit case when only_ch is null then 100 else 10 end
@@ -253,7 +270,7 @@ $$;
 
 -- 내 순위(TOP 밖이어도) — 랭킹 화면 위 「내 기록」 줄
 create or replace function public.my_rank(only_ch text default null)
-returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean)
+returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean, outfit text, wskin text)
 language sql stable security definer set search_path = public as $$
   with best as (
     select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
@@ -261,7 +278,7 @@ language sql stable security definer set search_path = public as $$
   ), ranked as (
     select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.at) as rank, b.* from best b join players p on p.uid = b.uid
   )
-  select x.rank, p.nick, x.ch, x.lv, x.bosses, x.bt, x.t, x.kills, x.lvl, x.weapons, x.passives, x.slain, x.winter, x.at, true
+  select x.rank, p.nick, x.ch, x.lv, x.bosses, x.bt, x.t, x.kills, x.lvl, x.weapons, x.passives, x.slain, x.winter, x.at, true, x.outfit, x.wskin
   from ranked x join players p on p.uid = x.uid where x.uid = auth.uid()
 $$;
 
