@@ -554,7 +554,7 @@ async function ranking(only = null) {
   list.replaceChildren(...(rows.length ? rows.map(rankRow) : [h('li', { class: 'wait' }, tr`아직 기록이 없어요 — 첫 번째가 되어 보세요!`)]))
   if (!auth) mine.replaceChildren(h('span', {}, tr`로그인하면 내 기록도 올라가요`), btn(tr`로그인`, loginBox))
   else if (me?.[0]) mine.replaceChildren(rankRow(me[0]))
-  else mine.replaceChildren(h('span', {}, NICK ? tr`무한 모드를 해 보면 여기에 내 기록이 나와요` : tr`닉네임을 정하면 랭킹에 올라가요`), !NICK && btn(tr`닉네임 정하기`, () => nickBox()))
+  else mine.replaceChildren(h('span', {}, NICK ? tr`무한 모드를 해 보면 여기에 내 기록이 나와요` : tr`닉네임을 정하면 랭킹에 올라가요`), NICK ? '' : btn(tr`닉네임 정하기`, () => nickBox()))
 }
 function rankRow(r) {
   return h('li', { class: r.me ? 'me' : '', onclick: () => rankInfo(r) },
