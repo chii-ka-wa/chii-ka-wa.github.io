@@ -18,7 +18,7 @@ const ROOT = path.join(__dirname, '..'), OUT = path.join(ROOT, 'dist'), SKIP = /
   // 랭킹 체크섬 소금 — GitHub 비밀 CK_SALT(서버 ck_key 와 같은 값). 글자 그대로 남지 않게 XOR 로 섞어 넣는다(풀 수는 있지만 검색으로는 안 나온다). CI 에서 없으면 멈춘다(틀린 값으로 배포하면 모든 기록이 막힌다)
   const SALT = "const CK_SALT = '__CK_SALT__'"
   if (!src.includes(SALT)) throw new Error('CK_SALT 자리를 못 찾음 — build.cjs 를 고칠 것')
-  if (process.env.CK_SALT) { const k = 1 + (Math.random() * 200 | 0); src = src.replace(SALT, `const CK_SALT = [${[...process.env.CK_SALT].map(c => c.charCodeAt(0) ^ k)}].map(c => String.fromCharCode(c ^ ${k})).join('')`) }
+  if (process.env.CK_SALT) { const k = 1 + (Math.random() * 200 | 0); src = src.replace(SALT, `const CK_SALT = [${[...process.env.CK_SALT].map(c => c.codePointAt(0) ^ k)}].map(c => String.fromCodePoint(c ^ ${k})).join('')`) }   // 코드 포인트로(이모지 같은 4바이트 글자도 그대로 — QC)
   else if (process.env.CI) throw new Error('GitHub 비밀 CK_SALT 가 없음 — Settings › Secrets and variables › Actions 에 넣을 것')
   const min = await minify(src, { module: true, compress: { passes: 2 }, mangle: { toplevel: true }, format: { comments: false } })
   const ob = JO.obfuscate(min.code, {

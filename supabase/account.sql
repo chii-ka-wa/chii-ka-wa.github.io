@@ -116,7 +116,7 @@ end $$;
 drop trigger if exists saves_guard on public.saves;
 create trigger saves_guard before update on public.saves for each row execute function public.saves_guard();
 
--- 2) 닉네임 — 랭킹에 보이는 이름. NFKC 로 맞춘 뒤 2~12자(한 · 영 · 일 · 중 · 숫자 · _), 대소문자 무시하고 겹치면 안 된다. 바꾸기는 7일에 한 번. 표는 함수로만
+-- 2) 닉네임 — 랭킹에 보이는 이름. NFKC 로 맞춘 뒤 2~12자(한 · 영 · 일 · 중 · 숫자 · _), 대소문자 무시하고 겹치면 안 된다. 처음 정하기는 바로, 바꾸기는 하루에 한 번(사용자 결정 2026-11-18 — 예전엔 7일). 표는 함수로만
 create table if not exists public.players (
   uid        uuid primary key references auth.users on delete cascade,
   nick       text not null check (char_length(nick) between 2 and 12 and nick ~ '^[0-9A-Za-z_가-힣ぁ-んァ-ヶー一-鿿]+$'),
@@ -136,6 +136,8 @@ revoke all on public.run_starts from anon, authenticated;
 --   update public.ck_key set v = '<GitHub 비밀 CK_SALT 와 같은 값>';      (이 줄은 저장소에 적지 말 것. 바꾸면 GitHub 비밀도 같이 바꾸고 다시 배포)
 create table if not exists public.ck_key (id int primary key default 1 check (id = 1), v text not null default gen_random_uuid()::text);
 insert into public.ck_key default values on conflict do nothing;
+alter table public.ck_key add column if not exists old text;   -- 바로 전 소금 — 이것과 맞으면 「예전 game.js(새로 고침 전)」로 보고 받지도 신고하지도 않는다(정직한 사람이 탭을 열어 둔 채 3번 올려 정지되지 않게)
+update public.ck_key set old = 'mjg|r7Q' where old is null;   -- 처음 소금(이미 공개된 값이라 적어도 된다). 소금을 다시 바꿀 때:  update public.ck_key set old = v, v = '<새 값>';
 alter table public.ck_key enable row level security;
 revoke all on public.ck_key from anon, authenticated;
 
@@ -159,13 +161,13 @@ create table if not exists public.ranks (
 );
 alter table public.ranks drop constraint if exists ranks_check;   -- 예전 판의 「그럴듯한 기록만」(단계마다 60초 — 고수의 진짜 기록도 걸릴 수 있었다)
 create index if not exists ranks_order on public.ranks (lv desc, bosses desc, bt, at);
-alter table public.ranks add column if not exists real int;
+alter table public.ranks add column if not exists real int;   -- 판 시작(start_run) → 올리기까지 실제 흐른 초(살펴보기용 — 기록 ÷ 3 에 가까우면 3배속으로 내내 · 빠르게 만든 기록일 수도)
 alter table public.ranks add column if not exists outfit text check (outfit is null or outfit ~ '^[a-z0-9_]{1,24}$');   -- 그 판에 입은 의상 · 무기 스킨(랭킹 그림 — 보이기만, 체크섬에 넣지 않는다)
-alter table public.ranks add column if not exists wskin text check (wskin is null or wskin ~ '^[a-z0-9_]{1,24}$');   -- 판 시작(start_run) → 올리기까지 실제 흐른 초(살펴보기용 — 기록 ÷ 3 에 가까우면 3배속으로 내내 · 빠르게 만든 기록일 수도)
+alter table public.ranks add column if not exists wskin text check (wskin is null or wskin ~ '^[a-z0-9_]{1,24}$');
 alter table public.ranks enable row level security;   -- 정책 없음 — 넣기 · 보기 모두 함수로만
 revoke all on public.ranks from anon, authenticated;
 
--- 닉네임 정하기 · 바꾸기 → 'ok' | 'bad'(규칙 · 금지어) | 'taken'(이미 있음) | 'wait'(7일에 한 번)
+-- 닉네임 정하기 · 바꾸기 → 'ok' | 'bad'(규칙 · 금지어) | 'taken'(이미 있음) | 'wait'(바꾼 지 하루가 안 됨 — 처음 정하기는 바로)
 create or replace function public.set_nick(nick text) returns text language plpgsql security definer set search_path = public as $$
 declare n text := btrim(normalize(nick, NFKC)); old players;
 begin
@@ -175,7 +177,7 @@ begin
   if exists (select 1 from players p where lower(p.nick) = lower(n) and p.uid <> auth.uid()) then return 'taken'; end if;
   select * into old from players p where p.uid = auth.uid();
   if found and old.nick = n then return 'ok'; end if;
-  if found and old.changed_at > now() - interval '7 days' then return 'wait'; end if;
+  if found and old.changed_at > now() - interval '1 day' then return 'wait'; end if;
   insert into players (uid, nick) values (auth.uid(), n) on conflict (uid) do update set nick = excluded.nick, changed_at = now();
   return 'ok';
 exception when unique_violation then return 'taken';
@@ -193,7 +195,7 @@ $$;
 
 -- 내 닉네임 · 바꿀 수 있는 때(없으면 null)
 create or replace function public.my_nick() returns json language sql stable security definer set search_path = public as $$
-  select json_build_object('nick', nick, 'next', changed_at + interval '7 days') from players where uid = auth.uid()
+  select json_build_object('nick', nick, 'next', changed_at + interval '1 day') from players where uid = auth.uid()
 $$;
 
 -- 무한 판 시작 → 이 판의 일회용 값(tok)
@@ -204,7 +206,7 @@ create or replace function public.start_run() returns text language sql security
 $$;
 
 -- 기록 올리기 → { r: 'ok' | 'kept'(예전 기록이 더 좋음) | 'nonick' | 'nostart' | 'bad'(범위 밖 숫자 — 대개 우리 버그라 거절만) | 'fast'(흐른 시간보다 조금 긴 기록) | 'old'(시작한 지 6시간 넘음)
---   | 'hold'(차단 · 체크섬 어긋남) | 'ban'(정직한 게임이 못 내는 기록 — 방금 자동 정지), rank: 전체 순위(내 최고) }
+--   | 'stale'(바로 전 소금 — 예전 game.js, 새로 고침하면 된다 · 신고 안 함) | 'hold'(차단 · 체크섬 어긋남) | 'ban'(정직한 게임이 못 내는 기록 — 방금 자동 정지), rank: 전체 순위(내 최고) }
 --   ck = sha256(tok|ch|lv|bosses|bt|t|kills|lvl|weapons|hit0|v|소금) — game.js 의 runCk 와 같은 순서 · 소금. 어긋나면 그 판만 거절 + 기록(한 번으로는 차단 안 함 — 탭 두 개 · 배포 직후 예전 game.js. 7일 3번이면 report_cheat 가 차단)
 --   차단: 실제 흐른 시간 < 기록 ÷ 3 − 30초(3배속이 상한 · start_run 이 늦게 닿는 여유) · 처치 > 초당 100 · 레벨 > 4초에 1 + 20 · 그 단계까지 정직한 최소 시간 미달(보스 무리는 시계로만 온다 — 단계 k 는 쉬는 12초 + 무리 간격 60초 × (⌈6 ÷ min(6, k+1)⌉ − 1): 1단계 132 · 2~4단계 72 · 5단계부터 12초.
 --     세이렌 페이즈 전환 2초 × 2 는 넣지 않는다 — 예전 game.js 가 남은 기기의 기록을 정지시키지 않게) · 보스 < 단계 — 모두 게임 시간(t) 기준
@@ -213,7 +215,7 @@ drop function if exists public.submit_rank(text, int, int, int, int, int, int, t
 drop function if exists public.submit_rank(text, int, int, int, int, int, int, text, text, text, boolean, text, int, text);
 create or replace function public.submit_rank(ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, v text, hit0 int, ck text, outfit text default null, wskin text default null)
 returns json language plpgsql security definer set search_path = public as $$
-declare old ranks; st timestamptz; tk uuid; res text := 'ok'; my int;
+declare old ranks; st timestamptz; tk uuid; res text := 'ok'; my int; bd text;
 begin
   if auth.uid() is null or not exists (select 1 from players where uid = auth.uid()) then return json_build_object('r', 'nonick'); end if;
   if banned() then return json_build_object('r', 'hold'); end if;
@@ -223,7 +225,9 @@ begin
     and submit_rank.kills between 0 and 10000000 and submit_rank.lvl between 1 and 5000 and submit_rank.hit0 >= -1, false) then return json_build_object('r', 'bad'); end if;
   if split_part(submit_rank.weapons, ' ', 1) !~ ('^' || coalesce((json_build_object('chiikawa', 'sasu', 'hachiware', 'guitar', 'usagi', 'stick', 'momonga', 'momo', 'kurimanju', 'kanpai', 'rakko', 'sword', 'kani', 'book', 'shisa', 'ramen') ->> submit_rank.ch), '[a-z]{2,12}') || '[1-9]$') then
     return json_build_object('r', 'bad'); end if;   -- 첫 스킬은 그 캐릭터 무기(새 캐릭터면 형식만 — 거절만, 대개 우리 버그)
-  if ck is distinct from encode(sha256(convert_to(concat_ws('|', tk::text, submit_rank.ch, submit_rank.lv, submit_rank.bosses, submit_rank.bt, submit_rank.t, submit_rank.kills, submit_rank.lvl, submit_rank.weapons, submit_rank.hit0, submit_rank.v, (select k.v from ck_key k)), 'UTF8')), 'hex') then
+  bd := concat_ws('|', tk::text, submit_rank.ch, submit_rank.lv, submit_rank.bosses, submit_rank.bt, submit_rank.t, submit_rank.kills, submit_rank.lvl, submit_rank.weapons, submit_rank.hit0, submit_rank.v);
+  if ck is distinct from encode(sha256(convert_to(concat_ws('|', bd, (select k.v from ck_key k)), 'UTF8')), 'hex') then
+    if ck = encode(sha256(convert_to(concat_ws('|', bd, (select k.old from ck_key k)), 'UTF8')), 'hex') then return json_build_object('r', 'stale'); end if;   -- 예전 game.js — 받지 않고 신고도 안 한다(새로 고침하면 된다)
     perform report_cheat('ck', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t, 'v', submit_rank.v)::jsonb);
     return json_build_object('r', case when banned() then 'ban' else 'hold' end);
   end if;

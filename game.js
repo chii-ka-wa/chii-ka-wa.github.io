@@ -114,6 +114,7 @@ const PATCH = [
     ['up', 'coinbox', tr`떠돌이 보물상자가 훨씬 자주 나와요 — 멀리 돌아다니면 10초마다 나올 수 있어요`],
     ['up', 'inf', tr`랭킹 화면이 보기 쉬워졌어요 — 그 판에 입은 의상 · 무기 스킨으로 나오고, 넓은 화면에선 표처럼 · 0단계는 「세이렌 전」`],
     ['fix', 'clock', tr`무한 모드 후반에 구형 기기에서 느려지던 것 — 느려지면 눈 · 반짝이 · 작은 숫자를 알아서 줄여요(게임 내용은 그대로)`],
+    ['fix', 'license', tr`이용약관을 고쳤어요: 닉네임을 하루에 한 번 바꿀 수 있어요(7일 → 하루) · 약관 변경 알림 규칙을 정리했어요`],
     ['new', 'license', tr`이용약관이 생겼어요 — 처음 로그인할 때 동의를 받아요(처음 화면 맨 아래)`],
   ]],
   ['2026-11-17', [
@@ -501,7 +502,7 @@ async function link() {
   else return choose(cloud.data, at)   // 둘 다 바뀌었다 — 고르게
   NICK = await rpc('my_nick')
   const ok = await rpc('agreed')   // 이용약관 — 처음 로그인(새 계정) · 약관이 바뀐 뒤 첫 로그인에 묻는다. 동의하지 않으면 로그아웃(새 계정은 지운다). 서버에 아직 없으면(null) 묻지 않는다
-  if (ok && typeof ok === 'object' && ok.day !== TERMS_DAY && !(await termsBox(!cloud && !NICK && !ok.day))) return
+  if (ok && typeof ok === 'object' && ok.day !== TERMS_VER && !(await termsBox(!cloud && !NICK && !ok.day))) return
   if (mode === 'title') title()
   if (AUTH_NEW && !NICK) { AUTH_NEW = false; nickBox() }   // 처음 로그인 — 랭킹에 쓸 이름부터
 }
@@ -536,7 +537,7 @@ function termsBox(fresh) {
   BUSY?.()
   return new Promise(res => {
     const msg = h('p', { class: 'nmsg no' }), doc = (fn, back) => () => { close(); fn(() => { title(); termsBox(fresh).then(res) }) }
-    const go = btn(tr`동의하고 시작`, async () => { go.disabled = true; if (await rpc('agree', { day: TERMS_DAY }) === 'ok') { close(); res(true) } else { msg.textContent = tr`✗ 인터넷 연결을 확인해 주세요`; go.disabled = false } }, 'main')
+    const go = btn(tr`동의하고 시작`, async () => { go.disabled = true; if (await rpc('agree', { day: TERMS_VER }) === 'ok') { close(); res(true) } else { msg.textContent = tr`✗ 인터넷 연결을 확인해 주세요`; go.disabled = false } }, 'main')
     const close = modal('nick stay', h('p', { class: 'h' }, fresh ? tr`처음 오셨네요!` : tr`이용약관이 바뀌었어요`), h('p', { class: 'sub' }, tr`이용약관에 동의하고 시작해요`, h('br'), tr`개인정보는 개인정보 처리방침을 따라요`),
       h('p', { class: 'fine' }, h('button', { type: 'button', class: 'linkish', onclick: doc(terms) }, tr`이용약관`), ' · ', h('button', { type: 'button', class: 'linkish', onclick: doc(privacy) }, tr`개인정보 처리방침`)), msg,
       h('div', { class: 'row' }, btn(tr`동의하지 않아요`, async () => { close(); if (fresh) await rpc('delete_me'); logout(); res(false) }), go))
@@ -549,7 +550,7 @@ function nickBox(done = () => {}) {
     if (r === 'ok') { NICK = await rpc('my_nick'); close(); done(true); if (mode === 'title') title() }
     else { say2(r); ok.disabled = false }
   }, 'main')
-  const say2 = r => { msg.className = 'nmsg' + (r === 'ok' ? ' ok' : ' no'); msg.textContent = r === 'ok' ? tr`✓ 쓸 수 있어요` : r === 'taken' ? tr`✗ 이미 있는 이름이에요` : r === 'wait' ? tr`✗ 닉네임은 7일에 한 번 바꿀 수 있어요 (${new Date(NICK?.next).toLocaleDateString(LANG)}부터)` : r === 'bad' ? tr`✗ 쓸 수 없는 이름이에요` : tr`✗ 인터넷 연결을 확인해 주세요` }
+  const say2 = r => { msg.className = 'nmsg' + (r === 'ok' ? ' ok' : ' no'); msg.textContent = r === 'ok' ? tr`✓ 쓸 수 있어요` : r === 'taken' ? tr`✗ 이미 있는 이름이에요` : r === 'wait' ? tr`✗ 닉네임은 하루에 한 번 바꿀 수 있어요 (${new Date(NICK?.next).toLocaleString(LANG, { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}부터)` : r === 'bad' ? tr`✗ 쓸 수 없는 이름이에요` : tr`✗ 인터넷 연결을 확인해 주세요` }
   let t = 0
   const check = () => { const v = inp.value.trim(), len = [...v].length; cnt.textContent = `${len}/12`; ok.disabled = true; msg.textContent = ''; clearTimeout(t)
     if (len < 2) return
@@ -610,6 +611,7 @@ function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기
     if (!r) set(h('span', {}, tr`랭킹에 올리지 못했어요 — 인터넷 연결을 확인해 주세요`))
     else if (r.r === 'nonick') set(h('span', {}, tr`닉네임을 정하면 이 기록이 랭킹에 올라가요`), btn(tr`닉네임 정하기`, () => nickBox(ok => ok && send())))
     else if (r.r === 'ok' || r.r === 'kept') set(h('span', {}, r.r === 'ok' ? tr`랭킹 #${r.rank} · 최고 기록 갱신!` : tr`랭킹 #${r.rank} — 예전 기록이 더 좋아요`), btn(tr`랭킹 보기`, () => ranking()))
+    else if (r.r === 'stale') set(h('span', {}, tr`게임이 새로 바뀌었어요 — 새로 고침하면 다음 판부터 랭킹에 올라가요`), btn(tr`새로 고침`, () => location.reload()))   // 바뀌기 전 game.js 로 한 판
     else if (r.r === 'hold' || r.r === 'ban') { set(h('span', {}, tr`이 판은 랭킹에 올라가지 않아요`)); if (r.r === 'ban') { blockCheck(); suspendCheck() } }   // 체크섬이 안 맞음 · 차단된 계정 · 방금 자동 차단(IP 가 막혔으면 안내 화면)
     else set(h('span', {}, tr`이 판은 랭킹에 올릴 수 없어요 — 로그인한 뒤 새로 시작한 판만 올라가요`))
   }
@@ -2878,7 +2880,7 @@ const SKFX = new Set(['boom', 'bolt', 'beam', 'grab', 'swing'])
 const FX_KEEP = new Set(['hand', 'shout', 'wave', 'duel'])   // 꼭 보여야 하는 것 — 효과가 많아도 늘 넣는다(피하는 데 필요한 정보)
 const fx = o => { if (G.fx.length < (LQ > 1 ? 110 : 220) || FX_KEEP.has(o.k)) G.fx.push({ t: 0, src: SRC, ...o }); const k = SRC && SKFX.has(o.k) && G.sk[SRC]; if (k) skBurst(o, k) }   // 스킬 스킨 — 터진 자리에 반짝이
 const part = (x, y, vx, vy, col, T, r) => { if (G.parts.length < (LQ > 1 ? 180 : 360)) G.parts.push({ x, y, vx, vy, col, t: 0, T, r }) }
-const num = (x, y, v, kind) => { if (LQ > 1 && kind !== 'crit') return   // 가장 가벼운 화질이면 치명타만
+const num = (x, y, v, kind) => { if (LQ > 1 && !kind) return   // 가장 가벼운 화질이면 적에게 준 보통 피해 숫자만 빼기(치명타 · 내가 맞은 양 · 회복은 그대로 — QC)
   if (G.nums.length > (LQ ? 30 : 60)) G.nums.shift(); G.nums.push({ x: x + (rnd() - 0.5) * 10, y, v, kind, t: 0 }) }
 const say = (s, T = 1.6, col = '#fff') => { G.banner = { s, t: 0, T, col } }
 const tip = (s, col = '#fff', T = 2.8) => { G.tip = { s, t: 0, T, col } }   // 작은 안내 — 가운데 글자 아래(눈보라 등)
@@ -4387,9 +4389,10 @@ function blockScreen(b) {
     h('p', {}, tr`학교나 휴대폰 데이터처럼 여러 사람이 같이 쓰는 인터넷이라 잘못 막혔을 수 있어요. 그럴 땐 문의 메일로 알려 주세요.`),
     h('p', { class: 'fine' }, tr`문의할 때 이 번호를 알려 주세요: ${b.id}`, h('br'), tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
 }
-/** 이용약관 — 처음 화면 맨 아래 링크 · 주소 ?terms · 로그인 창 · 처음 로그인 때 동의(termsBox). 바꾸면 TERMS_DAY(시행일)도 — 바뀐 날 뒤 첫 로그인에 다시 묻는다(7일 전부터 알리기)
+/** 이용약관 — 처음 화면 맨 아래 링크 · 주소 ?terms · 로그인 창 · 처음 로그인 때 동의(termsBox). 바꾸면 TERMS_DAY(시행일)를, 이용자에게 불리한 변경이면 TERMS_VER(동의 버전 — 7일 전부터 알리고 다음 로그인에 다시 묻는다)도
  *  문안은 기획 세션(2026-11-18). 9번 「고의 또는 중대한 과실이 없는 한」은 남길 것(책임을 통째로 빼면 약관규제법상 무효가 될 수 있다) */
-const TERMS_DAY = '2026-11-18'
+const TERMS_DAY = '2026-11-18'   // 시행일(화면에 보이는 날짜)
+const TERMS_VER = '2026-11-18'   // 동의 버전 — 이용자에게 불리하게 바꿀 때만 올린다(그때만 다음 로그인에 다시 묻는다). 유리하거나 글만 다듬는 변경은 TERMS_DAY 만 바꾼다
 function terms(back = title) {
   mode = 'terms'
   const sec = (t, ...li) => [h('h3', { class: 'day' }, t), h('ul', { class: 'pv' }, li.map(s => h('li', {}, s)))]
@@ -4400,7 +4403,7 @@ function terms(back = title) {
       sec(tr`2. 이용과 로그인`, tr`로그인 없이 누구나 할 수 있습니다. 로그인(카카오 · Google)은 선택이며, 기록을 계정에 저장하고 무한 모드 랭킹에 오를 때 씁니다.`, tr`처음 로그인할 때 이 약관에 동의해야 계정을 쓸 수 있습니다.`,
         tr`만 14세 미만은 보호자와 함께 로그인해 주세요.`, tr`개인정보는 「개인정보 처리방침」을 따릅니다.`),
       sec(tr`3. 닉네임`, tr`2~12자, 한글 · 영어 · 일본어 · 중국어 · 숫자로 정하며, 다른 사람과 같은 이름은 쓸 수 없습니다.`, tr`욕설, 남을 놀리거나 상처 주는 말, 운영자 · 관리자인 척하는 이름은 쓸 수 없습니다.`,
-        tr`7일에 한 번 바꿀 수 있습니다.`, tr`규칙에 맞지 않는 닉네임은 운영자가 바꾸거나 지울 수 있습니다.`),
+        tr`처음 정할 때는 바로, 그다음부터는 하루에 한 번 바꿀 수 있습니다.`, tr`규칙에 맞지 않는 닉네임은 운영자가 바꾸거나 지울 수 있습니다.`),
       sec(tr`4. 랭킹`, tr`무한 모드 기록이 오릅니다. 전체 순위는 계정마다 가장 좋은 기록 하나, 캐릭터별 순위는 캐릭터마다 하나입니다.`, tr`기록은 서버가 확인하며, 확인을 통과하지 못한 기록은 오르지 않습니다.`, tr`운영자는 잘못된 기록을 지울 수 있습니다.`),
       sec(tr`5. 하면 안 되는 것`, tr`게임 코드 · 저장 · 메모리를 고치거나, 게임 속도를 바꾸는 프로그램을 쓰는 것`, tr`자동으로 플레이하는 프로그램(매크로 · 봇)을 쓰는 것`, tr`서버로 가는 요청을 고치거나 만들어 보내는 것`,
         tr`버그를 알면서 이용하는 것(버그를 찾으면 문의 메일로 알려 주세요)`, tr`서버에 무리를 주거나 다른 사람의 이용을 방해하는 것`),
@@ -4411,7 +4414,7 @@ function terms(back = title) {
       sec(tr`7. 저장`, tr`기록은 이 기기의 브라우저에 저장되고, 로그인하면 계정에도 저장됩니다.`, tr`브라우저 정보를 지우거나 기기를 바꾸면 기기의 기록은 사라질 수 있습니다. 소중한 기록은 로그인해서 계정에 두세요.`,
         tr`게임 안의 보상금 · 의상 등은 게임 안에서만 쓰는 것으로 돈의 가치가 없으며, 사고팔거나 바꿀 수 없습니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있습니다.`),
       sec(tr`8. 게임의 변경과 중단`, tr`게임은 더 좋아지기 위해 예고 없이 바뀔 수 있고(밸런스 · 기능 · 랭킹 초기화 포함), 사정에 따라 끝날 수 있습니다. 무료 게임이라 이에 따른 보상은 없습니다.`,
-        tr`약관을 바꿀 때는 시행 7일 전부터 게임 안에 알리고, 바뀐 약관은 다음 로그인 때 다시 동의를 받습니다.`),
+        tr`약관을 이용자에게 불리하게 바꿀 때는 시행 7일 전부터 게임 안에 알리고, 다음 로그인 때 다시 동의를 받습니다. 이용자에게 유리하거나 글만 다듬는 변경은 바로 적용합니다.`),
       sec(tr`9. 책임`, tr`게임은 지금 있는 그대로 제공됩니다. 운영자의 고의 또는 중대한 과실이 없는 한, 게임을 쓰다 생긴 손해(기록이 사라짐 · 서비스 중단 등)에 책임지지 않습니다.`, tr`카카오 · Google · Supabase · GitHub 같은 외부 서비스의 장애에는 책임지지 않습니다.`),
       sec(tr`10. 문의`, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), tr`이 약관은 대한민국 법을 따릅니다.`)),
     h('div', { class: 'row' }, btn(tr`← 처음으로`, back, 'main'))))
@@ -4646,7 +4649,7 @@ function autoQ(raw) {
   AQ.ema = AQ.ema ? AQ.ema + (raw - AQ.ema) * 0.03 : raw
   if (G.t > 5 && G.t < 90) AQ.base = Math.min(AQ.base, AQ.ema)   // 처음 프레임 — 30fps 로 묶인 기기를 알아보려고
   const lock = AQ.base > 30 && AQ.base < 37, th = LQ ? Math.max(40, lock ? AQ.base * 1.6 : 0) : Math.max(25, lock ? AQ.base * 1.25 : 0)
-  if (LQ < 2 && G.t - AQ.at > 3 && AQ.ema > th) { LQ++; AQ.at = G.t; size(true) }   // 평균 프레임이 25ms(LQ1) · 40ms(LQ2)를 넘으면 — 절대값(기획: 처음부터 느린 구형 폰도 켜지게). 30fps 로 묶인 기기(처음부터 33ms)는 그만큼 올려서 괜히 안 내린다. 내려가기만 · 그림은 다시 그리지 않는다
+  if (LQ < 2 && G.t > 5 && G.t - AQ.at > 3 && AQ.ema > th) { LQ++; AQ.at = G.t; size(true) }   // 평균 프레임이 25ms(LQ1) · 40ms(LQ2)를 넘으면 — 절대값(기획: 처음부터 느린 구형 폰도 켜지게). 30fps 로 묶인 기기(처음부터 33ms)는 그만큼 올려서 괜히 안 내린다 — 그래서 기준(5초부터)이 잡히기 전엔 안 내린다(QC). 내려가기만 · 그림은 다시 그리지 않는다
 }
 function frame(ts) {
   if (last) autoQ(ts - last)

@@ -131,11 +131,14 @@ button.acct, .acct summary { display: flex; align-items: center; gap: 5px; paddi
 @media (min-width: 640px) {
   .panel.rank.wide { width: min(720px, 100%) }
   .panel.rank .dex-nav { display: grid; grid-template-columns: repeat(5, 1fr); overflow: visible; -webkit-mask-image: none; mask-image: none } .panel.rank .dex-nav button { display: flex; align-items: center; justify-content: center; gap: 4px }   /* 탭 10개 — 5칸 두 줄 */
+  .panel.rank .dex-nav button { min-width: 0; padding-inline: 6px; overflow: hidden }   /* 좁은 칸에 긴 이름(일본어 モモンガ · くりまんじゅう) — 테두리에 닿지 않게 */
   .list.rank li:not(.ghost), .panel.rank .mine li:not(.ghost) { grid-template-columns: 30px 48px minmax(0, 1fr) 96px 64px 56px }
   .rank .sc { display: contents } .rank .sc .t, .rank .sc .bs { font-size: 15px; color: var(--ink); justify-self: end } .rank .sc .bs i { display: none } .rank .sc .lvpill { grid-column: auto; justify-self: center } .rank .lvpill .long { display: inline } .rank .lvpill .short { display: none }
   .list.rank li.head { display: grid; padding-top: 0; padding-bottom: 0; border: 0; background: none; cursor: default } .list.rank li.head span { font-family: inherit; font-size: 12px; color: var(--soft) }
   .list.rank li.head span:nth-child(4) { justify-self: center } .list.rank li.head span:nth-child(n+5) { justify-self: end }
 }
+@media (min-width: 640px) { .panel.rank .dex-nav button { font-size: 12.5px; gap: 2px; padding-inline: 4px } .panel.rank .dex-nav .ico { width: 18px; height: 18px } }   /* 탭 칸(패널 720 · 5칸) — 글자 조금 작게(넓은 화면도 패널이 720 이라 칸 폭이 같다) */
+@media (min-width: 640px) and (max-width: 719px) { .panel.rank .dex-nav button { font-size: 11.5px; padding-inline: 2px } .panel.rank .dex-nav .ico { width: 15px; height: 15px } }
 .panel.rinfo canvas.pt { height: 72px } .panel.rinfo .sub { margin-bottom: 4px }
 .panel.rinfo .brow { display: grid; grid-template-columns: 64px 1fr; align-items: center; text-align: left; gap: 6px } .panel.rinfo .brow > small { color: var(--soft); font-size: 13px }
 .panel.rinfo .build { justify-content: flex-start; margin: 4px 0 } .panel.rinfo .chip .ico { width: 18px; height: 18px; vertical-align: -4px }
@@ -474,6 +477,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611181544"></script>
+<script type="module" src="game.js?v=202611181633"></script>
 </body>
 </html>
