@@ -124,6 +124,7 @@ export default {
   "무한 1단계부터는 각성 스킬로 날아오는 것을 막는 확률이 절반이에요": "From Infinite stage 1, the chance for awakened skills to block incoming attacks is halved",
   "로그인(카카오 · 구글)하면 기록을 계정에 저장하고 무한 랭킹에 올라가요 — 처음 화면 오른쪽 위": "Log in (Kakao · Google) to save your records to your account and join the Infinite ranking — top right of the title screen",
   "기록 고르기에서 「이 기기」를 골라도 한 번 더 묻던 것 · 마지막으로 한 때를 시 · 분 · 초까지": "Fixed being asked again after choosing \"This device\" when picking a record · Last played time now shows hours, minutes and seconds",
+  "카니가 다른 친구들처럼 책을 앞손에 들어요": "Kani-chan now holds the book in the front hand, like the others",
   "응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요": "The Cheering card now shows your current level — when nothing's left to upgrade, pick Onigiri or Cheering. In Endless mode Cheering stacks forever, and regular foes get tougher every stage",
   "상점 값이 내려갔어요 — 고급 의상 20,000(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 10,000), 무기 스킨 · 스킬 스킨 10,000": "Shop prices dropped — Premium costumes 20,000 (Crab Headband, Chestnut, Strawberry Daifuku, Cinderella and Prince are 10,000), Weapon Skins and Skill Skins 10,000",
   "어려움을 클리어하면 3배속이 열려요 — 오른쪽 위 ×2 단추를 한 번 더 누르면 ×3": "Clear Hard to unlock 3× speed — press the ×2 button at the top right once more for ×3",

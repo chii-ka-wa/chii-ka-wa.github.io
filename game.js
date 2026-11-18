@@ -110,6 +110,7 @@ const PATCH = [
     ['up', 'parry', tr`무한 1단계부터는 각성 스킬로 날아오는 것을 막는 확률이 절반이에요`],
     ['new', 'inf', tr`로그인(카카오 · 구글)하면 기록을 계정에 저장하고 무한 랭킹에 올라가요 — 처음 화면 오른쪽 위`],
     ['fix', 'coin', tr`기록 고르기에서 「이 기기」를 골라도 한 번 더 묻던 것 · 마지막으로 한 때를 시 · 분 · 초까지`],
+    ['fix', 'book', tr`카니가 다른 친구들처럼 책을 앞손에 들어요`],
   ]],
   ['2026-11-17', [
     ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
@@ -1053,7 +1054,7 @@ function kani(g, p) {
       dotEyes(g, y(0.4), 4.2, 1.4, p); hatch(g, y(0.48), 7.6, 0.9); catMouth(g, y(0.49), p.hurt ? 1.1 : 0.55)
     },
     frontHold: true,   // 앞에 그린 것이 든 무기(무기 스킨이면 뺀다)
-    front: g => { g.save(); g.translate(-11.4, -5); g.rotate(-0.15); g.fillStyle = '#8fd14f'; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6); g.restore() },   // 초록 헌책
+    front: g => { g.save(); bookAt(g); g.fillStyle = '#8fd14f'; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6); g.restore() },   // 초록 헌책
   }, p)
 }
 // 고블린 — 연두색 · 머리 꼭지 · 옆으로 뻗은 뾰족 귀 · 몸 아래만 두른 들쭉날쭉한 가죽옷 · 몽둥이
@@ -2528,8 +2529,9 @@ function ladle(g, x, y, col, shine) {   // 라멘 국자
   g.beginPath(); g.ellipse(13.2, 0.8, 2.8, 2.2, 0.3, 0, TAU); ink(g, col, 0.7); if (shine) { g.fillStyle = '#fff'; starP(g, 12.4, 0, 0.9, 0.3, 4); g.fill() }
   g.restore()
 }
-function tome(g, col, mark, magic, snow) {   // 카니 책 자리 · 방향 그대로(왼손 · 하얀 책장이 오른쪽). snow — 표지에 별 대신 눈꽃
-  g.save(); g.translate(-11.4, -5); g.rotate(-0.15); g.fillStyle = col; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6)
+function bookAt(g) { g.translate(11.4, -5); g.scale(-1, 1); g.rotate(-0.15) }   // 카니 책 자리 — 다른 친구들처럼 앞손(오른쪽 · 들고 있는 무기 자리). 거울로 돌려 하얀 책장이 몸 쪽
+function tome(g, col, mark, magic, snow) {   // 카니 책(무기 스킨) — 자리 · 방향은 bookAt. snow — 표지에 별 대신 눈꽃
+  g.save(); bookAt(g); g.fillStyle = col; g.fillRect(-2, -2.8, 4, 5.6); g.fillStyle = '#fff'; g.fillRect(1.1, -2.3, 0.7, 4.6); g.strokeStyle = OUT; g.lineWidth = 0.6; g.strokeRect(-2, -2.8, 4, 5.6)
   if (snow) flake(g, -0.45, 0, 1.35, mark); else { starP(g, -0.45, 0, 1.25, 0.5); ink(g, mark, 0.35) }
   if (magic) { g.fillStyle = '#fff6a8'; for (const [a, b] of [[-3.2, -3.8], [2.6, -4.2]]) { starP(g, a, b, 0.9, 0.3, 4); g.fill() } }
   g.restore()
@@ -4248,7 +4250,7 @@ function title() {
     h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
     AUTH_ERR && h('p', { class: 'hint' }, tr`로그인하지 못했어요 — 잠시 뒤 다시 해 보세요`),
-    SUSP && h('p', { class: 'hint' }, tr`이 계정은 이용이 정지됐어요(번호 ${SUSP}) · 잘못 막혔다면 문의 메일로 알려 주세요`),
+    SUSP ? h('p', { class: 'hint' }, tr`이 계정은 이용이 정지됐어요(번호 ${SUSP}) · 잘못 막혔다면 문의 메일로 알려 주세요`) : null,   // SUSP 는 숫자 — && 로 쓰면 0 이 글자로 찍힌다
     TAMPER && h('p', { class: 'hint' }, TAMPER === 'bak' ? tr`저장 기록이 게임 밖에서 바뀌어 바로 전 저장으로 되돌렸어요` : tr`저장 기록이 게임 밖에서 바뀌어 기록을 처음부터 시작해요`),
     h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), () => shop()), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(h('span', {}, ic('inf'), tr` 랭킹`), () => ranking()), btn(tr`토벌 시작!`, chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? tr`토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : tr`몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),

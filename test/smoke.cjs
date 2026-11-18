@@ -502,6 +502,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (b.mode !== 'blocked' || !b.text.includes('42') || !b.text.includes('풀려요') || b.trio || b.lang !== 1 || b.esc !== 'blocked') errors.push('[ban] ' + JSON.stringify(b))
   })
   await run('privacy', { width: 390, height: 844 }, async page => {   // 개인정보 처리방침 — 처음 화면 링크 · ?lang=en&privacy 로 바로(그 말로)
+    const stray = await page.evaluate(() => [...document.querySelector('#ui .home').childNodes].filter(n => n.nodeType === 3 && n.textContent.trim()).map(n => n.textContent))   // 처음 화면에 맨 글자(0 · false — 조건을 && 로 쓴 실수)가 없어야
+    if (stray.length) errors.push('[privacy] 처음 화면 빈 줄 ' + JSON.stringify(stray))
     await page.locator('.fine .linkish', { hasText: '개인정보 처리방침' }).click(); await page.waitForTimeout(200)
     const ko = { h: await page.locator('#ui .panel .h').textContent(), n: await page.locator('#ui ul.pv li').count(), mode: await page.evaluate(() => window.__mjg.mode) }
     await page.screenshot({ path: OUT + 'privacy.png' }); await page.keyboard.press('Escape'); await page.waitForTimeout(150); ko.back = await page.evaluate(() => window.__mjg.mode)
