@@ -10,7 +10,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   const errors = []
   const run = async (name, viewport, fn) => {
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
-    const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
+    const page = await browser.newPage({ viewport, deviceScaleFactor: 2, locale: 'ko-KR' })   // 고른 말이 없으면 브라우저 언어 — 점검은 한국어 브라우저로
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
     page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis', 'terms'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
     await page.route('**/rpc/blocked', r => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }))   // IP 차단 확인(?secure · ?guard 면 묻는다) — 진짜 서버 대신 「안 막힘」. ban 은 따로
@@ -442,7 +442,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (ok.bad || ok.mode !== 'play' || !bad?.includes('seal')) errors.push('[guard] ' + JSON.stringify({ ok, bad }))
   })
   await run('acct', { width: 390, height: 844 }, async page => {   // 계정 · 랭킹 — Supabase 를 흉내 낸다(로그인 토큰 · 랭킹 · 닉네임 · 기록 올리기)
-    const row = (rank, nick, ch, me) => ({ rank, nick, ch, lv: 9 - rank, bosses: 30 - rank, bt: 2000, t: 2400, kills: 9000, lvl: 300, weapons: 'sasu9 ramen8', passives: 'manju5', slain: 'siren3 chef2', winter: true, at: '2026-11-17T10:00:00Z', me })
+    const row = (rank, nick, ch, me) => ({ rank, nick, ch, lv: 9 - rank, bosses: 30 - rank, bt: 2000, t: 2400, kills: 9000, lvl: 300, weapons: 'sasu9 ramen8', passives: 'manju5', slain: 'siren3 chef2', winter: true, at: '2026-11-17T10:00:00Z', me, lang: me ? null : 'ja' })   // 플레이한 언어 — 예전 기록(null)은 국기 없음
     const sent = []; let body = null
     await page.route('**/*.supabase.co/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); sent.push(u.split('/').pop())
       if (u.includes('top_ranks')) return j([row(1, 'A', 'usagi'), row(2, '치이카와팬', 'chiikawa', true)]); if (u.includes('my_rank')) return j([row(2, '치이카와팬', 'chiikawa', true)])
@@ -454,13 +454,16 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (onStats !== 1) errors.push('[acct] 로그인 중 통계 글 ' + onStats)
     await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400)
     const rows = await page.locator('.list.rank li:not(.head)').count(), mine = await page.locator('.panel.rank .mine li.me').count()
+    const flags = await page.evaluate(() => [...document.querySelectorAll('.list.rank li:not(.head)')].map(li => li.querySelector('.av > img.flag')?.alt ?? null))   // ja 기록 → 「日本語」, 예전 기록 → 없음
+    if (flags.join() !== '日本語,') errors.push('[acct] 랭킹 국기 ' + JSON.stringify(flags))
     await page.locator('.list.rank li:not(.head)').first().click(); await page.waitForTimeout(150); const info = await page.locator('.modal .lvl-badge').textContent()
+    const sub = await page.locator('.modal .sub').innerText(); if (!sub.endsWith('· 日本語') || !(await page.locator('.modal .sub img.flag').count())) errors.push('[acct] 자세히 창 언어 ' + sub)
     await page.keyboard.press('Escape'); await page.waitForTimeout(100); const closed = await page.locator('.modal').count(), still = await page.evaluate(() => window.__mjg.mode)
     await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForTimeout(300)   // start_run 이 tok 을 돌려줄 때까지
     await page.evaluate(() => { const M = window.__mjg; M.G.loop.lv = 2; M.finish(false) }); await page.waitForTimeout(500)
     const line = await page.locator('.rankline').textContent()
     const ck = body && require('crypto').createHash('sha256').update(['tok-1', body.ch, body.lv, body.bosses, body.bt, body.t, body.kills, body.lvl, body.weapons, body.hit0, body.v, /const CK_SALT = '([^']*)'/.exec(require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'))[1]].join('|')).digest('hex')   // 체크섬 — SQL(submit_rank)과 같은 순서
-    if (!body || body.ck !== ck) errors.push('[acct] 체크섬 ' + JSON.stringify({ body, ck }))
+    if (!body || body.ck !== ck || body.lang !== 'ko') errors.push('[acct] 체크섬 · 언어 ' + JSON.stringify({ body, ck }))
     console.log('acct', { pill, rows, mine, info, closed, still, line, sent: [...new Set(sent)] })
     await page.reload(); await page.waitForTimeout(800)   // 계정 지우기 — 닉네임을 똑같이 써야 눌리고, 지우면 로그아웃
     await page.locator('.acct summary').click(); await page.locator('.acct button.del').click(); await page.waitForTimeout(100)
@@ -568,7 +571,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   })
 
   await run('lang', { width: 1280, height: 800 }, async page => {
-    const han = () => page.evaluate(() => (document.querySelector('#ui').innerText.replace(/한국어/g, '').match(/[가-힣]+/g) || []).slice(0, 6))
+    const han = () => page.evaluate(() => (document.querySelector('#ui').innerText.replace(/한국어|먼작귀 서바이버즈/g, '').match(/[가-힣]+/g) || []).slice(0, 6))
     for (const code of ['ja', 'en', 'zh-CN', 'zh-TW']) {
       await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true }))); await page.reload(); await page.waitForTimeout(400)
       await page.click('.lang summary'); await Promise.all([page.waitForNavigation(), page.click(`.lang button[lang="${code}"]`)]); await page.waitForTimeout(600)
@@ -585,11 +588,23 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const lang = await page.evaluate(() => [document.documentElement.lang, JSON.parse(localStorage.getItem('mjg.v1')).lang])
       if (lang[0] !== code || lang[1] !== code || Object.values(left).some(a => a.length)) errors.push(`[lang] ${code} ${JSON.stringify({ lang, left })}`)
     }
-    // 나라별 홍보 링크 /en/ · /ja/ · /zh-cn/ · /zh-tw/ — 게임(/?lang=…)으로 넘어가 그 말로 정하고 기억, 주소의 ?lang= 은 지운다
+    // 나라별 홍보 링크 /en/ · /ja/ · /zh-cn/ · /zh-tw/ — 게임(/?lang=…)으로 넘어가 그 말로 보이되 기억하지는 않는다(링크는 고른 게 아니다 · 기획), 주소의 ?lang= 은 지운다
     for (const [dir, code] of [['en', 'en'], ['ja', 'ja'], ['zh-cn', 'zh-CN'], ['zh-tw', 'zh-TW']]) {
       await page.evaluate(() => localStorage.clear()); await page.goto(URL + dir + '/'); await page.waitForURL(u => u.pathname === new globalThis.URL(URL).pathname); await page.waitForTimeout(600)
-      const via = await page.evaluate(() => ({ lang: document.documentElement.lang, saved: JSON.parse(localStorage.getItem('mjg.v1') || '{}').lang, search: location.search, han: (document.querySelector('#ui').innerText.replace(/한국어/g, '').match(/[가-힣]+/g) || []).length }))
-      if (via.lang !== code || via.saved !== code || via.search || via.han) errors.push(`[lang] /${dir}/ ` + JSON.stringify(via))
+      const via = await page.evaluate(() => ({ lang: document.documentElement.lang, saved: JSON.parse(localStorage.getItem('mjg.v1') || '{}').lang, search: location.search, han: (document.querySelector('#ui').innerText.replace(/한국어|먼작귀 서바이버즈/g, '').match(/[가-힣]+/g) || []).length }))
+      if (via.lang !== code || via.saved || via.search || via.han) errors.push(`[lang] /${dir}/ ` + JSON.stringify(via))
+    }
+    { const p = await browser.newPage({ locale: 'ja-JP' }); await p.goto(URL); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(500)   // 지금 보이는 말(브라우저 언어)을 언어 단추에서 눌러도 고정된다
+      await p.click('.lang summary'); await p.click('.lang button[lang="ja"]'); await p.waitForTimeout(200)
+      const r = await p.evaluate(() => ({ saved: JSON.parse(localStorage.getItem('mjg.v1') || '{}').lang, open: document.querySelector('.lang').open }))
+      if (r.saved !== 'ja' || r.open) errors.push('[lang] 같은 말을 눌러도 고정 ' + JSON.stringify(r))
+      await p.close() }
+    // 고른 말이 없으면 브라우저 언어(navigator.languages 첫 맞는 것 · 다섯 말에 없으면 영어) — 저장은 안 한다. 언어 단추로 고른 말은 브라우저보다 앞선다
+    for (const [loc, want, saved] of [['ja-JP', 'ja'], ['zh-HK', 'zh-TW'], ['zh-SG', 'zh-CN'], ['en-GB', 'en'], ['fr-FR', 'en'], ['ko-KR', 'ko'], ['fr-FR', 'ko', 'ko'], ['en-US', 'zh-TW', 'zh-TW']]) {
+      const p = await browser.newPage({ locale: loc }); await p.goto(URL); await p.evaluate(s => { localStorage.clear(); if (s) localStorage.setItem('mjg.v1', JSON.stringify({ lang: s })) }, saved); await p.reload(); await p.waitForTimeout(500)
+      const r = await p.evaluate(() => ({ lang: document.documentElement.lang, saved: JSON.parse(localStorage.getItem('mjg.v1') || '{}').lang, name: document.querySelector('#ui .appname')?.textContent ?? null, title: document.title }))
+      if (r.lang !== want || r.saved !== saved || (r.name !== (want === 'ko' ? null : '먼작귀 서바이버즈')) || !r.title.startsWith('먼작귀 서바이버즈 — ')) errors.push(`[lang] 브라우저 ${loc} 저장 ${saved} → ` + JSON.stringify(r))   // 탭 제목은 어느 말이든 한국어(검색 제목)
+      await p.close()
     }
   })
 

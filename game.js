@@ -7,11 +7,16 @@
 // 언어 — 처음 화면 오른쪽 위에서 고르면 이 브라우저(save.lang)에 기억하고 다시 불러온다. 한국어가 원문이고 다른 말은 i18n/<언어>.js(열쇠 = 한국어 원문)
 //   글은 모두 tr`…` 로 감싼다 — ${} 자리는 열쇠에서 {0} {1} …(번역에서 순서를 바꿀 수 있다). 번역이 없으면 한국어 그대로. 빠진 번역 찾기: node test/i18n.cjs
 const LANGS = [['ko', '한국어', 'kr'], ['ja', '日本語', 'jp'], ['en', 'English', 'us'], ['zh-CN', '简体中文', 'cn'], ['zh-TW', '繁體中文', 'tw']]   // 코드 · 그 말로 쓴 이름 · 국기
-const LANG = (() => {   // 주소에 ?lang=en 이 있으면(홍보 링크 chii-ka-wa.github.io/en/ 이 여기로 보낸다) 그 말로 정하고 기억, 없으면 기억한 말
+const LANG = (() => {   // ?lang=en(홍보 링크 chii-ka-wa.github.io/en/ 이 여기로 보낸다)은 그 방문만 — 저장하지 않는다(링크는 고른 게 아니다 · 기획). 언어 단추로 고른 것(save.lang)은 고정, 없으면 브라우저 언어
   const q = new URLSearchParams(location.search).get('lang')?.toLowerCase(), hit = LANGS.find(x => x[0].toLowerCase() === q)?.[0]
+  if (hit) { const u = new URLSearchParams(location.search); u.delete('lang'); history.replaceState(null, '', location.pathname + (u.size ? '?' + u : '') + location.hash); return hit }   // 주소에서는 지운다(언어 단추와 같은 동작)
   let s = {}; try { s = JSON.parse(localStorage.getItem('mjg.v1')) || {} } catch {}
-  if (hit) { s.lang = hit; try { localStorage.setItem('mjg.v1', JSON.stringify(s)) } catch {} const u = new URLSearchParams(location.search); u.delete('lang'); history.replaceState(null, '', location.pathname + (u.size ? '?' + u : '') + location.hash) }   // 주소에서는 지운다(언어 단추로 바꾼 뒤 다시 불러와도 고른 말이 이기게)
-  return hit || (LANGS.some(x => x[0] === s.lang) ? s.lang : 'ko')
+  if (LANGS.some(x => x[0] === s.lang)) return s.lang
+  for (const l of navigator.languages?.length ? navigator.languages : [navigator.language || '']) {   // 브라우저 언어 — 첫 맞는 것. 자동으로 고른 말은 저장하지 않는다
+    const v = l.toLowerCase()
+    if (v.startsWith('ko')) return 'ko'; if (v.startsWith('ja')) return 'ja'; if (/^zh-(tw|hk|mo)|^zh-hant/.test(v)) return 'zh-TW'; if (v.startsWith('zh')) return 'zh-CN'; if (v.startsWith('en')) return 'en'
+  }
+  return 'en'   // 다섯 말에 없으면 영어(기획)
 })()
 const TR = LANG === 'ko' ? null : await import(`./i18n/${LANG}.js${new URL(import.meta.url).search}`).then(m => m.default, () => null)   // ?v= — index.html 이 붙인 판 번호를 번역 파일에도(새 판이면 새로 받는다)
 function tr(s, ...v) {
@@ -116,6 +121,8 @@ const PATCH = [
     ['fix', 'clock', tr`무한 모드 후반에 구형 기기에서 느려지던 것 — 느려지면 눈 · 반짝이 · 작은 숫자를 알아서 줄여요(게임 내용은 그대로)`],
     ['fix', 'license', tr`이용약관을 고쳤어요: 닉네임을 하루에 한 번 바꿀 수 있어요(7일 → 하루) · 약관 변경 알림 규칙을 정리했어요`],
     ['new', 'license', tr`이용약관이 생겼어요 — 처음 로그인할 때 동의를 받아요(처음 화면 맨 아래)`],
+    ['new', LANGS.find(x => x[0] === LANG)[2], tr`처음 들어오면 브라우저 언어로 보여요 — 오른쪽 위 언어 단추로 고른 말은 계속 그 말로 열려요`],
+    ['up', 'inf', tr`랭킹에 그 판을 플레이한 언어가 국기로 나와요 · 휴대폰에서 랭킹 줄이 두 줄로 넉넉해졌어요`],
   ]],
   ['2026-11-17', [
     ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
@@ -599,7 +606,7 @@ const CK_SALT = '__CK_SALT__'   // 진짜 값은 배포할 때 GitHub Actions �
 const runCk = async (tok, a) => { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode([tok, a.ch, a.lv, a.bosses, a.bt, a.t, a.kills, a.lvl, a.weapons, a.hit0, a.v, CK_SALT].join('|'))); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('') } catch { return '' } }
 const rankArgs = () => ({ ch: G.ch.id, lv: G.loop.lv, bosses: G.bosses, bt: Math.round(G.bossT), t: Math.round(G.t), kills: G.kills, lvl: G.lvl,
   weapons: G.weapons.map(w => w.id + (G.aw.has(w.id) ? 9 : Math.min(8, w.lv))).join(' '), passives: Object.entries(G.passives).map(([k, n]) => k + n).join(' '),
-  slain: Object.entries(G.slain).map(([k, n]) => k + n).join(' '), winter: !!G.winter, v: PATCH_ID, hit0: G.hit0 == null ? -1 : Math.round(G.hit0), outfit: wornId(G.ch.id), wskin: wornW(G.ch.id) })   // 의상 · 무기 스킨 — 랭킹 그림(체크섬엔 안 넣는다)   // hit0 — 처음 맞은 때(-1 = 한 번도 안 맞음)
+  slain: Object.entries(G.slain).map(([k, n]) => k + n).join(' '), winter: !!G.winter, v: PATCH_ID, hit0: G.hit0 == null ? -1 : Math.round(G.hit0), outfit: wornId(G.ch.id), wskin: wornW(G.ch.id), lang: LANG })   // 의상 · 무기 스킨 — 랭킹 그림(체크섬엔 안 넣는다)   // hit0 — 처음 맞은 때(-1 = 한 번도 안 맞음)
 function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기 / 로그인 안내
   const el = h('div', { class: 'rankline' }), set = (...k) => el.replaceChildren(...k)
   if (!auth) { set(h('span', {}, tr`로그인하면 다음 판부터 랭킹에 올라가요`), btn(tr`로그인`, loginBox)); return el }
@@ -640,11 +647,12 @@ async function ranking(only = null) {
   else mine.replaceChildren(NICK ? ghost(tr`무한 모드를 해 보면 여기에 내 기록이 나와요`) : ghost(tr`닉네임을 정하면 랭킹에 올라가요`, btn(tr`닉네임 정하기`, () => nickBox())))
 }
 /** 랭킹 그림 — 그 판에 입은 의상 · 무기 스킨으로(서버 값 — 없거나 그 캐릭터 것이 아니면 기본 모습) */
+const langFlag = (code, cls = 'flag') => { const L = LANGS.find(x => x[0] === code); if (!L) return null; const f = ic(L[2]); f.classList.add(...cls.split(' ')); f.alt = f.title = L[1]; return f }   // 플레이한 언어 — 언어 단추와 같은 국기, 이름은 그 나라말(번역 안 함). 예전 기록(없음)은 안 그린다
 const rankPortrait = r => { const o = OUTFIT[r.outfit], w = WSKIN[r.wskin]; return portrait(r.ch, o && (!o.ch || o.ch === r.ch) ? r.outfit : null, w && (!w.ch || w.ch === r.ch) ? r.wskin : null) }
 function rankRow(r) {
   return h('li', { class: r.me ? 'me' : '', onclick: () => rankInfo(r) },
     h('span', { class: `rk ${RK_COL[r.rank] || ''}` }, r.rank),
-    rankPortrait(r),
+    h('span', { class: 'av' }, rankPortrait(r), langFlag(r.lang)),
     h('div', {}, h('b', {}, r.nick), h('span', { class: 'wp' }, r.weapons.split(' ').map(w => icSafe(w.replace(/\d+$/, ''))))),
     h('div', { class: 'sc' }, h('span', { class: 'lvpill' + (r.lv ? '' : ' zero') }, r.lv ? [h('span', { class: 'long' }, `∞ ${tr`${r.lv}단계`}`), h('span', { class: 'short' }, `∞ ${r.lv}`)] : tr`세이렌 전`),   // 0단계 = 세이렌을 아직 못 쓰러뜨림
       h('span', { class: 't' }, fmt(r.t)), h('span', { class: 'bs' }, h('i', {}, tr`보스`), ' ', String(r.bosses))))   // 넓은 화면은 머리줄에 「보스」가 있어 숫자만
@@ -654,7 +662,7 @@ function rankInfo(r) {   // 자세히 — 작은 결과 화면처럼
   const chip = (id, txt, w) => h('span', { class: `chip${w ? ' w' : ''}` }, icSafe(id), ` ${txt}`), stat = (k, v) => h('div', {}, h('small', {}, k), h('b', {}, v))
   const row = (k, ...kids) => kids.flat().length > 0 && h('div', { class: 'brow' }, h('small', {}, k), h('div', { class: 'build' }, ...kids))
   const close = modal('rinfo', rankPortrait(r),
-    h('p', { class: 'h' }, `#${r.rank} ${r.nick}`), h('p', { class: 'sub' }, `${ch?.name ?? r.ch} · ${new Date(r.at).toLocaleDateString(LANG)} · ${r.winter ? tr`겨울` : tr`풀밭`}`),
+    h('p', { class: 'h' }, `#${r.rank} ${r.nick}`), h('p', { class: 'sub' }, `${ch?.name ?? r.ch} · ${new Date(r.at).toLocaleDateString(LANG)} · ${r.winter ? tr`겨울` : tr`풀밭`}`, ((f = langFlag(r.lang, 'flag in')) => f ? [' · ', f, f.alt] : '')()),   // 끝에 「· [국기] 한국어」(디자인 — 국기와 이름을 한 번 짝지어 보여 준다)
     r.lv ? h('p', { class: 'lvl-badge inf' }, ic('inf'), tr` ${r.lv}단계`) : h('p', { class: 'lvl-badge inf zero' }, tr`세이렌 전`),
     h('div', { class: 'stats' }, stat(tr`버틴 시간`, fmt(r.t)), stat(tr`처치`, r.kills.toLocaleString()), stat(tr`보스`, r.bosses), stat(tr`레벨`, r.lvl)),
     row(tr`메인`, ws.slice(0, 1).map(([id, v]) => chip(id, `${WEAP[id]?.name ?? id} ${lvOf(v)}`, 1))),
@@ -2713,7 +2721,7 @@ function skPuff(x, y, k, n = 1, L = G.sfx.list) {   // 스킬 스킨 반짝이 �
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ui = document.getElementById('ui'), pauseBtn = document.getElementById('pause')
 SND.button(document.getElementById('snd'))
 if (TR) {   // index.html 의 한국어 이름표 · 탭 제목도 그 말로(검색 엔진용 글은 한국어 그대로)
-  document.title = `${tr`먼작귀`} ${tr`서바이버즈`}`; cv.setAttribute('aria-label', document.title)
+  cv.setAttribute('aria-label', `${tr`먼작귀`} ${tr`서바이버즈`}`)   // 탭 제목(document.title)은 index.html 의 한국어 그대로 — 검색 결과 제목 · 구글 동의 화면 이름과 늘 맞게(기획)
   pauseBtn.setAttribute('aria-label', tr`일시정지`); document.getElementById('snd').setAttribute('aria-label', tr`소리 크기`); document.getElementById('spd').setAttribute('aria-label', '×2')
 }
 let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2, LQ = 0   // LQ = 자동 화질 단계(0 · 1 · 2) — 느려지면 내려간다
@@ -4315,7 +4323,7 @@ addEventListener('pointerdown', e => { const d = document.querySelector('.lang[o
 function langPick() {
   const [, name, fl] = LANGS.find(l => l[0] === LANG)
   return h('details', { class: 'lang' }, h('summary', { 'aria-label': 'Language' }, ic(fl), h('span', { class: 'lnm' }, ` ${name}`)),
-    h('div', {}, LANGS.map(([code, nm, f]) => h('button', { type: 'button', lang: code, class: code === LANG ? 'on' : '', onclick: () => { if (code !== LANG) { save.lang = code; persist(); location.reload() } } }, ic(f), ` ${nm}`))))
+    h('div', {}, LANGS.map(([code, nm, f]) => h('button', { type: 'button', lang: code, class: code === LANG ? 'on' : '', onclick: e => { save.lang = code; persist(); if (code !== LANG) location.reload(); else e.currentTarget.closest('details').open = false } }, ic(f), ` ${nm}`))))
 }
 function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) · 풀밭(예전). 고르면 기억하고 바닥 · 적 그림만 다시 그린다
   return h('div', { class: 'theme', role: 'radiogroup', 'aria-label': tr`테마` }, [['winter', 'snow', tr`겨울`], ['grass', 'clover', tr`풀밭`]].map(([k, pic, name]) =>
@@ -4332,6 +4340,7 @@ function title() {
   show(h('div', { class: 'panel home' }, themePick(), h('div', { class: 'corner' }, acctPick(), langPick()),
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, tr`먼작귀`, ' ', h('span', {}, tr`서바이버즈`)),   // 사이 띄어쓰기 — 글자로는 「먼작귀 서바이버즈」(구글 브랜드 인증이 홈페이지의 앱 이름과 맞춰 본다)
+    LANG !== 'ko' && h('p', { class: 'appname', lang: 'ko' }, '먼작귀 서바이버즈'),   // 다른 말 화면도 앱 이름이 늘 보이게(기획 — 인증 · 검색)
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
     AUTH_ERR && h('p', { class: 'hint' }, tr`로그인하지 못했어요 — 잠시 뒤 다시 해 보세요`),
     SUSP ? h('p', { class: 'hint' }, tr`이 계정은 이용이 정지됐어요(번호 ${SUSP}) · 잘못 막혔다면 문의 메일로 알려 주세요`) : null,   // SUSP 는 숫자 — && 로 쓰면 0 이 글자로 찍힌다
@@ -4430,7 +4439,7 @@ function privacy(back = title) {
       sec(tr`1. 로그인하지 않으면`, tr`게임 기록은 이 기기 브라우저에만 저장되고 서버로 보내지 않습니다.`,
         tr`게임을 고치려고 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 등 개인을 알 수 없는 정보)와 방문 통계(Google 애널리틱스, 쿠키 사용)를 모읍니다. 처음 화면의 「보내지 않기」나 브라우저의 추적 거부 설정으로 끌 수 있습니다.`, tr`무한 모드를 하려면 통계 보내기를 켜야 합니다.`,
         tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
-      sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록, 이용약관 동의 기록(약관 시행일 · 동의한 시각)`,
+      sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록(플레이한 언어 포함), 이용약관 동의 기록(약관 시행일 · 동의한 시각)`,
         tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`,
         tr`로그인 중에는 랭킹 기록 확인을 위해 익명 플레이 통계를 항상 보냅니다(끌 수 없습니다).`),
       sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남기며 90일 뒤 지웁니다.`,
