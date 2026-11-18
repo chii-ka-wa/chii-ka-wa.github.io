@@ -2,15 +2,17 @@
 //   처음 화면 → 캐릭터 → 판 → 상자 → 최종보스까지 빨리 돌리기(무적) → 세이렌 → 클리어. 콘솔 에러가 하나라도 있으면 실패
 const { chromium } = require('playwright')
 const OUT = __dirname + '/shots/'; require('fs').mkdirSync(OUT, { recursive: true })
-const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END = 30 * 60, M_INF = { rest: 12, gap: 60, dark: 240 }   // 무한 — game.js INF 와 같게
+const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END = 30 * 60, M_INF = { rest: 12, gap: 60, dark: 180 }   // 무한 — game.js INF 와 같게
 
 ;(async () => {
   const browser = await chromium.launch()
   const errors = []
   const run = async (name, viewport, fn) => {
+    if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
-    page.on('request', q => { if (q.url().includes('.supabase.co') && name !== 'acct') errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
+    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
+    await page.route('**/rpc/blocked', r => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }))   // IP 차단 확인(?secure · ?guard 면 묻는다) — 진짜 서버 대신 「안 막힘」. ban 은 따로
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
     await fn(page)
@@ -405,13 +407,20 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const go = (sec, who = '') => page.evaluate(([sec, who]) => { const M = window.__mjg, G = M.G
       for (let i = 0; i < sec * 20; i++) { M.pl.inv = 9; G.next = 1e12; G.rest = null; M.step(0.05)
         for (const e of G.foes) if (e.boss && !e.dead && (who === 'boss' ? e.kind !== 'siren' && e.kind !== 'mermaid' : e.kind === who)) M.kill(e) }
-      return { lv: G.loop.lv, q: G.loop.queue.length, n: G.foes.filter(e => e.loop && !e.dead).length, sirens: G.final?.sirens?.filter(s => !s.dead).length || 0, dark: !!G.dark, mode: M.mode } }, [sec, who])
-    await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.t = M.FINAL_T - 1 })
+      return { lv: G.loop.lv, q: G.loop.queue.length, n: G.foes.filter(e => e.loop && !e.dead).length, sirens: G.final?.sirens?.filter(s => !s.dead).length || 0, dark: !!G.dark, mode: M.mode, ph: (G.final?.sirens || []).filter(s => !s.dead).map(s => s.ph).join(), bosses: G.bosses } }, [sec, who])
+    await page.locator('#ui .btn.main').click(); await page.waitForTimeout(150)   // 통계를 끈 채 무한 — 설명에 미리 알리고, 「토벌 시작!」에서 묻는다
+    const gate = { note: await page.locator('.diff-note span.on').textContent() }; await page.locator('#ui .row .btn.main').click(); await page.waitForTimeout(150)
+    Object.assign(gate, { modal: await page.locator('.modal .h').textContent(), mode: await page.evaluate(() => window.__mjg.mode) }); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(150)
+    Object.assign(gate, { after: await page.evaluate(() => window.__mjg.mode), noStats: await page.evaluate(() => JSON.parse(localStorage.getItem('mjg.v1')).noStats) })
+    if (!gate.note.includes('통계를 켜야 해요') || gate.modal !== '통계를 켤까요?' || gate.mode !== 'chars' || gate.after !== 'play' || gate.noStats) errors.push('[inf] 통계 ' + JSON.stringify(gate))
+    await page.evaluate(() => { const M = window.__mjg; M.G.t = M.FINAL_T - 1 })
     await go(2, 'boss'); await go(0.2, 'mermaid'); const a = await go(0.2, 'siren')   // 첫 세이렌 → 1단계
     const b = await go(M_INF.rest + 1)   // 보스 둘
     await go(0.2, 'boss'); await go(M_INF.gap + 1); await go(0.2, 'boss'); await go(M_INF.gap + 1); const c = await go(0.2, 'boss')   // 여섯을 다 쓰러뜨리면 세이렌 둘
-    const d = await go(M_INF.dark + 2)   // 4분 — 검은 별똥별
-    await go(0.2, 'mermaid'); const e = await go(0.2, 'siren')   // 다 쓰러뜨리면 2단계, 검은 별똥별은 사라진다
+    const d = await go(M_INF.dark + 2)   // 3분 동안 페이즈를 못 넘기면 — 검은 별똥별
+    await go(0.2, 'mermaid'); const p = await go(0.1, 'siren')   // 무한 세이렌은 3페이즈 — 한 번 쓰러뜨리면 2페이즈(2초 무적), 별똥별은 물러난다
+    const e = await go(4.5, 'siren')   // 3페이즈까지 다 쓰러뜨리면 2단계
+    if (p.ph !== '2,2' || p.dark || p.bosses !== d.bosses + 2 || p.lv !== 1) errors.push('[inf] 페이즈 ' + JSON.stringify({ d, p }))
     console.log('inf', a, b, c, d, e)
     if (a.lv !== 1 || a.mode !== 'play' || b.n !== 2 || c.sirens !== 2 || !d.dark || e.lv !== 2 || e.dark) errors.push(`[inf] ${JSON.stringify({ a, b, c, d, e })}`)
   })
@@ -436,9 +445,10 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       if (u.includes('top_ranks')) return j([row(1, 'A', 'usagi'), row(2, '치이카와팬', 'chiikawa', true)]); if (u.includes('my_rank')) return j([row(2, '치이카와팬', 'chiikawa', true)])
       if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('submit_rank')) { body = r.request().postDataJSON(); return j({ r: 'ok', rank: 2 }) } if (u.includes('start_run')) return j('tok-1'); if (u.includes('delete_me')) return j('ok'); if (u.includes('saves?select')) return j([])
       return r.fulfill({ status: 204 }) })
-    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, diff: 'inf', seen: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, diff: 'inf', seen: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
     await page.reload(); await page.waitForTimeout(800)
-    const pill = await page.locator('.acct .nm').textContent()
+    const pill = await page.locator('.acct .nm').textContent(), onStats = await page.locator('#ui .fine', { hasText: '로그인 중에는 통계를 보내요' }).count()
+    if (onStats !== 1) errors.push('[acct] 로그인 중 통계 글 ' + onStats)
     await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400)
     const rows = await page.locator('.list.rank li').count(), mine = await page.locator('.panel.rank .mine li.me').count()
     await page.locator('.list.rank li').first().click(); await page.waitForTimeout(150); const info = await page.locator('.modal .lvl-badge').textContent()
@@ -460,6 +470,37 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (pill !== '치이카와팬' || rows !== 2 || mine !== 1 || !/8/.test(info) || closed || still !== 'rank' || !line.includes('#2') || !sent.includes('start_run') || !sent.includes('submit_rank')) errors.push('[acct] ' + JSON.stringify({ pill, rows, mine, info, closed, still, line, sent }))
   })
 
+  await run('sync', { width: 390, height: 844 }, async page => {   // 기기 · 계정 기록이 다르면 고르기 — 「이 기기」를 고르면 올린 뒤 다시 맞추고, 또 묻지 않는다. 마지막 때는 시 · 분 · 초까지
+    let cloud = [{ data: { runs: 15 }, updated_at: '2026-11-18T01:02:03.456+00:00' }], reads = 0
+    await page.route('**/*.supabase.co/**', async r => { const q = r.request(), u = q.url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) })
+      if (u.includes('saves?select')) { reads++; return j(cloud) }
+      if (u.includes('saves?on_conflict') && q.method() === 'POST') { const b = q.postDataJSON(); await new Promise(f => setTimeout(f, 300)); cloud = [{ data: b.data, updated_at: b.updated_at }]; return r.fulfill({ status: 201 }) }   // 올리기는 조금 걸린다
+      if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' })
+      return r.fulfill({ status: 204 }) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ runs: 17, seen: 1, last: Date.parse('2026-11-18T09:08:07Z') })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'kakao' })) })
+    await page.reload(); await page.waitForTimeout(800)
+    const o = { h: await page.locator('.modal .h').textContent(), when: await page.locator('.modal .pickrec small').allTextContents() }
+    await page.locator('.modal .pickrec[data-k=here]').click(); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(100); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(1200)
+    Object.assign(o, { modal: await page.locator('.modal').count(), mode: await page.evaluate(() => window.__mjg.mode), reads, runs: cloud[0].data.runs })
+    console.log('sync', o)
+    if (o.h !== '기록이 두 군데 있어요' || !o.when.every(t => /\d:\d\d:\d\d/.test(t)) || o.modal || o.mode !== 'title' || reads !== 2 || o.runs !== 17) errors.push('[sync] ' + JSON.stringify(o))
+  })
+  await run('susp', { width: 390, height: 844 }, async page => {   // 정지된 계정 — 켜면 로그아웃되고 처음 화면에 번호. 로그인 중에는 「보내지 않기」 대신 글
+    await page.route('**/*.supabase.co/**', r => r.request().url().includes('rpc/suspended') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{"id":7}' }) : r.fulfill({ status: 204 }))
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ seen: 1, noStats: true, diff: 'inf' })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'kakao' })) })
+    await page.reload(); await page.waitForTimeout(800)
+    const o = { hint: await page.locator('#ui .hint').allTextContents(), auth: await page.evaluate(() => localStorage.getItem('mjg.auth')), toggle: await page.locator('#ui .fine .linkish', { hasText: '다시 보내기' }).count(), mode: await page.evaluate(() => window.__mjg.mode) }
+    console.log('susp', o)
+    if (!o.hint.some(t => t.includes('정지') && t.includes('7')) || o.auth || o.toggle !== 1 || o.mode !== 'title') errors.push('[susp] ' + JSON.stringify(o))
+  })
+  await run('ban', { width: 390, height: 844 }, async page => {   // IP 차단 — 열 때 서버에 묻고(?guard 로 이 주소에서도) 막혔으면 안내 화면만(번호 · 풀리는 때 · 언어 고르기)
+    await page.route('**/*.supabase.co/**', r => r.request().url().includes('rpc/blocked') ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 42, until: '2026-11-25T06:07:00+00:00' }) }) : r.fulfill({ status: 204 }))
+    await page.goto(new globalThis.URL('?guard', URL).href); await page.waitForTimeout(800)
+    const b = { mode: await page.evaluate(() => window.__mjg.mode), text: await page.locator('#ui .panel.ban').innerText(), trio: await page.locator('#ui .trio').count(), lang: await page.locator('#ui .panel.ban .lang').count() }
+    await page.screenshot({ path: OUT + 'ban.png' }); await page.keyboard.press('Escape'); await page.waitForTimeout(100); b.esc = await page.evaluate(() => window.__mjg.mode)
+    console.log('ban', b)
+    if (b.mode !== 'blocked' || !b.text.includes('42') || !b.text.includes('풀려요') || b.trio || b.lang !== 1 || b.esc !== 'blocked') errors.push('[ban] ' + JSON.stringify(b))
+  })
   await run('privacy', { width: 390, height: 844 }, async page => {   // 개인정보 처리방침 — 처음 화면 링크 · ?lang=en&privacy 로 바로(그 말로)
     await page.locator('.fine .linkish', { hasText: '개인정보 처리방침' }).click(); await page.waitForTimeout(200)
     const ko = { h: await page.locator('#ui .panel .h').textContent(), n: await page.locator('#ui ul.pv li').count(), mode: await page.evaluate(() => window.__mjg.mode) }

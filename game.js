@@ -103,6 +103,14 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 유치원 · 초등학생도 읽기 쉽게: 한 줄에 그림 하나(ic) · 꼬리표 하나 · 짧은 문장 하나. 새 항목을 맨 위에.
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
+  ['2026-11-18', [
+    ['new', 'siren', tr`무한 세이렌은 3페이즈! 노래하는 세이렌 → 화난 세이렌(음표 울타리 — 초록 빈틈으로 빠져나가요) → 폭풍의 세이렌(큰 파도 — 초록 줄에 서요). 페이즈를 넘길 때마다 오니기리가 떨어지고 검은 별똥별 시계가 3분으로 돌아가요`],
+    ['new', 'anoko', tr`무한 1단계부터 보스마다 새 기술 — 아노코 세 갈래 꼬리 · 데카츠요 쿵쿵 충격파 · 고블린 대장 돌격대 출동 · 거대 키메라 눈물 웅덩이 · 가위바위보 승부(이기는 손 원으로!) · 요리사 괴물 빙글빙글 소스`],
+    ['up', 'inf', tr`무한 1단계부터 보스가 더 세져요 — 데카츠요 · 거대 키메라는 2연속, 고블린 대장 돌 2겹 · 부하 12, 가위바위보 바위 3연속 · 종이 2겹, 요리사 후추 14 · 큰 토르티야, 아노코 꼬리 뒤 바로 돌진 · 체력 2배`],
+    ['up', 'parry', tr`무한 1단계부터는 각성 스킬로 날아오는 것을 막는 확률이 절반이에요`],
+    ['new', 'inf', tr`로그인(카카오 · 구글)하면 기록을 계정에 저장하고 무한 랭킹에 올라가요 — 처음 화면 오른쪽 위`],
+    ['fix', 'coin', tr`기록 고르기에서 「이 기기」를 골라도 한 번 더 묻던 것 · 마지막으로 한 때를 시 · 분 · 초까지`],
+  ]],
   ['2026-11-17', [
     ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
     ['fix', 'coin', tr`상점 값이 내려갔어요 — 고급 의상 20,000(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 10,000), 무기 스킨 · 스킬 스킨 10,000`],
@@ -272,7 +280,9 @@ const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인�
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 // 무한 — 세이렌을 쓰러뜨리면 단계(lv)가 오른다. 단계마다 강해진 보스가 lv+1 마리씩 INF.gap 초마다(종류는 섞어서 BOSS 여섯이 다 나올 때까지), 다 쓰러뜨리면 세이렌 lv+1 명(인어 셋씩). INF.dark 초 안에 못 쓰러뜨리면 검은 별똥별
-const INF = { gap: 60, rest: 12, dark: 240, foe: 0.2, kinds: ['dekatsuyo', 'goblinKing', 'bigChimera', 'rps', 'chef', 'anoko'], hp: 0.6, dmg: 0.25, spd: 0.04 }   // hp · dmg · spd — 단계마다 보스가 그만큼씩 세진다(1 + 값 × 단계, 선형). foe — 일반 적 체력도 단계마다(보스의 1/3)
+const INF = { gap: 60, rest: 12, dark: 180, foe: 0.2, kinds: ['dekatsuyo', 'goblinKing', 'bigChimera', 'rps', 'chef', 'anoko'], hp: 0.6, dmg: 0.25, spd: 0.04, anoko: 2, parry: 0.5 }   // dark — 진행 시계(세이렌이 나오거나 페이즈를 넘긴 뒤 이만큼 못 넘기면 검은 별똥별). anoko — 무한 아노코 체력 배수, parry — 각성 스킬로 막는 확률 배수(무한 1단계부터). hp · dmg · spd — 단계마다 보스가 그만큼씩 세진다(1 + 값 × 단계, 선형). foe — 일반 적 체력도 단계마다(보스의 1/3)
+// 무한 세이렌(1단계부터) — 한 명 한 명이 3페이즈. hp · dmg 는 단계 보정한 체력 · 기술 피해에 곱한다. col — 페이즈 색(HUD 점 · 링 · 외침)
+const SIREN_PH = [{ hp: 1.5, dmg: 1, col: '#ff8fb1' }, { hp: 1.5, dmg: 1.2, col: '#a94fd0', line: tr`…용서 못 해!`, name: tr`화난 세이렌!` }, { hp: 2, dmg: 1.4, col: '#3f68b3', line: tr`바다여, 나에게 힘을!`, name: tr`폭풍의 세이렌!` }]
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'rps'], [1080, 'chef', 1], [1200, 'anoko'],
   [1320, 'chef'], [1410, 'bigChimera', 1]]   // 20~25분은 보스 셋(예전 넷 — 24분 중간보스 데카츠요는 뺐다)
 // 영구 강화(처음 화면 「상점」) — 판마다 받는 토벌 보상금으로 산다. 한 칸이 같은 아이템 한 레벨의 1/5쯤, 다 사도 아이템 한 레벨 몫이라 판의 밸런스가 무너지지 않는다
@@ -395,7 +405,7 @@ const authSet = a => { auth = a; try { a ? localStorage.setItem('mjg.auth', JSON
 const jwt = t => { try { return JSON.parse(decodeURIComponent(escape(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))))) } catch { return {} } }
 const fromToken = (at, rt, ttl) => { const p = jwt(at); return { at, rt, exp: Date.now() / 1000 + +ttl, uid: p.sub, prov: p.app_metadata?.provider } }
 const syncMark = at => { try { localStorage.setItem('mjg.sync', JSON.stringify({ at, h: sign(save) })) } catch {} }
-let AUTH_ERR = '', AUTH_NEW = false, NICK = null, MODAL = null   // 로그인 실패 글 · 방금 로그인 · 내 닉네임({ nick, next }) · 떠 있는 창 닫기
+let AUTH_ERR = '', AUTH_NEW = false, NICK = null, MODAL = null, SUSP = 0   // 로그인 실패 글 · 방금 로그인 · 내 닉네임({ nick, next }) · 떠 있는 창 닫기 · 정지된 계정 번호(bans.id)
 { const q = new URLSearchParams(location.hash.slice(1)), qs = new URLSearchParams(location.search), err = q.get('error_description') || qs.get('error_description')   // 로그인에서 돌아왔다
   if (q.get('access_token')) { authSet(fromToken(q.get('access_token'), q.get('refresh_token'), q.get('expires_in') || 3600)); AUTH_NEW = true }
   if (err) AUTH_ERR = err.slice(0, 120)
@@ -423,13 +433,14 @@ const rpc = (fn, args = {}) => api('rpc/' + fn, args)
 function cloudPush(now) {   // 저장할 때마다 계정에도(2초 모아서). 페이지를 닫을 때는 바로
   if (!linked || !auth) return
   clearTimeout(cloudPush.t)
-  const go = () => { const at = Date.now(); api('saves?on_conflict=uid', { uid: auth.uid, data: save, updated_at: new Date(at).toISOString() }, { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(ok => ok && syncMark(at)) }
-  if (now) go(); else cloudPush.t = setTimeout(go, 2000)
+  const go = () => { const at = Date.now(); return api('saves?on_conflict=uid', { uid: auth.uid, data: save, updated_at: new Date(at).toISOString() }, { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(ok => ok && syncMark(at)) }
+  if (now) return go(); cloudPush.t = setTimeout(go, 2000)
 }
 addEventListener('pagehide', () => { if (cloudPush.t) cloudPush(true) })
 /** 로그인한 뒤 · 켤 때 — 계정 저장과 이 기기 저장을 맞춘다. 둘 다 바뀌었으면 고르게 한다 */
+const suspendCheck = async () => { const b = auth && await rpc('suspended'); if (b?.id) { SUSP = b.id; logout(); return true } }   // 정지된 계정 — 로그아웃(로그인 없는 판은 그대로)
 async function link() {
-  if (!auth) return
+  if (!auth || await suspendCheck()) return
   const rows = await api('saves?select=data,updated_at')
   if (!rows || !auth) return   // 인터넷이 안 되면 다음에
   const cloud = rows[0], mark = (() => { try { return JSON.parse(localStorage.getItem('mjg.sync')) } catch { return null } })(), at = cloud && Date.parse(cloud.updated_at)
@@ -460,7 +471,8 @@ function loginBox() {   // 로그인 창 — 카카오 · 구글
   const close = modal('login', h('p', { class: 'h' }, tr`로그인`), h('p', { class: 'sub' }, tr`기록과 상점 구매를 계정에 저장하고 무한 랭킹에 올라가요`),
     h('button', { type: 'button', class: 'btn sns kakao', onclick: () => login('kakao') }, svgIc(KAKAO_IC), tr`카카오로 시작하기`),
     h('button', { type: 'button', class: 'btn sns google', onclick: () => login('google') }, svgIc(GOOGLE_IC), tr`Google로 시작하기`),
-    h('p', { class: 'fine' }, tr`로그인하지 않아도 지금처럼 이 기기에 저장돼요`),
+    h('p', { class: 'fine' }, tr`로그인하지 않아도 지금처럼 이 기기에 저장돼요`, h('br'), tr`로그인하면 랭킹 기록을 확인하려고 익명 플레이 통계를 함께 보내요`, ' · ',
+      h('button', { type: 'button', class: 'linkish', onclick: () => { close(); privacy() } }, tr`개인정보 처리방침`)),
     h('div', { class: 'row' }, btn(tr`닫기`, () => close())))
 }
 /** 닉네임 창 — 입력을 멈추고 0.4초 뒤 서버에 물어본다. done(정했으면 true) */
@@ -484,14 +496,14 @@ function nickBox(done = () => {}) {
 function choose(cloud, at) {
   const sum = d => { const ids = Object.keys(BONUS), best = Object.entries(d.best || {}).filter(([k]) => k.endsWith('.inf')).reduce((a, [, b]) => Math.max(a, b.lv || 0), 0)
     return [[tr`토벌`, d.runs || 0], [tr`클리어`, d.clears || 0], [tr`토벌 보상금`, d.coin || 0], [tr`의상`, (d.owned || []).filter(k => OUTFIT[k]).length], [tr`무한 최고 단계`, best]] }
-  const A = sum(save), B = sum(cloud), day = ms => ms ? new Date(ms).toLocaleDateString(LANG) : '—'
+  const A = sum(save), B = sum(cloud), day = ms => ms ? new Date(ms).toLocaleString(LANG) : '—'   // 시 · 분 · 초까지(같은 날이면 구분이 안 돼서)
   const card = (k, name, rows, other, when) => h('button', { type: 'button', class: 'pickrec', 'data-k': k, onclick: e => { for (const b of e.currentTarget.parentNode.children) b.classList.toggle('on', b === e.currentTarget); go.disabled = false } },
     h('b', {}, name), rows.map(([n, v], i) => h('span', { class: v > other[i][1] ? 'more' : '' }, `${n} ${v.toLocaleString()}`)), h('small', {}, tr`마지막 ${day(when)}`))
   const go = btn(tr`이걸로 할게요`, () => {
     const k = document.querySelector('.modal .pickrec.on')?.dataset.k; if (!k) return
     const name = k === 'here' ? tr`이 기기` : tr`내 계정`
     modal('choose', h('p', { class: 'h' }, tr`정말 ${name} 기록으로 할까요?`), h('p', { class: 'warn' }, tr`다른 쪽 기록은 지워져요`),
-      h('div', { class: 'row' }, btn(tr`아니요`, () => choose(cloud, at)), btn(tr`네, 이걸로`, () => { MODAL?.(); if (k === 'cloud') adopt(cloud, at); else { linked = true; cloudPush(true); link() } }, 'main')))
+      h('div', { class: 'row' }, btn(tr`아니요`, () => choose(cloud, at)), btn(tr`네, 이걸로`, () => { MODAL?.(); if (k === 'cloud') adopt(cloud, at); else { linked = true; cloudPush(true)?.then(link) } }, 'main')))   // 올리기가 끝난 뒤에 다시 맞춘다(바로 부르면 예전 계정 기록을 읽어 또 고르라고 했다)
   }, 'main')
   go.disabled = true
   modal('choose', h('p', { class: 'h' }, tr`기록이 두 군데 있어요`), h('p', { class: 'sub' }, tr`어느 쪽으로 이어서 할까요?`),
@@ -531,7 +543,7 @@ function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기
     if (!r) set(h('span', {}, tr`랭킹에 올리지 못했어요 — 인터넷 연결을 확인해 주세요`))
     else if (r.r === 'nonick') set(h('span', {}, tr`닉네임을 정하면 이 기록이 랭킹에 올라가요`), btn(tr`닉네임 정하기`, () => nickBox(ok => ok && send())))
     else if (r.r === 'ok' || r.r === 'kept') set(h('span', {}, r.r === 'ok' ? tr`랭킹 #${r.rank} · 최고 기록 갱신!` : tr`랭킹 #${r.rank} — 예전 기록이 더 좋아요`), btn(tr`랭킹 보기`, () => ranking()))
-    else if (r.r === 'hold') set(h('span', {}, tr`이 판은 랭킹에 올라가지 않아요`))   // 체크섬이 안 맞음 · 차단된 계정
+    else if (r.r === 'hold' || r.r === 'ban') { set(h('span', {}, tr`이 판은 랭킹에 올라가지 않아요`)); if (r.r === 'ban') { blockCheck(); suspendCheck() } }   // 체크섬이 안 맞음 · 차단된 계정 · 방금 자동 차단(IP 가 막혔으면 안내 화면)
     else set(h('span', {}, tr`이 판은 랭킹에 올릴 수 없어요 — 로그인한 뒤 새로 시작한 판만 올라가요`))
   }
   send(); return el
@@ -583,7 +595,7 @@ if (statsOn()) {   // 방문 통계(Google 애널리틱스) — 익명 통계와
   gtag('js', new Date()); gtag('config', 'G-DZDG6FBGP0')
   document.head.append(Object.assign(document.createElement('script'), { async: true, src: 'https://www.googletagmanager.com/gtag/js?id=G-DZDG6FBGP0' }))
 }
-const KILLER = { spike: tr`가면 키메라 독침`, net: tr`복어 기름 그물`, soy: tr`문어 간장`, note: tr`세이렌 음표`, paper: tr`날아오는 종이`, shard: tr`검은 별똥별 조각`, rock: tr`던진 돌`, claw: tr`날아오는 발톱`, bomb: tr`폭발`, land: tr`내려찍기` }
+const KILLER = { sauce: tr`빙글빙글 소스`, spike: tr`가면 키메라 독침`, net: tr`복어 기름 그물`, soy: tr`문어 간장`, note: tr`세이렌 음표`, paper: tr`날아오는 종이`, shard: tr`검은 별똥별 조각`, rock: tr`던진 돌`, claw: tr`날아오는 발톱`, bomb: tr`폭발`, land: tr`내려찍기` }
 const killerName = s => !s ? null : typeof s === 'string' ? s : s.kind ? BOSS[s.kind]?.name ?? s.kind : FOES[s.type]?.name ?? KILLER[s.k] ?? s.k ?? null
 function statRow(result) {
   const b = G.final ? G.final.siren : G.foes.find(e => e.boss && !e.dead)
@@ -591,8 +603,8 @@ function statRow(result) {
     boss: G.dark ? '검은 별똥별' : b ? ko(BOSS[b.kind]?.name) ?? null : null, weapons: G.weapons.map(w => w.id + (G.aw.has(w.id) ? 9 : w.lv)).join(' '), touch: matchMedia('(hover: none)').matches,
     up: Object.values(save.up).reduce((a, n) => a + n, 0) }   // 상점에서 산 영구 강화 칸 수(0 = 강화 없이)
 }
-function report(result) {
-  if (!statsOn()) return
+function report(result) {   // 로그인 중이면 익명 통계는 늘 보낸다(랭킹 기록 확인 — 기획 결정. 계정은 붙이지 않는다). 방문 통계(GA)는 그대로 토글 · 추적 거부를 따른다
+  if (!statsOn() && !(auth && location.hostname === STATS.host)) return
   fetch(`${STATS.url}/rest/v1/rpc/report_run`, { method: 'POST', keepalive: true, body: JSON.stringify(statRow(result)),
     headers: { 'Content-Type': 'application/json', apikey: STATS.key, Authorization: `Bearer ${STATS.key}`, Prefer: 'return=minimal' } }).catch(() => {})
 }
@@ -1540,15 +1552,15 @@ function darkStar(g, p = {}) {
 }
 // 세이렌 — 하얀 찹쌀떡 몸 · 이마로 뾰족 내려온 까만 앞머리와 양쪽 까만 머리 덩이(빨간 하트 장식) · 붉은 테 큰 눈 · 수염 · 복슬한 하얀 손(나무 숟가락) · 붉은 비늘 아랫몸과 꼬리지느러미. 화나면 눈이 새빨갛고 얼굴에 그늘
 // 최종보스라 다른 적보다 공들여 — 위로 길쭉한 몸(높은 상체), 몸 · 비늘에 은은한 명암, 진주 허리띠, 인어와 같은 짧은 꼬리, 인어 지느러미처럼 뻗은 팔 끝에 손가락 넷이 나뉜 손, 머리 윤기, 반짝이는 눈
-function siren(g, angry = false, p = {}) {
-  const f = p.foot || 0, red = '#d46a6a', deep = '#9c4040', black = '#1f1715', px = g.getTransform().a
+function siren(g, angry = false, p = {}) {   // p.storm — 무한 3페이즈 「폭풍의 세이렌」(꼬리 · 비늘 바다색, 차가운 흰 몸, 머리 하트 → 번개)
+  const st = p.storm, f = p.foot || 0, red = st ? '#4f7fc9' : '#d46a6a', deep = '#9c4040', black = '#1f1715', px = g.getTransform().a
   const CY = -17.2, RX = 14.6, RY = 16.2   // 몸 — 위로 길쭉(상체가 높다)
   const wave = x => -8.6 + 1.3 * (1 - (x / RX) ** 2)   // 아랫몸 경계 — 가운데가 앞으로 볼록
   // 꼬리 — 인어와 같은 모양으로 짧게: 등 쪽(보는 쪽 반대 · 왼쪽) 아래 몸 속에서 가늘게 이어져 나와 지느러미로 벌어진다(걸음마다 살랑) — 오른쪽 그림을 거울로
   g.save(); g.scale(-1.45, 1.45)
   g.beginPath(); g.moveTo(3, -5.2); g.quadraticCurveTo(6.4, -3.6, 8.2, -3.5); g.quadraticCurveTo(9.4, -4.2, 10.6, -5.6 + f * 0.6); g.quadraticCurveTo(10.4, -2.6, 11.4, -0.2 + f * 0.3); g.quadraticCurveTo(9.4, -1.2, 8.2, -2.3); g.quadraticCurveTo(5.4, -2, 2.4, -1.4); g.closePath()
   g.fillStyle = red; g.fill(); g.lineWidth = LW / 1.45; g.strokeStyle = OUT; g.stroke()
-  g.strokeStyle = 'rgba(120,40,40,.45)'; g.lineWidth = 0.3; g.beginPath(); for (const [x, y] of [[10.2, -4.6], [10.4, -2.8], [10.6, -1]]) { g.moveTo(8.6, -2.9); g.lineTo(x, y) } g.stroke()   // 지느러미 결
+  g.strokeStyle = st ? 'rgba(30,50,110,.45)' : 'rgba(120,40,40,.45)'; g.lineWidth = 0.3; g.beginPath(); for (const [x, y] of [[10.2, -4.6], [10.4, -2.8], [10.6, -1]]) { g.moveTo(8.6, -2.9); g.lineTo(x, y) } g.stroke()   // 지느러미 결
   g.restore()
   // 나무 숟가락(오른손) — 손 뒤로 자루가 지나간다
   g.lineCap = 'round'; for (const [c, lw] of [[OUT, 1.9], ['#d8b48e', 1]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(15.2, -9.6); g.lineTo(19.4, -17); g.stroke() }
@@ -1564,14 +1576,15 @@ function siren(g, angry = false, p = {}) {
   for (const s of [-1, 1]) {
     blob(g, s * 7.8, -35.6, 5.1, 4.5, black, LW)
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 0.8; g.beginPath(); g.ellipse(s * 7.8, -35.6, 3.4, 2.8, 0, Math.PI * (s > 0 ? 1.15 : 1.25), Math.PI * (s > 0 ? 1.6 : 1.7)); g.stroke()
-    heart(g, s * 8.9, -37, 1.75, '#e0606c'); g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(s * 8.9 - 0.6, -37.6, 0.4, 0, TAU); g.fill()
+    if (st) { const x = s * 8.9; g.beginPath(); for (const [dx, dy] of [[0.9, -2.6], [-0.9, -0.2], [0.4, -0.2], [-0.9, 2.6], [0.9, 0.2], [-0.4, 0.2]]) g.lineTo(x + dx, -37 + dy); g.closePath(); g.fillStyle = '#ffd23f'; g.fill(); g.lineWidth = 0.5; g.strokeStyle = OUT; g.stroke() }   // 번개
+    else { heart(g, s * 8.9, -37, 1.75, '#e0606c'); g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(s * 8.9 - 0.6, -37.6, 0.4, 0, TAU); g.fill() }
   }
   // 주인공처럼 머리와 몸이 나뉜다 — 볼 높이가 가장 넓은 큰 머리, 팔이 붙는 목에서 들어가고, 아랫몸은 꼬리 쪽으로 점점 좁아진다(주인공 몸 아래쪽만 더 갸름하게)
   const S = mochiSegs(RX * 2, RY * 2, 0.46, 0, true, 0.74, 0.66, 0.76), { jx, yj } = headJoin(RX * 2, RY * 2, 0.66, 0.76), be = RX * 0.26, my = yj + (-1 - yj) * 0.4
   S.splice(4, 3, [jx, yj, jx * 0.96, my, be * 1.4, -1, be, -1], [be, -1, be * 0.35, -0.7, -be * 0.35, -0.7, -be, -1], [-be, -1, -be * 1.7, -1, -jx * 1.02, my, -jx, yj])
   const B = segPath(S)
   g.lineWidth = LW * 2; g.strokeStyle = OUT; g.stroke(B)
-  const bg = g.createRadialGradient(-4, -25, 1, 0, CY, 18); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.62, '#fbf8f5'); bg.addColorStop(1, '#e6ddd6')
+  const bg = g.createRadialGradient(-4, -25, 1, 0, CY, 18); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.62, st ? '#f3f6fb' : '#fbf8f5'); bg.addColorStop(1, st ? '#d9e0ec' : '#e6ddd6')
   g.fillStyle = bg; g.fill(B)
   g.save(); g.clip(B)
   // 앞머리 — 이마로 뾰족, 윤기 한 줄 · 볼을 따라 내려오는 짧은 옆머리
@@ -1579,18 +1592,18 @@ function siren(g, angry = false, p = {}) {
   for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 15, -26.2); g.quadraticCurveTo(s * 11.8, -24.4, s * 12.4, -18.6); g.quadraticCurveTo(s * 13.6, -20.6, s * 15.2, -20); g.fill() }
   g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(-9, -29.8); g.quadraticCurveTo(-4, -31.4, 1, -30.6); g.moveTo(4, -30.4); g.quadraticCurveTo(7, -30.6, 9.4, -29.6); g.stroke()
   // 붉은 비늘 아랫몸 — 아래로 짙어지고, 겹친 비늘마다 위쪽이 밝다
-  const rg = g.createLinearGradient(0, -9, 0, 0); rg.addColorStop(0, '#dd7676'); rg.addColorStop(1, '#a84a4a')
+  const rg = g.createLinearGradient(0, -9, 0, 0); rg.addColorStop(0, st ? '#5b8ad6' : '#dd7676'); rg.addColorStop(1, st ? '#2f4f99' : '#a84a4a')
   g.fillStyle = rg; g.beginPath(); g.moveTo(-15, wave(-15)); for (let x = -15; x <= 15; x += 1) g.lineTo(x, wave(x)); g.lineTo(15, 2); g.lineTo(-15, 2); g.fill()
   for (let r = 3; r >= 0; r--) {
     const yy = -6.4 + r * 2.3, o = r % 2 ? 1.6 : 0
     for (let x = -16 + o; x < 16; x += 3.2) {
-      g.beginPath(); g.arc(x, yy, 1.75, 0, Math.PI); g.fillStyle = r < 2 ? '#cf6363' : '#b85252'; g.fill()
-      g.strokeStyle = 'rgba(110,30,30,.55)'; g.lineWidth = 0.45; g.stroke()
-      g.strokeStyle = 'rgba(255,220,220,.5)'; g.lineWidth = 0.35; g.beginPath(); g.arc(x, yy + 0.2, 1.1, Math.PI * 0.25, Math.PI * 0.6); g.stroke()
+      g.beginPath(); g.arc(x, yy, 1.75, 0, Math.PI); g.fillStyle = r < 2 ? (st ? '#5583cf' : '#cf6363') : (st ? '#3f68b3' : '#b85252'); g.fill()
+      g.strokeStyle = st ? 'rgba(20,35,90,.55)' : 'rgba(110,30,30,.55)'; g.lineWidth = 0.45; g.stroke()
+      g.strokeStyle = st ? 'rgba(220,235,255,.5)' : 'rgba(255,220,220,.5)'; g.lineWidth = 0.35; g.beginPath(); g.arc(x, yy + 0.2, 1.1, Math.PI * 0.25, Math.PI * 0.6); g.stroke()
     }
   }
   if (angry) {   // 얼굴 그늘 — 위에서 내려오는 어둠 · 세로 줄
-    const sg = g.createLinearGradient(0, -33, 0, -16); sg.addColorStop(0, 'rgba(50,15,60,.62)'); sg.addColorStop(1, 'rgba(50,15,60,0)')
+    const sg = g.createLinearGradient(0, -33, 0, -16); sg.addColorStop(0, st ? 'rgba(25,35,80,.62)' : 'rgba(50,15,60,.62)'); sg.addColorStop(1, st ? 'rgba(25,35,80,0)' : 'rgba(50,15,60,0)')
     g.fillStyle = sg; g.fillRect(-15, -34, 30, 18)
     g.strokeStyle = 'rgba(40,10,50,.4)'; g.lineWidth = 0.55; g.beginPath(); for (const x of [-7.6, -5, 5, 7.6]) { g.moveTo(x, -26.4); g.lineTo(x, -24) } g.stroke()
   }
@@ -1671,6 +1684,7 @@ const ART = {
   mermaid2: [40, 36, (g, p) => { big(g, 1.4); mermaid(g, MER[2], p) }],
   siren: [124, 112, (g, p) => { big(g, 2.4); siren(g, false, p) }],
   sirenAngry: [124, 112, (g, p) => { big(g, 2.4); siren(g, true, p) }],
+  sirenStorm: [124, 112, (g, p) => { big(g, 2.4); siren(g, true, { ...p, storm: true }) }],
 }
 // 캐릭터 움직임 — 걷기 넷(발을 번갈아 들고 팔을 엇갈려 흔들고, 발을 모을 때 몸이 들썩) · 서 있기(숨 · 눈 깜빡) · 아픈 얼굴. 얼굴은 보는 쪽으로 조금
 const WALK = [{ foot: 1, arm: 1 }, { bob: -1.3 }, { foot: -1, arm: -1 }, { bob: -1.3 }], LOOK = 1.2
@@ -1692,7 +1706,7 @@ const XMAS = {
   spiker: ['hat', 2.8, -19.6, 11, -0.1], bug: ['hat', 0, -21, 13], beetle: ['hat', 0, -19.6, 13, -0.06], star: ['hat', -1.8, -18.4, 10, -0.22],
   fugu: ['hat', 0, -18.4, 12, -0.1], octo: ['hat', 0, -19.2, 12, -0.1], parttimer: ['hat', 0, -24.4, 16, -0.06],
   rps: ['hat', 0, -25.4, 14, -0.06], chef: ['holly', 3.4, -24.9, 10], dekatsuyo: ['hat', 0, -26, 14, -0.06], anoko: ['hat', 0, -28.8, 12, -0.06],
-  mermaid: ['hat', 0, -16.6, 10, -0.1], mermaid1: ['hat', 0, -16.6, 10, -0.1], mermaid2: ['hat', 0, -16.6, 10, -0.1], siren: ['hat', 0, -31, 16, -0.08], sirenAngry: ['hat', 0, -31, 16, -0.08],
+  mermaid: ['hat', 0, -16.6, 10, -0.1], mermaid1: ['hat', 0, -16.6, 10, -0.1], mermaid2: ['hat', 0, -16.6, 10, -0.1], siren: ['hat', 0, -31, 16, -0.08], sirenAngry: ['hat', 0, -31, 16, -0.08], sirenStorm: ['hat', 0, -31, 16, -0.08],
 }
 function xmas(g, kind, x, y, w, a = 0) {   // 산타 모자 · 루돌프 뿔(가운데 호랑가시) · 호랑가시 잎과 열매 — 12 너비로 그려 w 에 맞춘다
   const s = w / 12, lw = LW / s
@@ -1777,6 +1791,19 @@ const party = g => {   // 폭죽 콘 · 색종이
   line2(g, '#ff9be0', 1.3, () => { g.beginPath(); g.moveTo(1, 3); g.quadraticCurveTo(6, 2, 7.5, 5); g.quadraticCurveTo(9, 7.5, 11, 6) })
   for (const [x, y, c] of [[-3, -9, '#8be07a'], [4, -11, '#ff6b6b'], [10.5, -2, '#ffd23f'], [7.5, 10.5, '#b58cff']]) { el(g, x, y, 1.6); ink(g, c, 1) }
 }
+const tearP = g => { g.beginPath(); g.moveTo(0, -11); g.bezierCurveTo(4, -5, 8, -1, 8, 3.5); g.arc(0, 3.5, 8, 0, Math.PI); g.bezierCurveTo(-8, -1, -4, -5, 0, -11) }   // 눈물 한 방울(30칸 기준)
+/** 가위바위보 손(30칸 기준) — 가위바위보 보스 피부색, 굵은 손가락(작게 그려도 모양이 바로 보이게). 테두리를 먼저 굵게 칠하고 살색을 덮는다 */
+function hand(g, kind) {
+  const caps = kind === 'scissors' ? [[-2, 1, -6.5, -11], [2, 1, 5.5, -11.5]] : kind === 'paper' ? [[-6, 1, -8.5, -9], [-2.2, 0, -2.8, -12], [2, 0, 2.6, -12], [6, 1, 8, -9.5], [-7, 6, -12, 1]] : []
+  g.lineCap = 'round'
+  for (const pass of [0, 1]) {
+    const o = pass ? 0 : 1.4, col = pass ? '#f2c9a8' : OUT; g.strokeStyle = g.fillStyle = col
+    for (const [x0, y0, x1, y1] of caps) { g.lineWidth = (kind === 'paper' ? 4.6 : 5.4) + o * 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke() }
+    el(g, 0, 5, 8.5 + o, 7 + o); g.fill()   // 손바닥 · 주먹
+    if (kind !== 'paper') for (const x of [-5.6, -1.9, 1.9, 5.6]) if (kind === 'rock' || Math.abs(x) > 3) { el(g, x, -1.5, 2.7 + o); g.fill() }   // 접은 손가락 마디
+  }
+  if (kind !== 'paper') { g.strokeStyle = OUT; g.lineWidth = 1.3; g.beginPath(); g.moveTo(-7, 6); g.quadraticCurveTo(-2, 8, 3.5, 4); g.stroke() }   // 엄지
+}
 const ICO = {
   // 스킬
   pile: g => { for (const [y, w, x, col] of [[3.6, 21, 0, '#b07a4a'], [-2.2, 18, 1.4, '#8fd14f'], [-7.8, 15, -1, '#e07a6a']]) { rr(g, x - w / 2, y, w, 5.6, 1.2); ink(g, col, 1.3); g.fillStyle = '#fffaf0'; g.fillRect(x + w / 2 - 4, y + 1.3, 2.8, 3) } },   // 헌책 더미
@@ -1791,7 +1818,8 @@ const ICO = {
   yaha: 'usagi',
   ura: g => { starP(g, 0, 0, 11.5, 8.3, 10, 0); ink(g, '#fff', 1.5); g.fillStyle = '#e8473b'; rr(g, -1.6, -7, 3.2, 8.5, 1.6); g.fill(); el(g, 0, 4.8, 1.8); g.fill() },
   weed: sprout,
-  tears: g => { g.beginPath(); g.moveTo(0, -11); g.bezierCurveTo(4, -5, 8, -1, 8, 3.5); g.arc(0, 3.5, 8, 0, Math.PI); g.bezierCurveTo(-8, -1, -4, -5, 0, -11); ink(g, '#7cc6ff', 1.5); el(g, -3, 3, 1.6, 2.6, 0.3); g.fillStyle = '#fff'; g.fill() },
+  tears: g => { tearP(g); ink(g, '#7cc6ff', 1.5); el(g, -3, 3, 1.6, 2.6, 0.3); g.fillStyle = '#fff'; g.fill() },
+  rock: g => hand(g, 'rock'), scissors: g => hand(g, 'scissors'), paper: g => hand(g, 'paper'),
   guitar: g => {
     g.rotate(Math.PI / 5); rr(g, -1.6, -11.5, 3.2, 12, 1); ink(g, '#8a5a3a'); rr(g, -2.6, -13, 5.2, 3.4, 1); ink(g, '#5b3b28')
     both(g, '#f29b45', () => el(g, 0, 1.6, 5, 4.4), () => el(g, 0, 7, 6.6, 5))
@@ -2077,7 +2105,7 @@ function sprites() {
   SPR = { E: {}, sasu: {}, ground: groundTile() }
   for (const ch of CHARS) SPR[ch.id] = charSprites(ch.id)
   for (const id in FOES) if (id !== 'mermaid') SPR[id] = enemy(id)
-  SPR.mermaid = ['mermaid', 'mermaid1', 'mermaid2'].map(enemy); SPR.sirenAngry = enemy('sirenAngry'); SPR.dark = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('darkstar', K, p))
+  SPR.mermaid = ['mermaid', 'mermaid1', 'mermaid2'].map(enemy); SPR.sirenAngry = enemy('sirenAngry'); SPR.sirenStorm = enemy('sirenStorm'); SPR.dark = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('darkstar', K, p))
   SPR.pj = PJ.map((o, i) => [{ arm: 1, bob: -1.2 }, { arm: -1 }].map(p => artSprite('pj' + i, K, p)))   // 파자마 파티즈 — 춤 두 장
   const lp = [{ foot: 1 }, { foot: -1 }].map(p => artSprite('leafpair', K, p)); SPR.leaf = { R: lp, L: lp.map(flip) }
   SPR.pochette = sprite(24, 24, 12, 12, pochetteArt)
@@ -2698,7 +2726,13 @@ function newGame(ch) {
   cam.x = cam.y = 0; shake = 0; calm()
   say(tr`토벌 시작! ${FINAL_T / 60}분 뒤 세이렌이 온다`, 2.6)
 }
-function startGame(i) { if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
+function statsAsk(i) {   // 무한 모드는 통계를 켜야 한다(랭킹 기록 확인) — 「토벌 시작!」을 누를 때만 묻는다. 아니요 = 창만 닫고 그 화면 그대로
+  modal('nick', h('p', { class: 'h' }, tr`통계를 켤까요?`), h('p', { class: 'sub' }, tr`무한 모드는 게임을 고치고 랭킹을 확인하려고 통계(익명 플레이 통계 · 방문 통계)를 함께 보내요`),
+    h('p', { class: 'fine' }, tr`보내는 것: 캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 · 방문 통계(Google 애널리틱스) — 처음 화면에서 언제든 다시 끌 수 있어요`),
+    h('div', { class: 'row' }, btn(tr`아니요`, () => MODAL?.()), btn(tr`켜고 시작`, () => { MODAL?.(); save.noStats = false; persist(); startGame(i) }, 'main')))
+}
+function startGame(i) { if (DIFF[save.diff]?.inf && save.noStats && !auth) return statsAsk(i)   // 로그인 중이면 익명 통계를 늘 보내니 묻지 않는다
+  if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
   Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
@@ -2775,7 +2809,7 @@ const tip = (s, col = '#fff', T = 2.8) => { G.tip = { s, t: 0, T, col } }   // �
 /** 각성 스킬(SRC)이 날아오는 것 b 를 AW.p 확률로 막는다 — 탄 하나에 스킬마다 한 번만 굴린다. 막으면 true */
 function parry(b) {
   if (b.dead || !G.aw.has(SRC) || (b.tried ||= new Set()).has(SRC)) return false
-  b.tried.add(SRC); if (rnd() >= AW[SRC].p) return false
+  b.tried.add(SRC); if (rnd() >= AW[SRC].p * (G.inf && G.loop.lv ? INF.parry : 1)) return false   // 무한 1단계부터 절반
   b.dead = true; G.parried++; fx({ k: 'ring', x: b.x, y: b.y, R: 18, T: 0.3, col: '#ffd23f' })
   if (G.fx.length < 150 && rnd() < 0.35) fx({ k: 'text', x: b.x, y: b.y - 22, s: tr`막았다!`, col: '#ffd23f', T: 0.6 })
   return true
@@ -2922,7 +2956,7 @@ function infStep() {   // 무한 — 보스 무리(일정 시간마다) → 다 
   const n = Math.min(INF.kinds.length, L.lv + 1)
   if (L.queue.length && G.t >= L.next) {   // 강해진 보스 n 마리 — 서로 다른 종류
     const kinds = L.queue.splice(0, n)
-    kinds.forEach((k, i) => { const e = summon(k); e.max *= 1 + INF.hp * L.lv; e.hp = e.max; e.dmg *= 1 + INF.dmg * L.lv; e.spd *= 1 + INF.spd * L.lv; e.loop = L.lv; e.castT = G.t + 4 + i * 2.5; L.spawned.push(e) })
+    kinds.forEach((k, i) => { const e = summon(k); e.max *= (1 + INF.hp * L.lv) * (k === 'anoko' ? INF.anoko : 1); e.hp = e.max; e.dmg *= 1 + INF.dmg * L.lv; e.spd *= 1 + INF.spd * L.lv; e.loop = L.lv; e.castT = G.t + 4 + i * 2.5; L.spawned.push(e) })
     say(tr`무한 ${L.lv}단계 — 강해진 보스 ${kinds.length}마리!`, 2.4, '#ff8a5c'); L.next = G.t + INF.gap
   }
   if (!L.queue.length && L.spawned.every(e => e.dead)) sirens(Math.min(3, n))   // 이번 단계 보스를 다 쓰러뜨렸다 — 세이렌 n 명
@@ -2930,11 +2964,25 @@ function infStep() {   // 무한 — 보스 무리(일정 시간마다) → 다 
 function sirens(n) {   // 무한 — 세이렌 여럿(각각 인어 셋이 둘레를 돈다). 단계만큼 세다
   const L = G.loop, list = [], mermaids = []
   for (let k = 0; k < n; k++) {
-    const s = summon('siren'); s.sea = true; s.max *= 1 + INF.hp * L.lv; s.hp = s.max; s.dmg *= 1 + INF.dmg * L.lv; list.push(s)
+    const s = summon('siren'); s.sea = true; s.loop = L.lv; s.ph = 1; s.dmgK = 1; s.base = s.max * (1 + INF.hp * L.lv); s.max = s.base * SIREN_PH[0].hp; s.hp = s.max; s.dmg *= 1 + INF.dmg * L.lv; list.push(s)
     for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, m = spawn('mermaid', s.x + Math.cos(a) * 130, s.y + Math.sin(a) * 100); Object.assign(m, { v: i, sea: true, orb: a, patT: 2 + i, pat: 0, castT: Infinity, host: s }); mermaids.push(m) }
   }
   G.final = { siren: list[0], sirens: list, mermaids, at: G.t }; SND.play('siren')
-  say(tr`세이렌 ${n}명! ${INF.dark / 60}분 안에 못 쓰러뜨리면 검은 별똥별이 와요`, 3.2, '#ff7ad9'); shake = 10
+  say(tr`세이렌 ${n}명! ${INF.dark / 60}분 동안 페이즈를 못 넘기면 검은 별똥별이 와요`, 3.2, '#ff7ad9'); shake = 10
+}
+/** 무한 세이렌 — 쓰러지지 않고 다음 페이즈로: 2초 무적(방울 방패) · 화면 번쩍 · 날아오던 적 탄 지우기 · 오니기리 · 새 체력. 넘긴 페이즈도 잡은 보스로 센다(랭킹) */
+function phaseUp(e) {
+  const P = SIREN_PH[e.ph]; e.ph++; e.phT = G.t; e.shield = G.t + 2
+  Object.assign(e, { max: e.base * P.hp, dmgK: P.dmg, act: null, spray: null, st: 'walk', patT: 2.2, pat: 0 }); e.hp = e.max
+  if (e.ph === 2) { e.angry = true; for (const m of G.final.mermaids) if (m.host === e && !m.dead) kill(m, true) }   // 화난 세이렌 — 인어 없이
+  if (e.ph === 3) e.storm = true
+  for (const b of G.eshots) b.dead = true
+  item(e.x, e.y, 'onigiri'); G.bosses++; G.bossT = G.t; progress()
+  fx({ k: 'white', T: 0.3, a: 0.45 }); fx({ k: 'ring', x: e.x, y: e.y, R: 220, T: 0.5, col: P.col }); shake = Math.max(shake, 6); bubble(e, P.line, P.col); say(P.name, 2, P.col)
+}
+function progress() {   // 진행 시계 — 어느 세이렌이든 페이즈를 넘기면(쓰러뜨려도) 다시 3분, 와 있던 검은 별똥별은 물러난다
+  G.final.at = G.t
+  if (G.dark) { fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null }
 }
 function stageClear(e) {   // 무한 — 세이렌을 모두 쓰러뜨렸다 → 다음 단계(보스 무리부터)
   const L = G.loop
@@ -2954,7 +3002,7 @@ function finale() {
   }
   say(tr`최종보스 — 세이렌! 인어부터 쓰러뜨리자`, 3.2, '#ff7ad9'); shake = 10
 }
-const guarded = () => G.final?.mermaids.some(m => !m.dead)
+const guarded = s => G.final?.mermaids.some(m => !m.dead && (!s || !m.host || m.host === s))   // 그 세이렌의 인어가 살아 있나(무한 — 세이렌마다 따로)
 /** 화면 바로 바깥 — ahead 면 가는 쪽 앞에 */
 function ring(e, ahead = false) {
   const hw = VW / 2 + 40, hh = VH / 2 + 50
@@ -3002,6 +3050,57 @@ function event(m) {
     say(tr`고블린 돌격대!`, 1.2, '#ff6b6b')
   }
 }
+function bandNow(z) {   // 띠가 다 찼다 — 안에 있으면 맞는다(그림과 판정이 같다 — 납작하게 누르지 않음). 돌격대 줄은 돌격대를 내보낸다
+  const c = Math.cos(z.a), s = Math.sin(z.a)
+  if (z.lane) { for (let i = 0; i < z.lane; i++) { const e = spawn('rusher', z.x - c * i * 44, z.y - s * i * 44); e.rush = [c * 420, s * 420]; e.dmg = z.dmg } return }
+  const dx = pl.x - z.x, dy = pl.y - z.y, along = dx * c + dy * s, side = -dx * s + dy * c
+  if (along > -pl.r && along < z.L + pl.r && Math.abs(side) < z.W / 2 + pl.r * 0.5) ouch(z.dmg, z)
+  fx({ k: 'beam', x: z.x, y: z.y, a: z.a, L: z.L, W: z.W, T: 0.25, cols: [[z.col, 1, 0.6], ['#fff', 0.7, 0.85]] })
+  const ex = z.x + c * z.L, ey = z.y + s * z.L
+  for (let i = 0; i < 4; i++) { const a = rnd() * TAU; part(ex, ey, Math.cos(a) * 160, Math.sin(a) * 90 - 80, i % 2 ? z.col : '#fff', 0.35, 2.6) }
+  shake = Math.max(shake, 4)
+}
+/** 음표 울타리 — 초록 빈틈 호(음표와 함께 좁혀진다, 깜빡이지 않게) · 처음 0.9초는 빨간 점선 고리(빈틈은 끊는다) + 나 → 빈틈 화살표 셋 */
+function fenceDraw(c, z) {
+  const r = z.t < 0.9 ? 260 : Math.max(0, 260 - 150 * (z.t - 0.9)), h = TAU / 10
+  c.beginPath(); c.arc(z.x, z.y, r + 18, z.a - h, z.a + h); c.arc(z.x, z.y, Math.max(0, r - 18), z.a + h, z.a - h, true); c.closePath(); c.fillStyle = 'rgba(120,230,120,.55)'; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke()
+  if (z.t >= 0.9) return
+  c.globalAlpha = 0.6; c.strokeStyle = '#ff2e2e'; c.lineWidth = 2.5; c.setLineDash([10, 7]); c.beginPath(); c.arc(z.x, z.y, 260, z.a + h, z.a - h + TAU); c.stroke(); c.setLineDash([]); c.globalAlpha = 1
+  const q = Math.atan2(z.y + Math.sin(z.a) * 260 - pl.y, z.x + Math.cos(z.a) * 260 - pl.x)
+  c.font = `22px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 4; c.strokeStyle = '#fff'; c.fillStyle = '#3fae5a'
+  for (const d of [120, 170, 220]) { c.save(); c.translate(pl.x + Math.cos(q) * d, pl.y + Math.sin(q) * d); c.rotate(q); c.strokeText('›', 0, 0); c.fillText('›', 0, 0); c.restore() }
+  c.textBaseline = 'alphabetic'
+}
+/** 큰 파도 — top 이 아니면 바닥(예고: 출발 끝 파란 빛 · 화살표, 처음부터 끝까지 초록 빈 줄), top 이면 몸 위 물결 띠(뒤는 파란 그라데이션 · 앞머리 흰 거품 · 빈틈 끝은 둥근 거품)
+ *  세로로 가는 파도는 x · y 를 바꿔 같은 그림으로(c.transform(0, 1, 1, 0)) — 좌표는 (가는 방향, 가로지르는 방향) */
+function tideDraw(c, z, top) {
+  c.save(); if (!z.horiz) c.transform(0, 1, 1, 0, 0, 0)
+  const lo = z.c0 - z.half, hi = z.c0 + z.half
+  if (!top) {
+    c.fillStyle = 'rgba(120,230,120,.55)'; c.fillRect(z.from - 3e4, z.gap - 70, 6e4, 140)   // 빈틈 — 맞는 판정과 똑같이 ±70
+    if (z.t < 1.2) {
+      const e0 = z.from + z.dir * 40, g = c.createLinearGradient(e0, 0, e0 + z.dir * 120, 0); g.addColorStop(0, 'rgba(79,160,255,.7)'); g.addColorStop(1, 'rgba(79,160,255,0)')
+      c.globalAlpha = 0.5 + 0.3 * Math.sin(G.t * 14); c.fillStyle = g; c.fillRect(Math.min(e0, e0 + z.dir * 120), lo, 120, hi - lo); c.globalAlpha = 1
+    }
+    c.restore()
+    if (z.t < 1.2) txt(c, z.horiz ? (z.dir > 0 ? '→→→' : '←←←') : (z.dir > 0 ? '↓ ↓ ↓' : '↑ ↑ ↑'), cam.x, cam.y - 80, 34, '#2f7fe0')
+    return
+  }
+  const p = z.from + z.dir * 240 * (z.t - 1.2), back = p - z.dir * 80, g = c.createLinearGradient(back, 0, p, 0); g.addColorStop(0, '#2f6fd0'); g.addColorStop(1, '#4fa0ff')
+  for (const [a, b] of [[lo, z.gap - 70], [z.gap + 70, hi]]) {
+    if (b <= a) continue
+    c.globalAlpha = 0.85; c.fillStyle = g; c.fillRect(Math.min(back, p), a, 80, b - a); c.globalAlpha = 1
+    c.fillStyle = '#fff'; c.fillRect(Math.min(p, p - z.dir * 12), a, 12, b - a)   // 앞머리 흰 거품
+    c.beginPath(); for (let y = a + ((G.t * 30) % 24); y < b; y += 24) { c.moveTo(p, y); c.arc(p, y, 10, -Math.PI / 2, Math.PI / 2, z.dir < 0) } c.fill()   // 반원 물결 — 옆으로 흐른다
+  }
+  for (const y of [z.gap - 78, z.gap + 70]) if (y > lo && y < hi) c.fillRect(Math.min(back, p), y, 80, 8)   // 빈틈 가장자리 — 물 쪽으로 흰 거품 줄(빈틈 안으로 들어오지 않게)
+  c.restore()
+}
+/** 바닥에 손 하나 — 동그라미(반지름 R, 0.8 납작은 RX 가 있을 때만) 안에 손 그림 */
+function handAt(c, x, y, kind, R, line, fill, RX) {
+  c.fillStyle = fill; c.strokeStyle = line; c.lineWidth = 3; if (RX) oval(c, x, y, RX, RX * 0.8); else oval(c, x, y, R, R); c.fill(); c.stroke()
+  c.save(); c.translate(x, y); c.scale(R / 17, R / 17); hand(c, kind); c.restore()
+}
 function rushNow(z) {
   const H = z.horiz, from = H ? cam.x - z.dir * (VW / 2 + 30) : cam.y - z.dir * (VH / 2 + 30), c = H ? cam.y : cam.x, half = (H ? VH : VW) / 2 + 20
   for (let q = c - half; q <= c + half; q += 36) {
@@ -3040,16 +3139,24 @@ function foes(dt) {
   }
 }
 // 돌진 — 걷다가 멈칫(붉게) 하고 그 방향으로
+//   무한(e.loop — 무한 단계에 나온 보스) 데카츠요: 돌진이 끝나면 0.5초 쉬고 한 번 더(rest), 그다음은 충격파 — [돌진 2연속 → 충격파] 반복
 function charge(e, dt, dx, dy) {
   e.stT -= dt
-  if (e.st === 'walk') { e.vx = dx * e.spd; e.vy = dy * e.spd; if (e.stT <= 0) { e.st = 'wind'; e.stT = 0.7; e.dx = dx; e.dy = dy } }
+  const deka = e.kind === 'dekatsuyo' && e.loop
+  if (e.st === 'walk') { e.vx = dx * e.spd; e.vy = dy * e.spd; if (e.stT <= 0) {
+    if (deka && e.pat++ % 2) { e.stT = 2.6 + rnd() * 1.4; e.act = { k: 'quake', t: 0.4 }; bubble(e, tr`쿵! 쿵!`, '#ff6b6b'); return }
+    e.st = 'wind'; e.stT = 0.7; e.dx = dx; e.dy = dy } }
   else if (e.st === 'wind') { e.vx = e.vy = 0; e.flash = 0.05 * ((G.t * 12 | 0) % 2); if (e.stT <= 0) { e.st = 'dash'; e.stT = 0.75 } }
-  else { e.vx = e.dx * e.spd * 4; e.vy = e.dy * e.spd * 4; if (e.stT <= 0) { e.st = 'walk'; e.stT = 2.6 + rnd() * 1.4 } }
+  else if (e.st === 'rest') { e.vx = e.vy = 0; if (e.stT <= 0) { e.st = 'wind'; e.stT = 0.7; e.dx = dx; e.dy = dy } }
+  else { e.vx = e.dx * e.spd * 4; e.vy = e.dy * e.spd * 4; if (e.stT <= 0) { if (deka && !e.again) { e.again = true; e.st = 'rest'; e.stT = 0.5 } else { e.again = false; e.st = 'walk'; e.stT = 2.6 + rnd() * 1.4 } } }
 }
 // 보스 — 종류마다 다른 기술. 기술 전에는 멈춰 깜빡인다(act) — 보고 피할 수 있게
 function bossAI(e, dt, dx, dy, d) {
   if (e.leap) return leapStep(e, dt)
-  if (e.kind === 'siren' && !e.angry && e.hp < e.max / 2) { e.angry = true; bubble(e, tr`…용서 못 해!`, '#ff4d4d'); say(tr`세이렌이 화났다! 눈이 붉어졌다`, 2, '#ff4d4d') }
+  if (e.shield && G.t >= e.shield) { e.shield = 0; fx({ k: 'ring', x: e.x, y: e.y - e.r * 1.1, R: e.r + 40, T: 0.4, col: '#fff' }) }
+  if (e.storm && !LQ && (e.boltT = (e.boltT ?? 0.8) - dt) <= 0) { e.boltT = 0.8; const x = e.x + (rnd() - 0.5) * 120, y = e.y - e.r + (rnd() - 0.5) * 120; fx({ k: 'bolt', x, y, pts: zig(x + (rnd() - 0.5) * 30, y - 70, x, y), T: 0.25 }) }   // 폭풍 — 둘레 짧은 번개(보이기만)
+  if (e.kind === 'siren' && !e.ph && !e.angry && e.hp < e.max / 2) { e.angry = true; bubble(e, tr`…용서 못 해!`, '#ff4d4d'); say(tr`세이렌이 화났다! 눈이 붉어졌다`, 2, '#ff4d4d') }
+  if (e.spray) spray(e, dt)
   if (e.act) { e.vx = e.vy = 0; e.flash = 0.05 * ((G.t * 12 | 0) % 2); if ((e.act.t -= dt) <= 0) { const a = e.act; e.act = null; ACT[a.k](e, a) } return }
   const B = BOSS[e.kind]
   if (!e.rage && e.kind !== 'mermaid' && e.kind !== 'siren' && e.age > RAGE_T) { e.rage = true; e.spd *= 1.5; bubble(e, tr`화났다!`, '#ff4d4d'); say(tr`${B.name}이(가) 화났다! 빨라지고 더 자주 공격해요`, 2.2, '#ff4d4d') }   // 피해 다니기만 하면 화낸다
@@ -3074,37 +3181,94 @@ function bossAI(e, dt, dx, dy, d) {
   }
   if ((e.patT -= dt) > 0) return
   switch (e.kind) {
-    case 'goblinKing':
-      if (!e.mid && e.pat++ % 3 === 2) { e.patT = 2.6; e.act = { k: 'squad', t: 0.6 }; bubble(e, tr`모여라!`, '#fff') }
+    case 'goblinKing': {
+      const p = e.mid ? 0 : e.pat++ % (e.loop ? 4 : 3)
+      if (p === 2) { e.patT = 2.6; e.act = { k: 'squad', t: 0.6 }; bubble(e, tr`모여라!`, '#fff') }
+      else if (p === 3) { e.patT = 2.6; e.act = { k: 'lane', t: 0.6 }; bubble(e, tr`돌격대 출동!`, '#ff8a2b') }   // 무한 — 새 기술
       else { e.patT = e.mid ? 3.2 : 2.3; e.act = { k: 'volley', n: e.mid ? 3 : 5, t: 0.45, shot: 'rock' } }
       break
-    case 'bigChimera': e.patT = e.mid ? 5.5 : 4; leap(e); break
+    }
+    case 'bigChimera': e.patT = e.mid ? 5.5 : 4; if (e.loop && e.pat++ % 2) { e.act = { k: 'tears', t: 0.3 }; bubble(e, tr`흐에엥…`, '#4a86e8') } else leap(e); break   // 무한 — [점프 2연속 ↔ 눈물]
     case 'mermaid': e.patT = 3 + rnd() * 1.5; Object.assign(e, { st: 'wind', stT: 0.55, dx, dy }); break   // 날카로운 이빨로 달려들어 문다(charge)
-    case 'anoko': e.patT = 2.4; [() => Object.assign(e, { st: 'wind', stT: 0.7, dx, dy }), () => { e.act = { k: 'sweep', t: 0.5 }; bubble(e, tr`꼬리!`, '#4f9a8c') }, () => { e.act = { k: 'volley', n: 5, t: 0.45, shot: 'claw' } }][e.pat++ % 3](); break
-    case 'rps': e.patT = 2.4; [() => { e.act = { k: 'slamAt', t: 0.4 }; bubble(e, tr`바위!`, '#fff') }, () => { Object.assign(e, { st: 'wind', stT: 0.6, dx, dy }); bubble(e, tr`가위!`, '#fff') }, () => { e.act = { k: 'papers', t: 0.4 }; bubble(e, tr`보!`, '#fff') }][e.pat++ % 3](); break
-    case 'chef': e.patT = 2.6; [() => { e.act = { k: 'pepper', t: 0.4 }; bubble(e, tr`후추 톡톡!`, '#fff') }, () => { e.act = { k: 'wrap', t: 0.4 }; bubble(e, tr`돌돌 말아서…`, '#fff') }, () => Object.assign(e, { st: 'wind', stT: 0.7, dx, dy })][e.pat++ % 3](); break
-    case 'siren': e.patT = e.angry ? 2 : 2.6; [() => { e.act = { k: 'notes', t: 0.5 } }, () => { e.act = { k: 'vines', t: 0.3 }; bubble(e, tr`덩굴아!`, '#58b947') }, () => { e.act = { k: 'slam', t: 0.35 }; bubble(e, tr`꼬리치기!`, '#ff8a8a') }][e.pat++ % 3](); break
+    case 'anoko': e.patT = 2.4; [() => Object.assign(e, { st: 'wind', stT: 0.7, dx, dy }), () => { e.act = { k: 'sweep', t: 0.5 }; bubble(e, tr`꼬리!`, '#4f9a8c') }, () => { e.act = { k: 'volley', n: 5, t: 0.45, shot: 'claw' } },
+      () => { e.act = { k: 'trident', t: 0.3 }; bubble(e, tr`세 갈래!`, '#4f9a8c') }][e.pat++ % (e.loop ? 4 : 3)](); break
+    case 'rps': e.patT = 2.4; [() => { e.act = { k: 'slamAt', t: 0.4 }; bubble(e, tr`바위!`, '#fff') }, () => { Object.assign(e, { st: 'wind', stT: 0.6, dx, dy }); bubble(e, tr`가위!`, '#fff') }, () => { e.act = { k: 'papers', t: 0.4 }; bubble(e, tr`보!`, '#fff') },
+      () => { e.act = { k: 'duel', t: 0.3 }; bubble(e, tr`가위바위보!`, '#fff') }][e.pat++ % (e.loop ? 4 : 3)](); break
+    case 'chef': e.patT = 2.6; [() => { e.act = { k: 'pepper', t: 0.4 }; bubble(e, tr`후추 톡톡!`, '#fff') }, () => { e.act = { k: 'wrap', t: 0.4 }; bubble(e, tr`돌돌 말아서…`, '#fff') }, () => Object.assign(e, { st: 'wind', stT: 0.7, dx, dy }),
+      () => { e.patT = 4; e.act = { k: 'sauce', t: 0.9, dir: rnd() < 0.5 ? 1 : -1 }; bubble(e, tr`소스 듬뿍!`, '#ff6b3d') }][e.pat++ % (e.loop ? 4 : 3)](); break
+    case 'siren': {   // 무한 세이렌(ph) — 1 [음표 · 덩굴 · 꼬리치기] → 2 + 음표 울타리 → 3 + 큰 파도(간격 1.8초)
+      const ph = e.ph || 1; e.patT = ph >= 3 ? 1.8 : e.angry ? 2 : 2.6
+      let k = e.pat++ % (ph + 2)
+      if (k >= 3 && (sick('charm') || G.t < (G.final?.bigT || 0))) k = 0   // 울타리 · 파도는 세이렌 전체에서 한 번에 하나(8초) · 매혹 중엔 안 쓴다(끌려가는 중엔 빈틈으로 못 간다)
+      if (k >= 3) G.final.bigT = G.t + 8
+      ;[() => { e.act = { k: 'notes', t: 0.5 } }, () => { e.act = { k: 'vines', t: 0.3 }; bubble(e, tr`덩굴아!`, '#58b947') }, () => { e.act = { k: 'slam', t: 0.35 }; bubble(e, tr`꼬리치기!`, '#ff8a8a') },
+        () => { e.act = { k: 'fence', t: 0.3 }; bubble(e, tr`도망칠 수 없어~♪`, SIREN_PH[1].col) }, () => { e.act = { k: 'tide', t: 0.3 }; bubble(e, tr`파도야!`, SIREN_PH[2].col) }][k]()
+      break
+    }
   }
   if (e.rage) e.patT *= 0.6
 }
 const ACT = {
   volley(e, a) {   // 부채꼴로 던진다
-    const q0 = Math.atan2(pl.y - e.y, pl.x - e.x), v = e.mid ? 230 : 265
+    const q0 = a.q0 ?? Math.atan2(pl.y - e.y, pl.x - e.x), v = e.mid ? 230 : 265
     for (let i = 0; i < a.n; i++) { const q = q0 + (i - (a.n - 1) / 2) * 0.17; G.eshots.push({ k: a.shot, x: e.x, y: e.y, vx: Math.cos(q) * v, vy: Math.sin(q) * v, t: 0, life: 3.2, dmg: pct(e.mid || e.kind === 'mermaid' ? 0.07 : 0.09), r: 8 }) }
+    if (e.loop && e.kind === 'goblinKing' && a.q0 == null) e.act = { k: 'volley', n: a.n - 1, t: 0.3, shot: a.shot, q0 }   // 무한 — 0.3초 뒤 사이사이 한 겹 더
   },
-  notes(e) {   // 음표를 사방으로 — 매번 반 칸씩 돌려서
-    const n = 16, o = (e.pat % 2) * Math.PI / n
-    for (let i = 0; i < n; i++) { const q = o + i / n * TAU; G.eshots.push({ k: 'note', x: e.x, y: e.y, vx: Math.cos(q) * 170, vy: Math.sin(q) * 170, t: 0, life: 3.4, dmg: pct(0.06), r: 7 }) }
+  notes(e, a) {   // 음표를 사방으로 — 매번 반 칸씩 돌려서(무한 2페이즈부터 0.4초 뒤 반 칸 돌려 한 겹 더)
+    const n = 16, o = ((e.pat + (a.second ? 1 : 0)) % 2) * Math.PI / n
+    for (let i = 0; i < n; i++) { const q = o + i / n * TAU; G.eshots.push({ k: 'note', x: e.x, y: e.y, vx: Math.cos(q) * 170, vy: Math.sin(q) * 170, t: 0, life: 3.4, dmg: pct(0.06) * (e.dmgK || 1), r: 7 }) }
+    if (e.ph >= 2 && !a.second) e.act = { k: 'notes', t: 0.4, second: true }
   },
-  squad() { for (let i = 0; i < 8; i++) { const q = i / 8 * TAU; spawn('goblin', pl.x + Math.cos(q) * 230, pl.y + Math.sin(q) * 230) } },   // 부하를 불러 나를 에워싼다
-  slamAt() { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 95, t: 0, T: 0.9, dmg: pct(0.18), col: '#8a8f99' }) },   // 쇠공 팔로 내 자리를 내려찍는다
-  papers(e) { const n = 12, o = (e.pat % 2) * Math.PI / n; for (let i = 0; i < n; i++) { const q = o + i / n * TAU; G.eshots.push({ k: 'paper', x: e.x, y: e.y, vx: Math.cos(q) * 180, vy: Math.sin(q) * 180, t: 0, life: 3.2, dmg: pct(0.06), r: 7 }) } },
-  pepper() { for (let i = 0; i < 9; i++) { const a = rnd() * TAU, d = i ? 40 + rnd() * 160 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 38, t: -i * 0.07, T: 1, dmg: pct(0.08), col: '#5b4a42' }) } },
-  wrap() { G.haz.push({ k: 'bomb', x: pl.x, y: pl.y, R: 115, t: 0, T: 1.25, dmg: pct(0.2), col: '#e9b949' }) },   // 토르티야로 돌돌 — 밖으로 피하기
-  sweep(e) { G.haz.push({ k: 'bomb', x: e.x, y: e.y, R: 150, t: 0, T: 1, dmg: pct(0.18), col: '#4f9a8c' }) },   // 용 꼬리로 둘레를 휩쓴다 — 멀리 벗어나기
-  vines() { for (let i = 0; i < 7; i++) { const a = rnd() * TAU, d = i ? 50 + rnd() * 180 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 55, t: -i * 0.12, T: 1.15, dmg: pct(0.12), col: '#58b947' }) } },   // 노래로 땅에서 덩굴을 솟게 한다
-  slam() { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 100, t: 0, T: 1, dmg: pct(0.2), col: '#ff4d4d' }) },   // 큰 꼬리로 내려친다
+  squad(e) { const n = e.loop ? 12 : 8; for (let i = 0; i < n; i++) { const q = i / n * TAU; spawn('goblin', pl.x + Math.cos(q) * 230, pl.y + Math.sin(q) * 230) } },   // 부하를 불러 나를 에워싼다(무한 12)
+  slamAt(e, a) { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 95, t: 0, T: 0.9, dmg: pct(0.18), col: '#8a8f99' }); if (e.loop && (a.n ?? 3) > 1) e.act = { k: 'slamAt', t: 0.35, n: (a.n ?? 3) - 1 } },   // 쇠공 팔로 내 자리를 내려찍는다(무한 3연속)
+  papers(e, a) { const n = 12, o = ((e.pat + (a.second ? 1 : 0)) % 2) * Math.PI / n; for (let i = 0; i < n; i++) { const q = o + i / n * TAU; G.eshots.push({ k: 'paper', x: e.x, y: e.y, vx: Math.cos(q) * 180, vy: Math.sin(q) * 180, t: 0, life: 3.2, dmg: pct(0.06), r: 7 }) }
+    if (e.loop && !a.second) e.act = { k: 'papers', t: 0.35, second: true } },   // 무한 — 0.35초 뒤 반 칸 돌려 한 겹 더
+  pepper(e) { for (let i = 0, n = e.loop ? 14 : 9; i < n; i++) { const a = rnd() * TAU, d = i ? 40 + rnd() * 160 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 38, t: -i * 0.07, T: 1, dmg: pct(0.08), col: '#5b4a42' }) } },
+  wrap(e) { G.haz.push({ k: 'bomb', x: pl.x, y: pl.y, R: e.loop ? 140 : 115, t: 0, T: 1.25, dmg: pct(0.2), col: '#e9b949' }) },   // 토르티야로 돌돌 — 밖으로 피하기
+  sweep(e) { G.haz.push({ k: 'bomb', x: e.x, y: e.y, R: 150, t: 0, T: 1, dmg: pct(0.18), col: '#4f9a8c' }); if (e.loop) e.act = { k: 'lunge', t: 1 } },   // 용 꼬리로 둘레를 휩쓴다 — 멀리 벗어나기(무한 — 터지면 바로 돌진)
+  lunge(e) { const dx = pl.x - e.x, dy = pl.y - e.y, d = Math.hypot(dx, dy) || 1; Object.assign(e, { st: 'wind', stT: 0.7, dx: dx / d, dy: dy / d }) },
+  hold() {},   // 제자리에서 기다리기(띠가 터질 때까지)
+  tears(e) {   // 거대 키메라 「눈물 웅덩이」 — 내 둘레 파란 원 다섯(하나는 내 자리) → 눈물이 떨어지고 그 자리에 4초 웅덩이(밟으면 느려진다)
+    for (let i = 0; i < 5; i++) { const a = rnd() * TAU, d = i ? 70 + rnd() * 150 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 55, t: 0, T: 0.9, dmg: pct(0.06), col: '#4a86e8', tear: true, kind: e.kind }) }
+  },
+  duel(e) {   // 가위바위보 「가위바위보 승부!」 — 보스 손을 이기는 손 원에 2초 안에 들어가기. 그 원만 안전, 둘레 320 은 쾅. 원 셋은 똑같이(정답을 미리 티 내지 않게), 땅에 고정
+    const H = ['rock', 'scissors', 'paper'], hand = H[rnd() * 3 | 0], win = { rock: 'paper', scissors: 'rock', paper: 'scissors' }[hand], o = rnd() * TAU, order = [...H].sort(() => rnd() - 0.5)
+    G.haz.push({ k: 'duel', x: pl.x, y: pl.y, R: 320, t: 0, T: 2, dmg: pct(0.25), col: '#ff4d4d', hand, win, kind: e.kind, opts: order.map((k, i) => ({ hand: k, x: pl.x + Math.cos(o + i * TAU / 3) * 150, y: pl.y + Math.sin(o + i * TAU / 3) * 150 * 0.8 })) })
+    fx({ k: 'hand', e, hand, T: 2 }); e.act = { k: 'hold', t: 2 }
+  },
+  sauce(e, a) { e.spray = { t: 0, acc: 0, a: Math.atan2(pl.y - e.y, pl.x - e.x), dir: a.dir }; e.act = { k: 'hold', t: 2.4 } },   // 요리사 괴물 「빙글빙글 소스」 — 0.9초 국자를 돌린 뒤 2.4초
+  // ---- 무한 새 기술 — 띠(band): 몸에서 뻗는 긴 띠가 차오른 뒤 쾅. 겨눈 뒤로는 따라오지 않는다
+  trident(e) {   // 아노코 「세 갈래 꼬리」 — 나를 겨눈 청록 띠 셋(가운데 · 좌우 25°)
+    const q = Math.atan2(pl.y - e.y, pl.x - e.x)
+    for (const o of [-25, 0, 25]) G.haz.push({ k: 'band', x: e.x, y: e.y, a: q + o * Math.PI / 180, L: 450, W: 70, t: 0, T: 1, dmg: pct(0.22), col: '#4f9a8c', kind: e.kind })
+    e.act = { k: 'hold', t: 1 }
+  },
+  quake(e) {   // 데카츠요 「쿵쿵 충격파」 — 제자리에서 세 번, 몸에서 붉은 띠 넷(+ → × → +), 사이 0.5초
+    for (let k = 0; k < 3; k++) for (let j = 0; j < 4; j++) G.haz.push({ k: 'band', x: e.x, y: e.y, a: (k % 2) * Math.PI / 4 + j * Math.PI / 2, L: 500, W: 60, t: -k * 1.4, T: 0.9, dmg: pct(0.18), col: '#ff3c3c', kind: e.kind })
+    e.act = { k: 'hold', t: 2 * 1.4 + 0.9 }
+  },
+  lane() {   // 고블린 대장 「돌격대 출동!」 — 화면 끝에서 나를 지나는 주황 줄 → 1초 뒤 돌격대 6마리가 그 줄로 달려 지나간다
+    const a = rnd() * TAU, c = Math.cos(a), s = Math.sin(a), d = Math.min(VW / 2 / Math.max(0.01, Math.abs(c)), VH / 2 / Math.max(0.01, Math.abs(s))) + 40
+    G.haz.push({ k: 'band', x: pl.x - c * d, y: pl.y - s * d, a, L: d * 2, W: 80, t: 0, T: 1, dmg: pct(0.14), col: '#ff8a2b', lane: 6 })
+  },
+  vines(e) { for (let i = 0, n = e.ph >= 2 ? 10 : 7; i < n; i++) { const a = rnd() * TAU, d = i ? 50 + rnd() * 180 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 55, t: -i * 0.12, T: 1.15, dmg: pct(0.12) * (e.dmgK || 1), col: '#58b947' }) } },   // 노래로 땅에서 덩굴을 솟게 한다(무한 2페이즈부터 10)
+  slam(e) { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 100, t: 0, T: 1, dmg: pct(0.2) * (e.dmgK || 1), col: '#ff4d4d' }) },   // 큰 꼬리로 내려친다
+  fence(e) {   // 세이렌 「음표 울타리」 — 내 둘레 260 원 위 20칸에 음표(한 군데 4칸은 비움 — 초록 빈틈), 0.9초 멈췄다가 안쪽으로 모인다(150)
+    const cx = pl.x, cy = pl.y, g0 = rnd() * 20 | 0, dmg = pct(0.08) * (e.dmgK || 1)
+    for (let i = 0; i < 20; i++) { if ((i - g0 + 20) % 20 < 4) continue; const q = i / 20 * TAU; G.eshots.push({ k: 'note', x: cx + Math.cos(q) * 260, y: cy + Math.sin(q) * 260, vx: -Math.cos(q) * 150, vy: -Math.sin(q) * 150, wait: 0.9, t: 0, life: 0.9 + 260 / 150, dmg, r: 7 }) }
+    G.haz.push({ k: 'fence', x: cx, y: cy, a: (g0 + 1.5) / 20 * TAU, t: 0, T: 0.9 + 260 / 150 })
+  },
+  tide(e) {   // 세이렌 「큰 파도」 — 화면 한쪽 끝이 1.2초 파랗게 빛난 뒤 화면 폭 물결 띠(두께 80)가 반대쪽으로(240). 초록 빈틈(폭 140)에 서면 안 맞는다
+    const horiz = rnd() < 0.5, dir = rnd() < 0.5 ? 1 : -1, span = horiz ? VW : VH, cross = horiz ? VH : VW
+    G.haz.push({ k: 'tide', kind: 'siren', horiz, dir, t: 0, T: 1.2 + (span + 160) / 240, from: (horiz ? cam.x : cam.y) - dir * (span / 2 + 40), c0: horiz ? cam.y : cam.x, half: cross / 2 + 60,
+      gap: (horiz ? pl.y : pl.x) + (rnd() - 0.5) * cross * 0.5, dmg: pct(0.25) * (e.dmgK || 1) })
+  },
   wave(e, a) { fx({ k: 'wave', x: e.x, y: e.y, R: 360, T: 0.8, st: a.id, col: STATUS[a.id].col }) },
+}
+function spray(e, dt) {   // 빙글빙글 소스 — 두 갈래 소용돌이(갈래마다 1초에 10발, 속도 140)
+  const s = e.spray; s.t += dt; s.acc += dt * 10
+  while (s.acc >= 1) { s.acc--; const q = s.a + s.dir * s.t * 2.4; for (const o of [0, Math.PI]) G.eshots.push({ k: 'sauce', x: e.x, y: e.y, vx: Math.cos(q + o) * 140, vy: Math.sin(q + o) * 140, t: 0, life: 3.6, dmg: pct(0.06), r: 7 }) }
+  if (s.t >= 2.4) e.spray = null
 }
 /** 거대 키메라 — 내 자리(움직이면 조금 앞)에 뛰어내린다. 바닥의 붉은 원이 다 차면 쿵 */
 function leap(e) {
@@ -3115,7 +3279,7 @@ function leap(e) {
 function leapStep(e, dt) {
   const L = e.leap, u = Math.min(1, (L.t += dt) / L.T)
   e.vx = e.vy = 0; e.x = L.x0 + (L.x1 - L.x0) * u; e.y = L.y0 + (L.y1 - L.y0) * u; e.z = Math.sin(u * Math.PI) * 140
-  if (u >= 1) { e.leap = null; e.z = 0 }
+  if (u >= 1) { e.leap = null; e.z = 0; if (e.loop && !e.again) { e.again = true; leap(e) } else e.again = false }   // 무한 — 내려앉자마자 한 번 더
 }
 const sick = id => G.sts[id] > G.t
 function afflict(id) {
@@ -3125,10 +3289,10 @@ function afflict(id) {
 /** sea — 인어 · 세이렌에게 곱하는 배수(극매운 카레) */
 function hurt(e, dmg, ox, oy, kb = 0, sea = 1) {
   SND.hit()
-  if (e.dead || e.rush) return   // 돌격대는 스킬에 안 맞는다 — 피하는 수밖에
+  if (e.dead || e.rush || e.shield > G.t) return   // 돌격대는 스킬에 안 맞는다 — 피하는 수밖에. 페이즈가 바뀌는 세이렌은 2초 무적(숫자도 안 띄운다)
   if (e.type === 'star' && rnd() < 0.05 && G.fx.length < 150) fx({ k: 'text', x: e.x, y: e.y - 26, s: tr`흐아아악!`, col: '#ffe066', T: 0.6 })
   const crit = rnd() < S.crit
-  dmg *= (sick('weak') ? 0.6 : 1) * (e.boss || e.elite ? S.bossX : 1) * (e.sea ? sea : 1) * (e.kind === 'siren' && guarded() ? 0.5 : 1)
+  dmg *= (sick('weak') ? 0.6 : 1) * (e.boss || e.elite ? S.bossX : 1) * (e.sea ? sea : 1) * (e.kind === 'siren' && guarded(e) ? 0.5 : 1)
   dmg = Math.max(1, Math.round(dmg * (crit ? S.critX : 1) * (0.9 + rnd() * 0.2)))
   if (SRC) G.dmg[SRC] = (G.dmg[SRC] || 0) + Math.min(dmg, e.hp)
   e.hp -= dmg; e.flash = 0.1
@@ -3137,6 +3301,7 @@ function hurt(e, dmg, ox, oy, kb = 0, sea = 1) {
   if (e.hp <= 0) kill(e)
 }
 function kill(e, quiet = false) {
+  if (!quiet && e.ph) { if (e.shield > G.t) return; if (e.ph < 3) return phaseUp(e) }   // 무한 세이렌 — 마지막 페이즈까지
   e.dead = true
   if (!quiet) { G.kills++; gem(e.x, e.y, e.xp); SND.kill(); if (e.type === 'goblin' || e.type === 'rusher' || e.type === 'golden') G.gob++ }
   const col = FOES[e.type].col
@@ -3154,7 +3319,7 @@ function kill(e, quiet = false) {
   if (e.kind === 'mermaid') say(guarded() ? tr`인어 격파!` : tr`세이렌의 보호막이 사라졌다!`, 2, '#7fd8ff')
   else if (e.kind === 'siren' && G.inf) {   // 무한 — 세이렌을 다 쓰러뜨려야 다음 단계(판은 이어진다)
     G.bosses++; G.loop.sirens++; const rest = (G.final?.sirens || []).filter(s => !s.dead)
-    if (rest.length) { G.final.siren = rest[0]; say(tr`세이렌 격파! 남은 세이렌 ${rest.length}`, 2, '#ff9be0') }
+    if (rest.length) { G.final.siren = rest[0]; progress(); say(tr`세이렌 격파! 남은 세이렌 ${rest.length}`, 2, '#ff9be0') }
     else { if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; stageClear(e) }
   } else if (e.kind === 'siren') {   // 클리어 — 남은 적은 모두 도망친다
     G.bosses++; G.won = 2.8; G.endKind = 'siren'; const v = e.angry ? SPR.sirenAngry : SPR[e.type]; fx({ k: 'bye', s: (e.fx < 0 ? v.L : v.R)[0], x: e.x, y: e.y, T: 1.6 }); if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; say(tr`세이렌 격파! 토벌 성공!`, 3, '#ffd23f')
@@ -3256,10 +3421,10 @@ function helpers(dt) {
 // ---- 검은 별똥별 — 29분까지 세이렌을 못 쓰러뜨리면 나타나 끝까지 쫓아온다. G.foes 밖이라 스킬 · 폭죽에 안 맞는다(쓰러뜨릴 수 없다)
 function darkStep(dt) {
   if (!G.dark) {
-    if (G.inf ? !(G.final && G.t - G.final.at >= INF.dark) : G.t < DARK_T) return   // 무한 — 세이렌 단계 4분이 지나면(쓰러뜨릴 때까지)
+    if (G.inf ? !(G.final && G.t - G.final.at >= INF.dark) : G.t < DARK_T) return   // 무한 — 세이렌이 나온 뒤 · 페이즈를 넘긴 뒤 3분 동안 못 넘기면(progress)
     const a = rnd() * TAU, R = Math.max(VW, VH) * 0.6
     G.dark = { x: pl.x + Math.cos(a) * R, y: pl.y + Math.sin(a) * R, t: 0, cd: 3 }
-    say(G.inf ? tr`검은 별똥별! 세이렌을 쓰러뜨릴 때까지 쫓아와요` : tr`검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 도망쳐!`, 3.2, '#c9b3ff'); shake = 10; SND.dark()
+    say(G.inf ? tr`검은 별똥별! 세이렌 페이즈를 넘기면 물러나요` : tr`검은 별똥별! 쓰러뜨릴 수 없어요 — 30:00까지 도망쳐!`, 3.2, '#c9b3ff'); shake = 10; SND.dark()
     return
   }
   const D = G.dark, [dx, dy] = toward(pl, D.x, D.y), sp = 118 + D.t * 0.6   // 점점 빨라진다(30분엔 거의 내 속도) — 무한도 끝없이(못 잡으면 결국 따라잡힌다 · 판이 끝나는 자리)
@@ -3320,10 +3485,25 @@ function step(dt) {
   if (!dead && !G.won) { helpers(dt); darkStep(dt) }
   // 바닥 경고 — 원이 다 차면 터지고(안에 있으면 맞는다), 돌격대는 줄지어 나온다
   for (const z of G.haz) {
+    if (z.k === 'pool') {   // 눈물 웅덩이 — 아프지 않고 느려지기만(복어 그물과 같은 느려짐)
+      if ((z.t += dt) >= z.T) z.dead = true
+      else if (((pl.x - z.x) / z.R) ** 2 + ((pl.y - z.y) / (z.R * 0.8)) ** 2 < 1) { if (pl.slowT <= 0) fx({ k: 'text', x: pl.x, y: pl.y - 50, s: tr`첨벙!`, col: '#4a86e8', T: 0.6 }); pl.slowT = Math.max(pl.slowT, 0.2) }
+      continue
+    }
+    if (z.k === 'fence') { if ((z.t += dt) >= z.T) z.dead = true; continue }   // 음표 울타리 — 빈틈 그림만(맞는 것은 음표)
+    if (z.k === 'tide') {   // 큰 파도 — 앞머리가 지나가는 동안 띠 안이고 빈틈 밖이면 한 번 맞는다(빈틈은 그린 초록 줄과 똑같이)
+      if ((z.t += dt) >= z.T) z.dead = true
+      else if (z.t > 1.2 && !z.hit) { const p = z.from + z.dir * 240 * (z.t - 1.2), q = ((z.horiz ? pl.x : pl.y) - p) * z.dir; if (q <= 0 && q > -80 && Math.abs((z.horiz ? pl.y : pl.x) - z.gap) >= 70) { z.hit = true; ouch(z.dmg, z) } }
+      continue
+    }
     if ((z.t += dt) < z.T) continue
     z.dead = true
     if (z.k === 'rush') { rushNow(z); continue }
-    if (((pl.x - z.x) / (z.R + 4)) ** 2 + ((pl.y - z.y) / ((z.R + 4) * 0.8)) ** 2 < 1) ouch(z.dmg, z)
+    if (z.k === 'band') { bandNow(z); continue }
+    const safe = z.k === 'duel' && z.opts.some(o => o.hand === z.win && ((pl.x - o.x) / 70) ** 2 + ((pl.y - o.y) / 56) ** 2 < 1)
+    if (!safe && ((pl.x - z.x) / (z.R + 4)) ** 2 + ((pl.y - z.y) / ((z.R + 4) * 0.8)) ** 2 < 1) ouch(z.dmg, z)
+    if (z.k === 'duel') fx({ k: 'duel', opts: z.opts, win: z.win, T: 0.4 })   // 정답 원은 초록, 나머지는 빨강으로 번쩍 — 다음에 배울 수 있게
+    if (z.tear) G.haz.push({ k: 'pool', x: z.x, y: z.y, R: z.R, t: 0, T: 4 })
     fx({ k: 'ring', x: z.x, y: z.y, R: z.R, T: 0.4, col: z.col }); fx({ k: 'boom', x: z.x, y: z.y, R: z.R * 0.9, col: z.col, T: 0.35 })
     for (let i = 0; i < 8; i++) { const a = rnd() * TAU; part(z.x, z.y, Math.cos(a) * 160, Math.sin(a) * 90 - 80, i % 2 ? z.col : '#fff', 0.35, 2.6) }
     shake = Math.max(shake, z.k === 'land' ? 8 : 4)
@@ -3331,7 +3511,7 @@ function step(dt) {
   for (const b of G.eshots) {   // 날아오는 것 — 피하거나 각성 스킬 · 한잎이 두잎이로 막기
     if (b.dead) continue
     b.t += dt
-    if (G.freeze <= 0) { b.x += b.vx * dt; b.y += b.vy * dt }
+    if (G.freeze <= 0) { if (b.wait > 0) b.wait -= dt; else { b.x += b.vx * dt; b.y += b.vy * dt } }   // wait — 음표 울타리: 멈춰 반짝이다가 모인다
     if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < (pl.r + b.r) ** 2) { ouch(b.dmg, b); b.dead = true; if (b.slow) { pl.slowT = Math.max(pl.slowT, b.slow); fx({ k: 'text', x: pl.x, y: pl.y - 50, s: tr`끈적!`, col: '#f2c94c', T: 0.6 }) } }
     if (b.t > b.life) b.dead = true
   }
@@ -3690,11 +3870,35 @@ function world(c, ox, oy) {
     }
     if (z.t < 0) continue
     const u = z.t / z.T
+    if (z.k === 'fence') { fenceDraw(c, z); continue }
+    if (z.k === 'tide') { tideDraw(c, z, false); continue }
+    if (z.k === 'pool') {   // 눈물 웅덩이 — 빨간 점선 없이(아프지 않다). 물결 고리가 0.8초마다, 마지막 0.6초에 말라 없어진다
+      const k = clamp((z.T - z.t) / 0.6, 0, 1), R = z.R * (0.6 + 0.4 * k), w = (z.t % 0.8) / 0.8
+      c.globalAlpha = k; c.fillStyle = 'rgba(74,134,232,.35)'; oval(c, z.x, z.y, R, R * 0.8); c.fill(); c.globalAlpha = 0.7 * k; c.strokeStyle = '#4a86e8'; c.lineWidth = 2; c.stroke()
+      c.globalAlpha = 0.5 * (1 - w) * k; oval(c, z.x, z.y, R * (0.3 + 0.7 * w), R * (0.3 + 0.7 * w) * 0.8); c.stroke(); c.globalAlpha = 1
+      continue
+    }
+    if (z.k === 'band') {   // 띠 — 옅은 전체 · 몸 쪽에서 끝으로 차오름 · 안쪽 테두리 · 빨간 점선(적 공격) · 60% 자리에 !
+      c.save(); c.translate(z.x, z.y); c.rotate(z.a); c.fillStyle = z.col
+      c.globalAlpha = 0.18; c.fillRect(0, -z.W / 2, z.L, z.W); c.globalAlpha = 0.45; c.fillRect(0, -z.W / 2, z.L * u, z.W)
+      c.globalAlpha = 0.9; c.strokeStyle = z.col; c.lineWidth = 2; c.strokeRect(2, -z.W / 2 + 2, z.L - 4, z.W - 4)
+      c.strokeStyle = '#ff2e2e'; c.lineWidth = 3.5; c.setLineDash([10, 7]); c.lineDashOffset = -G.t * 40; c.strokeRect(0, -z.W / 2, z.L, z.W); c.setLineDash([]); c.lineDashOffset = 0; c.restore(); c.globalAlpha = 1
+      txt(c, '!', z.x + Math.cos(z.a) * z.L * 0.6, z.y + Math.sin(z.a) * z.L * 0.6 + 8, 24, '#ff3b3b')
+      continue
+    }
     c.fillStyle = z.col; c.globalAlpha = 0.18; oval(c, z.x, z.y, z.R, z.R * 0.8); c.fill()
     c.globalAlpha = 0.45; oval(c, z.x, z.y, z.R * u, z.R * 0.8 * u); c.fill()
     c.globalAlpha = 0.9; c.strokeStyle = z.col; c.lineWidth = 2; oval(c, z.x, z.y, z.R - 3, z.R * 0.8 - 3); c.stroke()
     c.strokeStyle = '#ff2e2e'; c.lineWidth = 3.5; c.setLineDash([10, 7]); c.lineDashOffset = -G.t * 40; oval(c, z.x, z.y, z.R, z.R * 0.8); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0; c.globalAlpha = 1   // 적 공격은 늘 빨간 점선 + ! — 내 스킬 장판과 헷갈리지 않게
-    txt(c, '!', z.x, z.y + Math.min(10, z.R * 0.25), Math.min(30, 12 + z.R * 0.15), '#ff3b3b')
+    if (z.k !== 'duel') txt(c, '!', z.x, z.y + Math.min(10, z.R * 0.25), Math.min(30, 12 + z.R * 0.15), '#ff3b3b')   // 결투는 가운데에 상대 손이 있다
+    if (z.tear && u > 0.667) { const p = (u - 0.667) / 0.333; c.save(); c.translate(z.x, z.y - 260 * (1 - p) - 8); c.scale(1.8, 1.8); tearP(c); c.fillStyle = '#4a86e8'; c.fill(); c.strokeStyle = '#2c5aa8'; c.lineWidth = 1.5; c.stroke(); c.restore() }   // 눈물이 떨어진다(진한 파랑 — 내 스킬 눈물과 다르게)
+    if (z.k === 'duel') {   // 손 원 셋(똑같이) — 상대 손은 몸 위 층에서 나를 따라다닌다
+      for (const o of z.opts) handAt(c, o.x, o.y, o.hand, 42, '#4a3b35', 'rgba(255,255,255,.55)', 70)
+    }
+  }
+  for (const e of G.foes) if (e.act?.k === 'sauce' && !e.dead) {
+    const R = e.r + 30, d = e.act.dir; c.strokeStyle = '#ff2e2e'; c.lineWidth = 3; c.setLineDash([10, 7]); c.lineDashOffset = -d * G.t * 120; oval(c, e.x, e.y, R, R * 0.8); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0
+    for (const o of [0, Math.PI]) { const q = G.t * 3 * d + o, x = e.x + Math.cos(q) * R, y = e.y + Math.sin(q) * R * 0.8, t = q + d * Math.PI / 2; c.fillStyle = '#ff2e2e'; c.beginPath(); c.moveTo(x + Math.cos(t) * 9, y + Math.sin(t) * 9); c.lineTo(x + Math.cos(t + 2.4) * 7, y + Math.sin(t + 2.4) * 7); c.lineTo(x + Math.cos(t - 2.4) * 7, y + Math.sin(t - 2.4) * 7); c.closePath(); c.fill() }
   }
   for (const e of G.foes) if (e.boss && e.st === 'wind') { const L = e.spd * 4 * 0.75, a = Math.atan2(e.dy, e.dx); c.save(); c.translate(e.x, e.y); c.rotate(a); c.fillStyle = 'rgba(255,60,60,.3)'; c.fillRect(0, -e.r, L, e.r * 2); c.restore() }
   for (const b of G.shots) {
@@ -3711,6 +3915,7 @@ function world(c, ox, oy) {
   for (const it of G.items) { put(c, SPR.shadow, it.x, it.y, 0.5); c.globalAlpha = 0.35 + 0.2 * Math.sin(it.t * 5); c.fillStyle = '#fff'; oval(c, it.x, it.y - 12, 16, 16); c.fill(); c.globalAlpha = 1; put(c, SPR.E[it.k], it.x, it.y - 12 + Math.sin(it.t * 4) * 2) }
   // 그림자 → 몸(y 순, 화면 안만)
   const vis = e => Math.abs(e.x - cam.x) < VW / 2 + 90 && Math.abs(e.y - cam.y) < VH / 2 + 140
+  for (const e of G.foes) if (e.storm && vis(e)) { c.fillStyle = 'rgba(30,40,80,.28)'; oval(c, e.x, e.y, e.r * 1.4, e.r * 0.5); c.fill() }   // 폭풍의 세이렌 — 그림자 밑 먹구름
   for (const e of G.foes) if (vis(e) && (!LQ || e.boss)) put(c, SPR.shadow, e.x, e.y, e.r / 16 * (e.z ? Math.max(0.4, 1 - e.z / 200) : 1))
   put(c, SPR.shadow, pl.x, pl.y, 0.8)
   let me = false
@@ -3744,13 +3949,15 @@ function world(c, ox, oy) {
   }
   cfxDraw(c, G.sfx)   // 스킬 스킨 반짝이 — 지나간 자리 · 터진 자리
   for (const b of G.eshots) {
-    const y = b.y - 14, R = b.r * 2.2 + 8, pu = 0.5 + 0.5 * Math.sin(b.t * 16), v = Math.hypot(b.vx, b.vy) || 1   // 잘 보이게 — 꼬리 · 깜빡이는 빨간 테
-    c.lineCap = 'round'; c.strokeStyle = 'rgba(255,70,90,.35)'; c.lineWidth = R * 1.2; c.beginPath(); c.moveTo(b.x - b.vx / v * R * 2.2, y - b.vy / v * R * 2.2); c.lineTo(b.x, y); c.stroke()
+    const y = b.y - 14, R = b.k === 'sauce' ? b.r + 5 : b.r * 2.2 + 8, pu = 0.5 + 0.5 * Math.sin(b.t * 16), v = Math.hypot(b.vx, b.vy) || 1   // 소스는 많이 뿌려서 테를 작게(틈이 보이게)   // 잘 보이게 — 꼬리 · 깜빡이는 빨간 테
+    if (b.k !== 'sauce') { c.lineCap = 'round'; c.strokeStyle = 'rgba(255,70,90,.35)'; c.lineWidth = R * 1.2; c.beginPath(); c.moveTo(b.x - b.vx / v * R * 2.2, y - b.vy / v * R * 2.2); c.lineTo(b.x, y); c.stroke() }
     oval(c, b.x, y, R, R); c.fillStyle = `rgba(255,60,90,${0.3 + 0.2 * pu})`; c.fill(); c.lineWidth = 2.2; c.strokeStyle = pu > 0.5 ? '#fff' : '#ff3355'; c.stroke()
     c.save(); c.translate(b.x, y); c.scale(1.7, 1.7); c.translate(-b.x, -y)
     if (b.k === 'spike' || b.k === 'claw') { c.save(); c.translate(b.x, y); c.rotate(Math.atan2(b.vy, b.vx)); c.beginPath(); c.moveTo(8, 0); c.lineTo(-6, -4); c.lineTo(-6, 4); c.closePath(); c.fillStyle = b.k === 'claw' ? '#b7793f' : '#3f7f74'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.5; c.stroke(); c.restore() }
     else if (b.k === 'note') put(c, SPR.pinkNote, b.x, y)
     else if (b.k === 'shard') { c.save(); c.translate(b.x, y); c.rotate(b.t * 8); c.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = i % 2 ? 2.2 : 6; c.lineTo(Math.cos(a) * r, Math.sin(a) * r) } c.closePath(); c.fillStyle = '#2a2038'; c.fill(); c.strokeStyle = '#a78bfa'; c.lineWidth = 1.2; c.stroke(); c.restore() }
+    else if (b.k === 'sauce') { const v = Math.hypot(b.vx, b.vy) || 1; c.globalAlpha = 0.5; c.strokeStyle = '#ff6b3d'; c.lineWidth = b.r * 1.3; c.beginPath(); c.moveTo(b.x, y); c.lineTo(b.x - b.vx / v * b.r * 1.5, y - b.vy / v * b.r * 1.5); c.stroke(); c.globalAlpha = 1
+      oval(c, b.x, y, b.r, b.r); c.fillStyle = '#ff6b3d'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke(); c.fillStyle = 'rgba(255,255,255,.7)'; oval(c, b.x - b.r * 0.3, y - b.r * 0.35, b.r * 0.3, b.r * 0.25); c.fill() }
     else if (b.k === 'paper') { c.save(); c.translate(b.x, y); c.rotate(b.t * 6); c.fillStyle = '#fff'; c.fillRect(-4.5, -5.5, 9, 11); c.strokeStyle = OUT; c.lineWidth = 1; c.strokeRect(-4.5, -5.5, 9, 11); c.restore() }
     else if (b.k === 'net') { oval(c, b.x, y, b.r, b.r); c.fillStyle = 'rgba(255,236,160,.6)'; c.fill(); c.strokeStyle = '#d9a93a'; c.lineWidth = 1; c.stroke(); c.beginPath(); for (let k = -1; k <= 1; k++) { c.moveTo(b.x + k * b.r * 0.5, y - b.r * 0.85); c.lineTo(b.x + k * b.r * 0.5, y + b.r * 0.85); c.moveTo(b.x - b.r * 0.85, y + k * b.r * 0.5); c.lineTo(b.x + b.r * 0.85, y + k * b.r * 0.5) } c.stroke() }
     else { oval(c, b.x, y, b.r, b.r); c.fillStyle = b.k === 'rock' ? '#9a8f86' : b.k === 'soy' ? '#5a3a26' : '#6fc3ff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.6; c.stroke(); c.fillStyle = 'rgba(255,255,255,.7)'; oval(c, b.x - b.r * 0.3, y - b.r * 0.35, b.r * 0.3, b.r * 0.25); c.fill() }
@@ -3758,6 +3965,8 @@ function world(c, ox, oy) {
   }
   for (const p of G.parts) { c.globalAlpha = 1 - p.t / p.T; c.fillStyle = p.col; c.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r) }
   c.globalAlpha = 1
+  for (const z of G.haz) if (z.k === 'tide' && z.t > 1.2) tideDraw(c, z, true)   // 큰 파도는 몸 위로 덮고 지나간다
+  for (const z of G.haz) if (z.k === 'duel' && z.t >= 0) handAt(c, pl.x, pl.y - 80, z.hand, 28, '#ff2e2e', 'rgba(255,255,255,.9)')   // 가위바위보 상대 손(빨간 테두리) — 내 머리 위, 원으로 달려가는 동안에도 보이게
   for (const f of G.fx) effect(c, f, ox, oy)
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'
   for (const n of G.nums) { c.globalAlpha = 1 - Math.max(0, n.t - 0.45) / 0.25; txt(c, String(n.v), n.x, n.y - n.t * 26, n.kind === 'crit' ? 15 : n.kind ? 14 : 11, n.kind === 'crit' ? '#ffd23f' : n.kind === 'hurt' ? '#ff6b6b' : n.kind === 'heal' ? '#62e38a' : '#fff') }
@@ -3773,7 +3982,7 @@ function tear(c, x, y, r) {
   c.fillStyle = 'rgba(255,255,255,.8)'; oval(c, x - r * 0.35, y, r * 0.25, r * 0.35); c.fill()
 }
 function drawFoe(c, e) {
-  const v = e.type === 'mermaid' ? SPR.mermaid[e.v % 3] : e.angry ? SPR.sirenAngry : SPR[e.type]
+  const v = e.type === 'mermaid' ? SPR.mermaid[e.v % 3] : e.storm ? SPR.sirenStorm : e.angry ? SPR.sirenAngry : SPR[e.type]
   const L = e.fx < 0, k = e.sc || 1, f = G.freeze > 0 || e.act ? 0 : (e.age * (e.boss ? 3 : 6) + e.seed | 0) & 1, y = e.y - e.z - (e.boss ? Math.sin(e.age * 3) * 1.5 : Math.abs(Math.sin(e.age * 6 * Math.PI + e.seed)) * 1.2)
   if (e.type === 'dekatsuyo') {   // 데카츠요의 노란 빛 — 둥근 빛과 빛살
     const cy = y - e.r * 1.1 * k, R = e.r * 2 * k
@@ -3782,13 +3991,14 @@ function drawFoe(c, e) {
   }
   if (e.kind === 'siren') {   // 세이렌의 노래 — 등 뒤 은은한 빛 · 둘레를 맴도는 음표 셋(화나면 붉게)
     const cy = y - 40, R = 80, gl = c.createRadialGradient(e.x, cy, 10, e.x, cy, R)
-    gl.addColorStop(0, e.angry ? 'rgba(255,50,80,.38)' : 'rgba(255,200,225,.5)'); gl.addColorStop(1, e.angry ? 'rgba(255,50,80,0)' : 'rgba(255,200,225,0)')
+    gl.addColorStop(0, e.storm ? 'rgba(63,104,179,.4)' : e.angry ? 'rgba(255,50,80,.38)' : 'rgba(255,200,225,.5)'); gl.addColorStop(1, e.storm ? 'rgba(63,104,179,0)' : e.angry ? 'rgba(255,50,80,0)' : 'rgba(255,200,225,0)')
     c.fillStyle = gl; oval(c, e.x, cy, R, R); c.fill()
     c.globalAlpha = 0.8; for (let i = 0; i < 3; i++) { const a = G.t * 0.8 + i * TAU / 3; put(c, SPR.note, e.x + Math.cos(a) * 70, cy - 6 + Math.sin(a) * 34 + Math.sin(G.t * 3 + i) * 3, 0.65) } c.globalAlpha = 1
   }
   if (e.flash > 0 && !e.boss) put(c, (L ? v.WL : v.WR)[f], e.x, y, k)   // 맞으면 하얗게 — 한 장만 그린다(겹쳐 그리면 적이 많을 때 무겁다)
   else { put(c, (L ? v.L : v.R)[f], e.x, y, k); if (e.flash > 0) { c.globalAlpha = 0.45; put(c, (L ? v.WL : v.WR)[f], e.x, y, k); c.globalAlpha = 1 } }   // 보스는 모양이 보이게 옅게 겹친다
-  if (e.boss && e.kind === 'siren' && guarded()) { c.globalAlpha = 0.35 + 0.15 * Math.sin(G.t * 4); c.strokeStyle = '#7fd8ff'; c.lineWidth = 3; oval(c, e.x, e.y - e.r * 1.1, e.r * 1.5, e.r * 1.6); c.stroke(); c.globalAlpha = 1 }
+  if (e.shield > G.t) { c.fillStyle = 'rgba(255,255,255,.25)'; oval(c, e.x, e.y - e.r * 1.1, e.r + 20, (e.r + 20) * 1.07); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke() }   // 페이즈가 바뀌는 2초 — 방울 방패(공격이 왜 안 들어가는지 보이게)
+  if (e.boss && e.kind === 'siren' && guarded(e)) { c.globalAlpha = 0.35 + 0.15 * Math.sin(G.t * 4); c.strokeStyle = '#7fd8ff'; c.lineWidth = 3; oval(c, e.x, e.y - e.r * 1.1, e.r * 1.5, e.r * 1.6); c.stroke(); c.globalAlpha = 1 }
   if (e.slow > 0 && !e.boss) { c.globalAlpha = 0.5; c.fillStyle = '#f5d36a'; oval(c, e.x, e.y, e.r, e.r * 0.4); c.fill(); c.globalAlpha = 1 }
   const SH = FOES[e.type].shot, d = Math.hypot(pl.x - e.x, pl.y - e.y)   // 쏘기 직전 경고 — 머리 위 빨간 ! (겨누는 것은 조준선도)
   if (SH ? d < SH.range && e.cd < 0.7 : e.act && FIRE.has(e.act.k)) {
@@ -3874,7 +4084,7 @@ function effect(c, f, ox, oy) {
     case 'ring': c.globalAlpha = 1 - u; c.strokeStyle = f.col; c.lineWidth = 4; oval(c, f.x, f.y, f.R * u, f.R * u * 0.8); c.stroke(); break
     case 'boom': c.globalAlpha = (1 - u) * 0.75; c.fillStyle = G.sk[f.src]?.col || f.col; oval(c, f.x, f.y - 4, f.R * (0.5 + 0.5 * u), f.R * (0.5 + 0.5 * u) * 0.8); c.fill(); c.globalAlpha = 1 - u; c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); if (G.sk[f.src]) { c.strokeStyle = G.sk[f.src].col2; c.lineWidth = 3; oval(c, f.x, f.y - 4, f.R * (0.7 + 0.6 * u), f.R * (0.7 + 0.6 * u) * 0.8); c.stroke() } break   // 스킨 — 바깥으로 퍼지는 고리 하나 더
     case 'flash': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = f.col; oval(c, f.x, f.y, f.R, f.R); c.fill(); c.globalCompositeOperation = 'source-over'; break
-    case 'white': c.globalAlpha = (1 - u) * 0.8; c.fillStyle = '#fff'; c.fillRect(ox, oy, VW, VH); break
+    case 'white': c.globalAlpha = (1 - u) * (f.a || 0.8); c.fillStyle = '#fff'; c.fillRect(ox, oy, VW, VH); break
     case 'text': c.globalAlpha = 1 - Math.max(0, u - 0.6) / 0.4; txt(c, f.s, f.x, f.y - u * 18, 17, f.col); break
     case 'bolt': {   // 어떻게든 돼라! — 노란 별 번개
       c.globalAlpha = 1 - u; c.lineJoin = 'round'
@@ -3885,7 +4095,7 @@ function effect(c, f, ox, oy) {
       const x1 = f.x + Math.cos(f.a) * f.L, y1 = f.y + Math.sin(f.a) * f.L
       c.globalAlpha = 1 - u; c.lineCap = 'round'
       const sk = G.sk[f.src]
-      for (const [col, k, al] of sk ? [[sk.col, 3.6, 0.28], [sk.col + '99', 2.2, 1], [sk.col2, 1.3, 1], ['#fff', 0.6, 1]] : [['rgba(127,200,255,.6)', 2, 1], ['#fff', 0.8, 1]]) { c.globalAlpha = (1 - u) * al; c.strokeStyle = col; c.lineWidth = f.W * k * (1 - u * 0.6); c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(x1, y1); c.stroke() }   // 스킨이면 넓은 빛 · 두 겹 색
+      for (const [col, k, al] of sk ? [[sk.col, 3.6, 0.28], [sk.col + '99', 2.2, 1], [sk.col2, 1.3, 1], ['#fff', 0.6, 1]] : f.cols || [['rgba(127,200,255,.6)', 2, 1], ['#fff', 0.8, 1]]) { c.globalAlpha = (1 - u) * al; c.strokeStyle = col; c.lineWidth = f.W * k * (1 - u * 0.6); c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(x1, y1); c.stroke() }   // 스킨이면 넓은 빛 · 두 겹 색
       if (sk && f.src === 'sword') {   // 벚꽃 일섬 — 칼끝이 화면을 가르며 달려가고(빛나는 끝 · 하얀 칼자국), 지나간 자리에 초승달 칼자국 셋 · 벚꽃이 피어 양옆으로 흩날린다
         const p = Math.min(1, u / 0.45), dx = Math.cos(f.a), dy = Math.sin(f.a), nx = -dy, ny = dx, hx = f.x + dx * f.L * p, hy = f.y + dy * f.L * p
         c.globalAlpha = 1 - u * 0.5; c.strokeStyle = '#fff'; c.lineWidth = f.W * 0.9; c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(hx, hy); c.stroke()
@@ -3915,6 +4125,11 @@ function effect(c, f, ox, oy) {
       break
     }
     case 'wave': c.globalAlpha = 1 - u * 0.6; c.strokeStyle = f.col; c.lineWidth = 6; oval(c, f.x, f.y, f.R * u, f.R * u * 0.8); c.stroke(); c.globalAlpha = 0.12; c.fillStyle = f.col; c.fill(); break
+    case 'hand': {   // 가위바위보 승부 — 보스 머리 위 손(흰 동그라미, 살짝 위아래로). 보스가 쓰러지면 지운다
+      if (f.e.dead) break
+      handAt(c, f.e.x, f.e.y - f.e.r * 2.6 * (f.e.sc || 1) - 78 + Math.sin(G.t * 6) * 3, f.hand, 32, OUT, '#fff'); break
+    }
+    case 'duel': for (const o of f.opts) { c.globalAlpha = 1 - u; c.fillStyle = o.hand === f.win ? '#3fae5a' : '#ff4d4d'; oval(c, o.x, o.y, 70, 56); c.fill() } c.globalAlpha = 1; break   // 쾅 — 정답 원 초록 · 나머지 빨강
     case 'shout': {   // 말풍선
       if (f.e.dead) break
       c.globalAlpha = 1 - Math.max(0, u - 0.8) / 0.2
@@ -3984,8 +4199,14 @@ function hud(c) {
     const bw = Math.min(420, W - 40), bx = (W - bw) / 2, by = H - 34
     c.fillStyle = OUT; c.fillRect(bx - 3, by - 3, bw + 6, 16)
     c.fillStyle = '#ff6b8b'; c.fillRect(bx, by, bw * Math.max(0, boss.hp / boss.max), 10)
-    const g = boss.kind === 'siren' ? G.final.mermaids.filter(m => !m.dead).length : 0
-    txt(c, `${boss.mid ? tr`중간보스 ` : ''}${BOSS[boss.kind].name}${g ? tr` — 인어 ${g}마리가 지키는 중 (받는 피해 -50%)` : boss.rage ? tr` — 화남! 빨라졌어요` : boss.kind !== 'siren' && boss.kind !== 'mermaid' && boss.age > RAGE_T - 15 ? tr` — ${Math.ceil(RAGE_T - boss.age)}초 뒤 화내요` : ''}`, W / 2, by - 8, 14, g ? '#7fd8ff' : boss.rage ? '#ff6b6b' : '#fff', W - 16)
+    const g = boss.kind === 'siren' ? G.final.mermaids.filter(m => !m.dead && (!boss.ph || m.host === boss)).length : 0
+    const ss = boss.ph ? G.final.sirens.filter(s => !s.dead) : [], dw = ss.length ? ss.length * 38 + (ss.length - 1) * 10 + 8 : 0
+    const label = `${boss.mid ? tr`중간보스 ` : ''}${BOSS[boss.kind].name}${g ? tr` — 인어 ${g}마리가 지키는 중 (받는 피해 -50%)` : boss.rage ? tr` — 화남! 빨라졌어요` : boss.kind !== 'siren' && boss.kind !== 'mermaid' && boss.age > RAGE_T - 15 ? tr` — ${Math.ceil(RAGE_T - boss.age)}초 뒤 화내요` : ''}`
+    c.font = `14px ${FONT}`; const lw = Math.min(c.measureText(label).width, W - 16 - dw), x0 = W / 2 - (dw + lw) / 2
+    ss.forEach((s, j) => { for (let i = 0; i < 3; i++) {   // 페이즈 점 — 채운 점은 지금 페이즈 색, 새 점은 0.3초 톡 튄다
+      const on = i < s.ph, r = 5 * (on && i === s.ph - 1 ? 1 + 0.6 * Math.max(0, 1 - (G.t - (s.phT ?? -9)) / 0.3) : 1)
+      oval(c, x0 + j * 48 + i * 14 + 5, by - 13, r, r); c.fillStyle = on ? SIREN_PH[s.ph - 1].col : 'rgba(255,255,255,.5)'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.5; c.stroke() } })
+    txt(c, label, x0 + dw + lw / 2, by - 8, 14, g ? '#7fd8ff' : boss.rage ? '#ff6b6b' : '#fff', lw)
   }
   if (G.banner) { const b = G.banner; c.globalAlpha = Math.min(1, (b.T - b.t) * 3, b.t * 6); const fs = Math.min(30, W / 15); c.font = `${fs}px ${FONT}`; txt(c, b.s, W / 2, H * 0.3, fs * Math.min(1, (W - 24) / c.measureText(b.s).width), b.col); c.globalAlpha = 1 }   // 화면보다 길면 글자를 줄인다
   if (G.freeze > 0) txt(c, tr`멈춤 ${Math.ceil(G.freeze)}`, W / 2, H * 0.3 + 34, 16, '#ffc2e0')
@@ -4019,6 +4240,7 @@ function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) 
     } }, ic(pic), ` ${name}`)))
 }
 function title() {
+  if (mode === 'blocked') return
   SND.play(fieldSong())
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
   show(h('div', { class: 'panel home' }, themePick(), h('div', { class: 'corner' }, acctPick(), langPick()),
@@ -4026,12 +4248,13 @@ function title() {
     h('h1', { class: 'logo' }, tr`먼작귀`, h('span', {}, tr`서바이버즈`)),
     h('p', { class: 'sub' }, tr`먼가 작고 귀여운 녀석들의 토벌 생존기`),
     AUTH_ERR && h('p', { class: 'hint' }, tr`로그인하지 못했어요 — 잠시 뒤 다시 해 보세요`),
+    SUSP && h('p', { class: 'hint' }, tr`이 계정은 이용이 정지됐어요(번호 ${SUSP}) · 잘못 막혔다면 문의 메일로 알려 주세요`),
     TAMPER && h('p', { class: 'hint' }, TAMPER === 'bak' ? tr`저장 기록이 게임 밖에서 바뀌어 바로 전 저장으로 되돌렸어요` : tr`저장 기록이 게임 밖에서 바뀌어 기록을 처음부터 시작해요`),
     h('div', { class: 'row' }, btn(tr`도감`, guide), btn(save.seen === PATCH_ID ? tr`패치노트` : h('span', {}, tr`패치노트`, h('mark', { class: 'new' }, 'NEW')), notes), btn(h('span', {}, tr`상점 `, ic('coin'), ` ${save.coin.toLocaleString()}`), () => shop()), btn(h('span', {}, tr`업적 `, medal('runs', 3), ` ${golds()}/${Object.keys(ACH).length}`), achs), btn(h('span', {}, ic('inf'), tr` 랭킹`), () => ranking()), btn(tr`토벌 시작!`, chars, 'main')),
     h('p', { class: 'rec' }, save.runs ? tr`토벌 ${save.runs}번 · 클리어 ${save.clears}번 · 쓰러뜨린 적 ${save.kills.toLocaleString()}` : tr`몰려오는 토벌 대상을 피해 다니면 스킬은 알아서 나가요. ${FINAL_T / 60}분 뒤 나타나는 세이렌을 쓰러뜨리면 클리어!`),
     h('p', { class: 'fine' }, tr`비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ`),
     STATS.url && h('p', { class: 'fine' }, tr`게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)와 방문 통계(Google 애널리틱스)를 모아요 · `,
-      h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? tr`다시 보내기` : tr`보내지 않기` } }, save.noStats ? tr`다시 보내기` : tr`보내지 않기`)),
+      auth ? tr`로그인 중에는 통계를 보내요` : h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? tr`다시 보내기` : tr`보내지 않기` } }, save.noStats ? tr`다시 보내기` : tr`보내지 않기`)),
     h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('button', { type: 'button', class: 'linkish', onclick: privacy }, tr`개인정보 처리방침`))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
@@ -4059,7 +4282,7 @@ function chars() {
         h('span', { class: 'best' }, bestText(ch.id)))
     })),
     h('div', { class: 'diff', role: 'radiogroup', 'aria-label': tr`난이도` }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, [ic(k), ` ${d.name}`]))),
-    h('p', { class: 'diff-note' }, Object.entries(DIFF).map(([k, d]) => h('span', { class: k === save.diff ? 'on' : '', 'data-k': k }, d.note))),   // 설명을 겹쳐 두고 고른 것만 — 높이가 그대로라 아래 단추가 출렁이지 않는다
+    h('p', { class: 'diff-note' }, Object.entries(DIFF).map(([k, d]) => h('span', { class: k === save.diff ? 'on' : '', 'data-k': k }, d.note, d.inf && save.noStats && !auth && tr` · 통계를 켜야 해요`))),   // 설명을 겹쳐 두고 고른 것만 — 높이가 그대로라 아래 단추가 출렁이지 않는다
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title), btn(tr`토벌 시작!`, () => startGame(pickCi), 'main'))))
 }
 setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리걸음
@@ -4068,6 +4291,18 @@ setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리�
   if (!cv?._walk?.length) return
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(cv._walk[(tnow * 8 | 0) % 4], 0, 0)
 }, 60)
+/** IP 차단 — 열 때 서버(blocked)에 묻는다. 기다리지 않고 뒤에서, 서버가 안 되면 그냥 연다. 막혔으면 게임 대신 이 화면(꾸짖지 않게 — IP 를 같이 쓰는 다른 아이일 수도)
+ *  GitHub Pages 라 진짜 네트워크 차단이 아니라 게임이 스스로 멈춘다(랭킹 · 통계는 서버도 막는다). 번호 = bans.id(문의 받으면 supabase/account.sql 의 bans) */
+const blockCheck = () => rpc('blocked').then(b => b?.id && blockScreen(b))
+function blockScreen(b) {
+  MODAL?.(); SND.play(null); mode = 'blocked'; G = null; BOX = null; pauseBtn.hidden = true
+  const end = b.until && new Date(b.until)
+  show(h('div', { class: 'panel home ban' }, h('div', { class: 'corner' }, langPick()), h('p', { class: 'h' }, tr`이용이 잠시 제한됐어요`),
+    h('p', { class: 'sub' }, tr`이 인터넷 주소(IP)에서 이상한 기록이 확인돼서 잠시 멈췄어요`),
+    h('p', { class: 'until' }, h('b', {}, end ? tr`${end.toLocaleString(LANG, { month: 'long', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' })}에 풀려요` : tr`기한 없이 제한돼요`)),
+    h('p', {}, tr`학교나 휴대폰 데이터처럼 여러 사람이 같이 쓰는 인터넷이라 잘못 막혔을 수 있어요. 그럴 땐 문의 메일로 알려 주세요.`),
+    h('p', { class: 'fine' }, tr`문의할 때 이 번호를 알려 주세요: ${b.id}`, h('br'), tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
+}
 /** 개인정보 처리방침 — 처음 화면 맨 아래 링크 · 주소 ?privacy 로 바로(카카오 · 구글 로그인 설정에 넣는 주소: https://chii-ka-wa.github.io/?privacy)
  *  고치면 PRIVACY_DAY(시행일)도. 실제와 같아야 한다 — 보관 기간은 supabase/account.sql 의 gc() · 비우기(scrub) · delete_me 와 맞춘다 */
 const PRIVACY_DAY = '2026-11-18'
@@ -4077,14 +4312,16 @@ function privacy() {
   show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, tr`개인정보 처리방침`), h('p', { class: 'sub' }, tr`시행일 ${new Date(PRIVACY_DAY + 'T12:00').toLocaleDateString(LANG, { year: 'numeric', month: 'long', day: 'numeric' })}`),
     h('div', { class: 'scroll' },
       sec(tr`1. 로그인하지 않으면`, tr`게임 기록은 이 기기 브라우저에만 저장되고 서버로 보내지 않습니다.`,
-        tr`게임을 고치려고 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 등 개인을 알 수 없는 정보)와 방문 통계(Google 애널리틱스, 쿠키 사용)를 모읍니다. 처음 화면의 「보내지 않기」나 브라우저의 추적 거부 설정으로 끌 수 있습니다.`,
+        tr`게임을 고치려고 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 등 개인을 알 수 없는 정보)와 방문 통계(Google 애널리틱스, 쿠키 사용)를 모읍니다. 처음 화면의 「보내지 않기」나 브라우저의 추적 거부 설정으로 끌 수 있습니다.`, tr`무한 모드를 하려면 통계 보내기를 켜야 합니다.`,
         tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
       sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록`,
-        tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`),
-      sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남깁니다. 90일 뒤 지우고, 차단된 경우는 차단 기간이 끝날 때까지 보관합니다.`),
-      sec(tr`4. 보관과 삭제`, tr`계정 정보는 탈퇴할 때까지 보관합니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있고, 계정 · 게임 저장 · 랭킹 기록이 바로 지워집니다. 이 기기 브라우저의 기록은 남습니다.`),
+        tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`,
+        tr`로그인 중에는 랭킹 기록 확인을 위해 익명 플레이 통계를 항상 보냅니다(끌 수 없습니다).`),
+      sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남깁니다. 90일 뒤 지우고, 차단된 경우는 차단 기간이 끝날 때까지 보관합니다.`,
+        tr`말이 안 되는 기록이나 부정 플레이가 확인되면 계정은 영구 정지되고, 다시 가입하지 못하도록 로그인 식별자를 되돌릴 수 없게 변환한 값을 계속 보관합니다. 접속 IP(변환한 값)는 7일 동안 차단되며, 그동안 이 사이트를 이용할 수 없습니다. 잘못 막혔다면 문의 메일로 알려 주세요.`),
+      sec(tr`4. 보관과 삭제`, tr`계정 정보는 탈퇴할 때까지 보관합니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있고, 계정 · 게임 저장 · 랭킹 기록이 바로 지워집니다. 이 기기 브라우저의 기록은 남습니다.`, tr`정지된 계정은 탈퇴해도 재가입 방지 값은 남습니다.`),
       sec(tr`5. 처리를 맡기는 곳`, tr`Supabase — 계정 · 저장 · 랭킹 · 통계 보관(서버 위치 호주 시드니)`, tr`Google — 방문 통계, 구글 로그인`, tr`Kakao — 카카오 로그인`, tr`GitHub — 사이트 호스팅`,
-        tr`국외 이전 — 위 정보는 서비스를 쓸 때 네트워크로 호주의 Supabase 서버와 미국의 Google · GitHub 로 전송됩니다. 목적: 게임 서비스 · 통계 / 보관: 위 기간 / 거부: 로그인과 통계를 쓰지 않으면 게임 기록은 전송되지 않습니다. 랭킹 화면을 열 때만 랭킹을 받아 오려고 Supabase 에 접속합니다(사이트를 여는 접속 정보는 GitHub 로 갑니다).`,
+        tr`국외 이전 — 위 정보는 서비스를 쓸 때 네트워크로 호주의 Supabase 서버와 미국의 Google · GitHub 로 전송됩니다. 목적: 게임 서비스 · 통계 / 보관: 위 기간 / 거부: 로그인과 통계를 쓰지 않으면 게임 기록은 전송되지 않습니다. 사이트를 열 때 차단 여부를 확인하고, 랭킹 화면을 열 때 랭킹을 받아 오려고 Supabase 에 접속합니다(사이트를 여는 접속 정보는 GitHub 로 갑니다).`,
         tr`Supabase · Google · GitHub 는 접속할 때의 IP 등 접속 기록을 각자의 방침에 따라 잠깐 보관합니다(Supabase 는 약 1일).`),
       sec(tr`6. 만 14세 미만`, tr`로그인은 선택입니다. 만 14세 미만은 보호자와 함께 로그인해 주세요.`),
       sec(tr`7. 문의`, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))),
@@ -4308,6 +4545,7 @@ function frame(ts) {
 }
 size()
 if (/[?&]privacy\b/.test(location.search)) privacy(); else title()
+if (GUARD) blockCheck()
 requestAnimationFrame(frame)
 if (auth) link()   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 로그인했으면 닉네임부터)
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다

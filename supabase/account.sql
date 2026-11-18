@@ -1,7 +1,9 @@
 -- 계정(카카오 · 구글 로그인) — 저장 기록 동기화 · 닉네임 · 무한 모드 랭킹. Supabase 대시보드 SQL Editor 에 통째로 붙여 Run(여러 번 돌려도 된다)
 --   게임은 공개 키(publishable) + 로그인 토큰으로 부른다. 표는 RLS 로 막고, 남의 것은 아래 함수로만 본다
 --   ponytail: 랭킹 기록은 게임(브라우저)이 보낸 값 — 서버는 「판 시작 시각 → 실제 흐른 시간」 · 그럴듯한지 · 체크섬 · 횟수까지만 막는다. 이상한 기록은 대시보드에서 지운다(delete from ranks where …)
---   부정 플레이: 걸린 것은 cheat_log 에 남고(IP 는 해시로만, 90일 보관) 의심 목록(suspects)으로 본다. 차단(bans)은 관리자가 직접 — 차단되면 랭킹 · 익명 통계에서 빠진다(게임 · 저장은 그대로)
+--   부정 플레이: 걸린 것은 cheat_log 에 남고(IP 는 해시로만, 90일 보관) 의심 목록(suspects)으로 본다. 차단되면 랭킹 · 익명 통계에서 빠지고, IP 가 막히면 사이트도 못 연다(blocked — 게임이 스스로 멈춘다)
+--   자동 정지(ban_me — 계정 영구 + 재가입 막기 · IP 7일): 정직한 게임이 못 내는 랭킹 기록(submit_rank) · 같은 계정에서 7일 안에 체크섬 어긋남 · 봉인 깨짐 · 자격 없는 3배속 3번(report_cheat)
+--   정지된 계정은 게임이 알아서 로그아웃시킨다(suspended — 로그인 없는 판은 그대로). 탈퇴하고 같은 카카오 · 구글로 다시 들어와도 바로 정지(mjg_rejoin)
 
 -- 0) 부정 플레이 기록 · 차단 ------------------------------------------------------------------------------------------------
 create table if not exists public.cheat_log (
@@ -17,7 +19,11 @@ create index if not exists cheat_log_ip on public.cheat_log (ip_h);
 alter table public.cheat_log enable row level security;   -- 정책 없음 = 함수 · 대시보드만
 revoke all on public.cheat_log from anon, authenticated;
 
--- 차단 — 계정(uid) 또는 IP(ip_h). until 이 지나면 풀린다(null = 직접 풀 때까지). 사람이 직접 넣는다(자동 차단은 coin 하나 — 랭킹에서만 빼 두고 확인을 기다린다)
+-- 차단 — 계정(uid) 또는 IP(ip_h). until 이 지나면 풀린다(null = 직접 풀 때까지). 계정 차단 = 랭킹 · 통계에서 빠짐, IP 차단 = 거기에 더해 사이트를 못 연다
+--   계정 정지 = pid_h(로그인 식별자 — 제공자 + 제공자 사용자 번호를 서버 비밀값으로 해시)가 있는 계정 차단: 로그인을 막고, 탈퇴 · 재가입해도 남는다
+--   자동: ban_me(계정 정지 영구 · IP 7일) · 보상금 급증 coin(계정 차단만 — 랭킹에서만 빼 두고 확인을 기다린다). 안내 화면 · 처음 화면의 번호 = bans.id
+--   ★ 잘못 막혔다는 문의를 받으면(번호를 알려 준다) — 풀기:  delete from bans where id = <번호> or pid_h = (select pid_h from bans where id = <번호>);
+--   직접 정지:  insert into bans (uid, pid_h, reason) values ('<uid>', public.pid_hash('<uid>'), '<이유>');
 --   계정 차단(먼저 쓰기를 권함):  insert into bans (uid, reason) values ('<uid>', '무적');
 --   IP 차단(기간제를 권함 — 통신사 · 학교는 여러 사람이 IP 하나를 같이 쓴다):  insert into bans (ip_h, reason, until) values ('<ip_h>', '무적', now() + interval '7 days');
 --   원래 IP 를 알면:  insert into bans (ip_h, reason, until) values (public.ip_hash('1.2.3.4'), '…', now() + interval '7 days');
@@ -33,6 +39,8 @@ create table if not exists public.bans (
 );
 create index if not exists bans_uid on public.bans (uid);
 create index if not exists bans_ip on public.bans (ip_h);
+alter table public.bans add column if not exists pid_h text;
+create index if not exists bans_pid on public.bans (pid_h);
 alter table public.bans enable row level security;
 revoke all on public.bans from anon, authenticated;
 
@@ -41,7 +49,21 @@ revoke all on public.bans from anon, authenticated;
 create or replace function public.banned() returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from bans b where (b.uid = auth.uid() or b.ip_h = my_ip_h()) and (b.until is null or b.until > now()))
 $$;
--- 남기기 — 게임도 부른다(판에서 봉인이 깨졌을 때). 한 IP 한 시간 30줄까지(지울 때가 된 것은 gc — 맨 아래 6번)
+-- 계정의 로그인 식별자 해시(재가입 막기) — 제공자 + 제공자 사용자 번호. 이메일 · 이름은 이미 비워 두었다(5번)
+create or replace function public.pid_hash(u uuid) returns text language sql stable security definer set search_path = public as $$
+  select ip_hash(i.provider || ':' || i.provider_id) from auth.identities i where i.user_id = u limit 1   -- 계정마다 하나(카카오 · 구글을 잇지 않는다)
+$$;
+-- 자동 정지 — 지금 요청한 계정 영구(재가입 막기 포함) + IP 7일(이미 막혀 있으면 그대로). 잘못 걸렸으면 위 ★ 한 줄로 푼다
+create or replace function public.ban_me(why text) returns void language plpgsql security definer set search_path = public as $$
+declare u uuid := auth.uid(); ih text := my_ip_h();
+begin
+  if u is not null and not exists (select 1 from bans b where b.uid = u and b.pid_h is not null and b.until is null) then
+    insert into bans (uid, pid_h, reason) values (u, pid_hash(u), why); end if;
+  if ih is not null and not exists (select 1 from bans b where b.ip_h = ih and (b.until is null or b.until >= now() + interval '6 days')) then
+    insert into bans (ip_h, reason, until) values (ih, why, now() + interval '7 days'); end if;
+end $$;
+-- 남기기 — 게임도 부른다(로그인한 판에서 봉인이 깨졌을 때). 한 IP 한 시간 30줄까지(지울 때가 된 것은 gc — 맨 아래 6번)
+--   같은 계정에서 7일 안에 ck · seal · spd 가 3번이면 자동 차단(한 번은 탭 두 개 · 배포 직후처럼 정직한 경우가 있다). IP 로는 세지 않는다 — 학교 · 통신사는 여러 아이가 IP 하나를 같이 쓴다
 create or replace function public.report_cheat(reason text, detail jsonb default null) returns void language plpgsql security definer set search_path = public as $$
 declare ih text := my_ip_h();
 begin
@@ -49,7 +71,31 @@ begin
   perform gc();
   if (select count(*) from cheat_log l where l.ip_h is not distinct from ih and l.at > now() - interval '1 hour') >= 30 then return; end if;
   insert into cheat_log (uid, ip_h, reason, detail) values (auth.uid(), ih, report_cheat.reason, report_cheat.detail);
+  if report_cheat.reason in ('ck', 'seal', 'spd') and auth.uid() is not null
+    and (select count(*) from cheat_log l where l.uid = auth.uid() and l.reason in ('ck', 'seal', 'spd') and l.at > now() - interval '7 days') >= 3 then perform ban_me(report_cheat.reason || ' x3'); end if;
 end $$;
+-- 내 계정이 정지됐나 — 게임이 로그인할 때 · 켤 때 묻는다(정지면 로그아웃 + 처음 화면에 번호). { id } 또는 null
+create or replace function public.suspended() returns json language sql stable security definer set search_path = public as $$
+  select json_build_object('id', b.id) from bans b where b.uid = auth.uid() and b.pid_h is not null and (b.until is null or b.until > now()) order by b.id limit 1
+$$;
+-- 재가입 막기 — 정지된 로그인 식별자로 새 계정이 생기면 바로 정지(로그인 자체는 막지 않는다 — 게임이 suspended 를 보고 로그아웃). 탈 나면 그냥 둔다
+create or replace function public.rejoin() returns trigger language plpgsql security definer set search_path = public as $$
+declare ph text := ip_hash(new.provider || ':' || new.provider_id);
+begin
+  if exists (select 1 from bans b where b.pid_h = ph and (b.until is null or b.until > now())) and not exists (select 1 from bans b where b.uid = new.user_id and b.pid_h = ph) then
+    insert into bans (uid, pid_h, reason) values (new.user_id, ph, 'rejoin'); end if;
+  return new;
+exception when others then return new;
+end $$;
+do $$ begin
+  drop trigger if exists mjg_rejoin on auth.identities;
+  create trigger mjg_rejoin after insert on auth.identities for each row execute function public.rejoin();
+exception when others then raise warning 'auth.identities — 재가입 막기를 못 켬: %', sqlerrm;
+end $$;
+-- 이 IP 가 막혔나 — 게임이 열 때 묻는다(막혔으면 안내 화면). { id: 차단 번호(문의할 때), until: 풀리는 때(null = 기한 없음) } 또는 null
+create or replace function public.blocked() returns json language sql stable security definer set search_path = public as $$
+  select json_build_object('id', b.id, 'until', b.until) from bans b where b.ip_h = my_ip_h() and (b.until is null or b.until > now()) order by b.until desc nulls first limit 1
+$$;
 
 -- 1) 저장 — 내 줄만 읽고 쓴다(게임 save 통째, 200KB 까지)
 create table if not exists public.saves (
@@ -114,9 +160,9 @@ create table if not exists public.ranks (
   winter   boolean not null default false,                                -- 겨울 맵
   v        text not null check (v ~ '^\d{4}-\d{2}-\d{2}#\d{1,3}$'),       -- 게임 버전
   at       timestamptz not null default now(),
-  primary key (uid, ch),
-  check (bt <= t and kills <= 100 * t + 100 and lvl <= t / 4 + 20 and (lv = 0 or t >= 1500 + 60 * (lv - 1)) and bosses >= lv)   -- 그럴듯한 기록만
+  primary key (uid, ch)   -- 그럴듯한지는 submit_rank 가 본다(어긋나면 차단)
 );
+alter table public.ranks drop constraint if exists ranks_check;   -- 예전 판의 「그럴듯한 기록만」(단계마다 60초 — 고수의 진짜 기록도 걸릴 수 있었다)
 create index if not exists ranks_order on public.ranks (lv desc, bosses desc, bt, at);
 alter table public.ranks enable row level security;   -- 정책 없음 — 넣기 · 보기 모두 함수로만
 revoke all on public.ranks from anon, authenticated;
@@ -159,8 +205,11 @@ create or replace function public.start_run() returns text language sql security
   returning tok::text
 $$;
 
--- 기록 올리기 → { r: 'ok' | 'kept'(예전 기록이 더 좋음) | 'nonick' | 'nostart' | 'fast'(흐른 시간보다 긴 기록) | 'old'(시작한 지 6시간 넘음) | 'hold'(차단 · 체크섬 어긋남), rank: 전체 순위(내 최고) }
---   ck = sha256(tok|ch|lv|bosses|bt|t|kills|lvl|weapons|hit0|v|소금) — game.js 의 runCk 와 같은 순서 · 소금. 어긋나면 그 판만 거절 + 기록(자동 차단은 안 한다 — 배포 직후 예전 game.js 일 수도)
+-- 기록 올리기 → { r: 'ok' | 'kept'(예전 기록이 더 좋음) | 'nonick' | 'nostart' | 'bad'(범위 밖 숫자 — 대개 우리 버그라 거절만) | 'fast'(흐른 시간보다 조금 긴 기록) | 'old'(시작한 지 6시간 넘음)
+--   | 'hold'(차단 · 체크섬 어긋남) | 'ban'(정직한 게임이 못 내는 기록 — 방금 자동 정지), rank: 전체 순위(내 최고) }
+--   ck = sha256(tok|ch|lv|bosses|bt|t|kills|lvl|weapons|hit0|v|소금) — game.js 의 runCk 와 같은 순서 · 소금. 어긋나면 그 판만 거절 + 기록(한 번으로는 차단 안 함 — 탭 두 개 · 배포 직후 예전 game.js. 7일 3번이면 report_cheat 가 차단)
+--   차단: 실제 흐른 시간 < 기록 ÷ 3 − 30초(3배속이 상한 · start_run 이 늦게 닿는 여유) · 처치 > 초당 100 · 레벨 > 4초에 1 + 20 · 그 단계까지 정직한 최소 시간 미달(보스 무리는 시계로만 온다 — 단계 k 는 쉬는 12초 + 무리 간격 60초 × (⌈6 ÷ min(6, k+1)⌉ − 1): 1단계 132 · 2~4단계 72 · 5단계부터 12초.
+--     세이렌 페이즈 전환 2초 × 2 는 넣지 않는다 — 예전 game.js 가 남은 기기의 기록을 정지시키지 않게) · 보스 < 단계 — 모두 게임 시간(t) 기준
 --   hit0 = 처음 맞은 때(초, -1 = 한 번도 안 맞음). 25분 넘게 한 대도 안 맞은 판은 받되 의심 목록 맨 위로(고수의 진짜 기록을 거절하지 않게)
 drop function if exists public.submit_rank(text, int, int, int, int, int, int, text, text, text, boolean, text);
 create or replace function public.submit_rank(ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, v text, hit0 int, ck text)
@@ -171,9 +220,19 @@ begin
   if banned() then return json_build_object('r', 'hold'); end if;
   delete from run_starts s where s.uid = auth.uid() returning s.at, s.tok into st, tk;   -- 한 판에 한 번
   if st is null then return json_build_object('r', 'nostart'); end if;
+  if not coalesce(submit_rank.lv between 0 and 500 and submit_rank.bosses between 0 and 100000 and submit_rank.bt >= 0 and submit_rank.t between 0 and 86400
+    and submit_rank.kills between 0 and 10000000 and submit_rank.lvl between 1 and 5000 and submit_rank.hit0 >= -1, false) then return json_build_object('r', 'bad'); end if;
   if ck is distinct from encode(sha256(convert_to(concat_ws('|', tk::text, submit_rank.ch, submit_rank.lv, submit_rank.bosses, submit_rank.bt, submit_rank.t, submit_rank.kills, submit_rank.lvl, submit_rank.weapons, submit_rank.hit0, submit_rank.v, 'mjg|r7Q'), 'UTF8')), 'hex') then
     perform report_cheat('ck', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t, 'v', submit_rank.v)::jsonb);
-    return json_build_object('r', 'hold');
+    return json_build_object('r', case when banned() then 'ban' else 'hold' end);
+  end if;
+  if not (submit_rank.bt <= submit_rank.t and submit_rank.kills <= 100 * submit_rank.t + 100 and submit_rank.lvl <= submit_rank.t / 4 + 20
+      and (submit_rank.lv = 0 or submit_rank.t >= 1500 + case when submit_rank.lv <= 1 then 0 else 132 + 72 * least(submit_rank.lv - 2, 3) + 12 * greatest(submit_rank.lv - 5, 0) end) and submit_rank.bosses >= submit_rank.lv)
+    or now() - st < make_interval(secs => submit_rank.t / 3.0 - 30) then
+    perform report_cheat('rank', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 'bosses', submit_rank.bosses, 't', submit_rank.t, 'kills', submit_rank.kills, 'lvl', submit_rank.lvl,
+      'real', round(extract(epoch from now() - st)), 'v', submit_rank.v)::jsonb);
+    perform ban_me('rank');
+    return json_build_object('r', 'ban');
   end if;
   if submit_rank.hit0 < 0 and submit_rank.t >= 1500 then perform report_cheat('nohit', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t)::jsonb); end if;
   if now() - st < make_interval(secs => submit_rank.t / 3.0 - 5) then return json_build_object('r', 'fast'); end if;
@@ -218,9 +277,9 @@ language sql stable security definer set search_path = public as $$
   from ranked x join players p on p.uid = x.uid where x.uid = auth.uid()
 $$;
 
-revoke all on function public.set_nick, public.nick_free, public.my_nick, public.start_run, public.submit_rank, public.top_ranks, public.my_rank, public.report_cheat, public.banned, public.my_ip_h, public.ip_hash, public.saves_guard from public;
-grant execute on function public.set_nick, public.nick_free, public.my_nick, public.start_run, public.submit_rank, public.my_rank to authenticated;
-grant execute on function public.top_ranks, public.report_cheat to anon, authenticated;
+revoke all on function public.set_nick, public.nick_free, public.my_nick, public.start_run, public.submit_rank, public.top_ranks, public.my_rank, public.report_cheat, public.banned, public.blocked, public.ban_me, public.suspended, public.pid_hash, public.rejoin, public.my_ip_h, public.ip_hash, public.saves_guard from public;
+grant execute on function public.set_nick, public.nick_free, public.my_nick, public.start_run, public.submit_rank, public.my_rank, public.suspended to authenticated;
+grant execute on function public.top_ranks, public.report_cheat, public.blocked to anon, authenticated;
 
 -- 익명 통계(runs)도 차단된 IP 는 조용히 버린다(report_run 은 그대로 두고 표 앞에서)
 create or replace function public.runs_guard() returns trigger language plpgsql security definer set search_path = public as $$
@@ -307,8 +366,9 @@ exception when others then raise warning 'pg_cron 을 못 켬: %', sqlerrm;
 end $$;
 
 notify pgrst, 'reload schema';
--- 확인 — 다섯 줄 모두 true 여야 한다
+-- 확인 — 여섯 줄 모두 true 여야 한다
 select c.t as "확인", c.ok as "켜짐" from (
   select 'auth.' || t || ' 개인정보 비우기', exists (select 1 from pg_trigger g where g.tgname = 'mjg_scrub' and g.tgrelid = to_regclass('auth.' || t)) from unnest(array['users', 'identities', 'audit_log_entries', 'sessions']) t
+  union all select 'auth.identities 재가입 막기', exists (select 1 from pg_trigger g where g.tgname = 'mjg_rejoin' and g.tgrelid = to_regclass('auth.identities'))
   union all select 'pg_cron 오래된 기록 지우기', exists (select 1 from pg_extension where extname = 'pg_cron')
 ) c(t, ok);

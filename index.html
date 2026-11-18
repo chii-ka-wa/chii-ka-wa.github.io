@@ -171,7 +171,8 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 #pause svg { display: block; margin: auto }
 .fine .linkish { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer }   /* 통계 보내지 않기 */
 .fine + .fine { margin-top: 4px }
-ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; line-height: 1.55 } ul.pv li { margin: 4px 0 }   /* 개인정보 처리방침 */
+ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; line-height: 1.55 } ul.pv li { margin: 4px 0 }
+    .panel.ban { width: min(420px, 100%); padding-top: 48px } .panel.ban .until { margin: 12px 0; font-size: 17px }   /* IP 차단 안내 — 좁게, 풀리는 때는 굵게 */   /* 개인정보 처리방침 */
 
 /* 캐릭터 고르기 */
 .panel.wide { width: min(900px, 100%) }
@@ -440,6 +441,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611181028"></script>
+<script type="module" src="game.js?v=202611181126"></script>
 </body>
 </html>
