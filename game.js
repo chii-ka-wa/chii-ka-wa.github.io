@@ -111,6 +111,8 @@ const PATCH = [
     ['new', 'inf', tr`로그인(카카오 · 구글)하면 기록을 계정에 저장하고 무한 랭킹에 올라가요 — 처음 화면 오른쪽 위`],
     ['fix', 'coin', tr`기록 고르기에서 「이 기기」를 골라도 한 번 더 묻던 것 · 마지막으로 한 때를 시 · 분 · 초까지`],
     ['fix', 'book', tr`카니가 다른 친구들처럼 책을 앞손에 들어요`],
+    ['up', 'coinbox', tr`떠돌이 보물상자가 훨씬 자주 나와요 — 멀리 돌아다니면 10초마다 나올 수 있어요`],
+    ['new', 'license', tr`이용약관이 생겼어요 — 처음 로그인할 때 동의를 받아요(처음 화면 맨 아래)`],
   ]],
   ['2026-11-17', [
     ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
@@ -233,12 +235,12 @@ const ITEMS = {
   pajama: { name: tr`꿀맛 페스티벌 티켓`, note: tr`파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%` },
   battery: { name: tr`건전지`, note: tr`한잎이 · 두잎이가 6초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다` },
   chest: { name: tr`보물상자`, note: tr`보스가 떨어뜨린다 — 잭팟 확률 50%` },
-  coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 돌아다니면 드물게 나타난다(25초 뒤 사라진다) — 토벌 보상금 10 ~ 200(클수록 드물게), 1% 잭팟 5000, 3% 확률로 이번 판에서만 쓰는 부활석` },
+  coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 돌아다니면 가끔 나타난다(10초에 한 번까지 · 25초 뒤 사라진다) — 토벌 보상금 10 ~ 200(클수록 드물게), 1% 잭팟 5000, 3% 확률로 이번 판에서만 쓰는 부활석` },
   awaken: { name: tr`각성의 별`, note: tr`Lv 8 스킬이 있을 때 보스(중간보스 빼고)가 떨어뜨린다 — Lv 8 스킬 하나를 각성(조금 세지고 날아오는 것을 가끔 막는다)` },
 }
 
 // 떠돌이 보물상자 — 처음 자리(앵커)에서 d 만큼 멀어질 때마다 앵커를 옮기고 p 확률로 가는 쪽 앞에. 바닥에 하나만 · 앞 상자에서 gap 초 뒤부터 · life 초 뒤 사라진다
-const WANDER = { d: 1500, p: 0.14, gap: 90, life: 25 }
+const WANDER = { d: 1500, p: 0.25, gap: 10, life: 25 }   // 기획(2026-11-18): 14% · 90초 → 25% · 10초 — 35% 면 상자만으로 판 수입이 두 배를 넘어서
 // 떠돌이 보물상자에서 나오는 것 — [토벌 보상금(또는 'stone' 부활석), 확률 %]. 합 100. 잭팟(LOOT_JACK) 말고는 200 을 넘지 않는다
 const LOOT_JACK = 5000, LOOT = [['stone', 3], [LOOT_JACK, 1], [10, 28], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
 
@@ -415,19 +417,21 @@ let AUTH_ERR = '', AUTH_NEW = false, NICK = null, MODAL = null, SUSP = 0   // �
 const login = prov => { busy(prov === 'kakao' ? tr`카카오 로그인 화면으로 가는 중이에요` : tr`Google 로그인 화면으로 가는 중이에요`, { prov, going: true, retry: () => login(prov) }); location.href = `${STATS.url}/auth/v1/authorize?provider=${prov}&redirect_to=${encodeURIComponent(location.origin + location.pathname)}` }
 /** Google 공식 단추(Google Identity Services) — 리디렉트는 Supabase 를 거쳐서 구글 화면에 「lvx….supabase.co(으)로 이동」이 떠 수상해 보인다. 단추 팝업은 이 사이트 주소로 보인다
  *  받은 ID 토큰을 Supabase 에 넘기면(grant_type=id_token) 같은 계정(구글 사용자 번호가 같다)으로 들어온다. nonce — 구글에는 해시, Supabase 에는 원래 값(다시 쓰기 막기)
- *  진짜 주소(또는 ?gis)에서만 — 다른 곳은 Google 콘솔의 승인된 출처가 아니다. 스크립트를 못 불러오면 예전 리디렉트 단추 그대로 */
+ *  진짜 주소(또는 ?gis)에서만 — 다른 곳은 Google 콘솔의 승인된 출처가 아니다. 스크립트를 못 불러오면 예전 모양 단추 — 누르면 다시 불러 본다(리디렉트는 쓰지 않는다:
+ *  구글 브랜드 인증(앱 이름 표시)은 승인된 도메인을 모두 소유 확인해야 해서 supabase.co 를 뺐다) */
 const GOOGLE_ID = '259801945128-0dak7f309us5924j1e857sn29b9e1kbk.apps.googleusercontent.com'   // 공개 값(OAuth 클라이언트 ID — 비밀번호 아님)
 const gisOn = () => location.hostname === STATS.host || /[?&]gis\b/.test(location.search)
 let gisP = null
 const gisLoad = () => gisP ||= new Promise((ok, no) => { if (window.google?.accounts?.id) return ok(); const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = ok; s.onerror = no; document.head.append(s); setTimeout(no, 6000) }).catch(e => { gisP = null; throw e })
 const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('')
-async function gisButton(el) {
+async function gisButton(el) {   // 그렸으면 true
   try {
     await gisLoad(); if (!el.isConnected) return
     const raw = hex(crypto.getRandomValues(new Uint8Array(16)).buffer), hashed = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw)))
     google.accounts.id.initialize({ client_id: GOOGLE_ID, nonce: hashed, callback: r => gisDone(r.credential, raw) })
     const w = Math.min(320, el.clientWidth || 280); el.replaceChildren(); google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'left', width: w, locale: LANG })   // 로고 왼쪽 — 카카오 심볼 자리와 맞춘다
-  } catch {}
+    return true
+  } catch { return false }
 }
 async function gisDone(idt, nonce) {   // 구글 팝업에서 골랐다 — 토큰을 Supabase 세션으로 바꾸고 계정 기록을 맞춘다(「로그인 중이에요」를 띄운 채로)
   MODAL?.(); const done = busy(tr`내 기록을 불러오는 중이에요`, { prov: 'google' })
@@ -493,7 +497,10 @@ async function link() {
   else if (sign(cloud.data) === sign(save) || mark?.at === at) { linked = true; syncMark(at); if (sign(cloud.data) !== sign(save)) cloudPush(true) }   // 같다 · 계정은 그대로고 이 기기만 앞섰다
   else if (empty || mark?.h === sign(save)) return adopt(cloud.data, at)   // 이 기기는 그대로고 다른 기기에서 앞섰다(또는 이 기기가 비었다) — 계정 것으로
   else return choose(cloud.data, at)   // 둘 다 바뀌었다 — 고르게
-  NICK = await rpc('my_nick'); if (mode === 'title') title()
+  NICK = await rpc('my_nick')
+  const ok = await rpc('agreed')   // 이용약관 — 처음 로그인(새 계정) · 약관이 바뀐 뒤 첫 로그인에 묻는다. 동의하지 않으면 로그아웃(새 계정은 지운다). 서버에 아직 없으면(null) 묻지 않는다
+  if (ok && typeof ok === 'object' && ok.day !== TERMS_DAY && !(await termsBox(!cloud && !NICK && !ok.day))) return
+  if (mode === 'title') title()
   if (AUTH_NEW && !NICK) { AUTH_NEW = false; nickBox() }   // 처음 로그인 — 랭킹에 쓸 이름부터
 }
 function adopt(data, at) {   // 계정 저장으로 바꾸고 다시 연다
@@ -505,21 +512,33 @@ function adopt(data, at) {   // 계정 저장으로 바꾸고 다시 연다
 function modal(cls, ...kids) {
   MODAL?.()
   const box = h('div', { class: 'modal', role: 'dialog' }, h('div', { class: `panel ${cls}` }, ...kids)), close = () => { box.remove(); if (MODAL === close) MODAL = null }
-  box.onpointerdown = e => { if (e.target === box) close() }
+  if (/\bstay\b/.test(cls)) close.stay = true; else box.onpointerdown = e => { if (e.target === box) close() }   // stay — 바깥 · Esc 로 닫히지 않는다(약관 동의처럼 꼭 고르게)
   document.body.append(box); MODAL = close; return close
 }
 const svgIc = (s, cls = 'brand') => { const e = h('span', { class: cls, 'aria-hidden': 'true' }); e.innerHTML = s; return e }
 const KAKAO_IC = '<svg viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.74l-.96 3.53c-.08.31.27.56.54.38l4.2-2.78c.49.06.99.1 1.5.1 5.52 0 10-3.58 10-8S17.52 3 12 3z"/></svg>'
 const GOOGLE_IC = '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
 function loginBox() {   // 로그인 창 — 카카오 · 구글(진짜 주소면 Google 공식 단추로 바꿔 그린다 — gisButton)
-  const gwrap = h('div', { class: 'gis' }, h('button', { type: 'button', class: 'btn sns google', onclick: () => login('google') }, svgIc(GOOGLE_IC), tr`Google로 시작하기`))
+  const gwrap = h('div', { class: 'gis' }, h('button', { type: 'button', class: 'btn sns google', onclick: async () => { if (!gisOn()) return login('google'); if (!(await gisButton(gwrap))) { AUTH_ERR = 'google'; close(); if (mode === 'title') title() } } }, svgIc(GOOGLE_IC), tr`Google로 시작하기`))   // 진짜 주소에선 리디렉트(supabase.co 를 거친다 — 구글 브랜드 인증에서 뺐다) 대신 공식 단추를 다시 불러 본다
   if (gisOn()) setTimeout(() => gisButton(gwrap))
   const close = modal('login', h('p', { class: 'h' }, tr`로그인`), h('p', { class: 'sub' }, tr`기록과 상점 구매를 계정에 저장하고 무한 랭킹에 올라가요`),
     h('button', { type: 'button', class: 'btn sns kakao', onclick: () => login('kakao') }, svgIc(KAKAO_IC), tr`카카오로 시작하기`),
     gwrap,
-    h('p', { class: 'fine' }, tr`로그인하지 않아도 지금처럼 이 기기에 저장돼요`, h('br'), tr`로그인하면 랭킹 기록을 확인하려고 익명 플레이 통계를 함께 보내요`, ' · ',
-      h('button', { type: 'button', class: 'linkish', onclick: () => { close(); privacy() } }, tr`개인정보 처리방침`)),
+    h('p', { class: 'fine' }, tr`로그인하지 않아도 지금처럼 이 기기에 저장돼요`, h('br'), tr`로그인하면 랭킹 기록을 확인하려고 익명 플레이 통계를 함께 보내요`, h('br'), tr`처음 로그인할 때 이용약관 동의를 받아요`, ' · ',
+      h('button', { type: 'button', class: 'linkish', onclick: () => { close(); terms() } }, tr`이용약관`), ' · ', h('button', { type: 'button', class: 'linkish', onclick: () => { close(); privacy() } }, tr`개인정보 처리방침`)),
     h('div', { class: 'row' }, btn(tr`닫기`, () => close())))
+}
+/** 이용약관 동의 — 개인정보는 동의가 아니라 처리방침으로 알린다(로그인 정보는 서비스에 꼭 필요한 정보 — 기획 결정, 체크박스 없이 단추 하나).
+ *  fresh — 방금 생긴 계정: 동의하지 않으면 계정을 지우고 로그아웃(동의 안 한 사람의 계정이 남지 않게). 아니면 로그아웃만. 동의하면 true */
+function termsBox(fresh) {
+  BUSY?.()
+  return new Promise(res => {
+    const msg = h('p', { class: 'nmsg no' }), doc = (fn, back) => () => { close(); fn(() => { title(); termsBox(fresh).then(res) }) }
+    const go = btn(tr`동의하고 시작`, async () => { go.disabled = true; if (await rpc('agree', { day: TERMS_DAY }) === 'ok') { close(); res(true) } else { msg.textContent = tr`✗ 인터넷 연결을 확인해 주세요`; go.disabled = false } }, 'main')
+    const close = modal('nick stay', h('p', { class: 'h' }, fresh ? tr`처음 오셨네요!` : tr`이용약관이 바뀌었어요`), h('p', { class: 'sub' }, tr`이용약관에 동의하고 시작해요`, h('br'), tr`개인정보는 개인정보 처리방침을 따라요`),
+      h('p', { class: 'fine' }, h('button', { type: 'button', class: 'linkish', onclick: doc(terms) }, tr`이용약관`), ' · ', h('button', { type: 'button', class: 'linkish', onclick: doc(privacy) }, tr`개인정보 처리방침`)), msg,
+      h('div', { class: 'row' }, btn(tr`동의하지 않아요`, async () => { close(); if (fresh) await rpc('delete_me'); logout(); res(false) }), go))
+  })
 }
 /** 닉네임 창 — 입력을 멈추고 0.4초 뒤 서버에 물어본다. done(정했으면 true) */
 function nickBox(done = () => {}) {
@@ -2707,7 +2726,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Tab') tabbed = true
   if (k) key[k] = 1
   if ((k || e.code === 'Space') && mode === 'play') e.preventDefault()
-  if (MODAL) { if (e.code === 'Escape') MODAL(); return }   // 떠 있는 작은 창(로그인 · 닉네임 · 랭킹 자세히)
+  if (MODAL) { if (e.code === 'Escape' && !MODAL.stay) MODAL(); return }   // 떠 있는 작은 창(로그인 · 닉네임 · 랭킹 자세히)
   if (SND.open?.()) { if (e.code === 'Escape') SND.close(); return }   // 소리 창이 떠 있으면 Esc 로 닫기만
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume() }
   if (e.code === 'Escape' && !e.repeat && !['play', 'pause', 'sound', 'box', 'revive'].includes(mode)) { const home = [...ui.querySelectorAll('button')].find(b => b.onclick === title); if (home) { e.preventDefault(); return home.click() } }   // PC — 메뉴 화면에서 Esc = 「처음으로」
@@ -4302,7 +4321,7 @@ function title() {
     h('p', { class: 'fine' }, tr`비공식 · 비영리 팬게임 — 원작 「ちいかわ」 © ナガノ`),
     STATS.url && h('p', { class: 'fine' }, tr`게임을 고치는 데 쓰려고 판마다 익명 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인)와 방문 통계(Google 애널리틱스)를 모아요 · `,
       auth ? tr`로그인 중에는 통계를 보내요` : h('button', { type: 'button', class: 'linkish', onclick: e => { save.noStats = !save.noStats; persist(); e.currentTarget.textContent = save.noStats ? tr`다시 보내기` : tr`보내지 않기` } }, save.noStats ? tr`다시 보내기` : tr`보내지 않기`)),
-    h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('button', { type: 'button', class: 'linkish', onclick: privacy }, tr`개인정보 처리방침`))))
+    h('p', { class: 'fine' }, tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), ' · ', h('button', { type: 'button', class: 'linkish', onclick: () => terms() }, tr`이용약관`), ' · ', h('button', { type: 'button', class: 'linkish', onclick: () => privacy() }, tr`개인정보 처리방침`))))
 }
 /** 캐릭터 고르기 — 화면을 다시 그리지 않고 고른 표시만 옮긴다(누를 때마다 깜빡이지 않게). 놓은 캐릭터는 서 있는 그림으로 */
 function pickChar(i) {
@@ -4350,10 +4369,39 @@ function blockScreen(b) {
     h('p', {}, tr`학교나 휴대폰 데이터처럼 여러 사람이 같이 쓰는 인터넷이라 잘못 막혔을 수 있어요. 그럴 땐 문의 메일로 알려 주세요.`),
     h('p', { class: 'fine' }, tr`문의할 때 이 번호를 알려 주세요: ${b.id}`, h('br'), tr`문의 `, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))))
 }
+/** 이용약관 — 처음 화면 맨 아래 링크 · 주소 ?terms · 로그인 창 · 처음 로그인 때 동의(termsBox). 바꾸면 TERMS_DAY(시행일)도 — 바뀐 날 뒤 첫 로그인에 다시 묻는다(7일 전부터 알리기)
+ *  문안은 기획 세션(2026-11-18). 9번 「고의 또는 중대한 과실이 없는 한」은 남길 것(책임을 통째로 빼면 약관규제법상 무효가 될 수 있다) */
+const TERMS_DAY = '2026-11-18'
+function terms(back = title) {
+  mode = 'terms'
+  const sec = (t, ...li) => [h('h3', { class: 'day' }, t), h('ul', { class: 'pv' }, li.map(s => h('li', {}, s)))]
+  show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, tr`이용약관`), h('p', { class: 'sub' }, tr`시행일 ${new Date(TERMS_DAY + 'T12:00').toLocaleDateString(LANG, { year: 'numeric', month: 'long', day: 'numeric' })}`),
+    h('div', { class: 'scroll' },
+      sec(tr`1. 이 게임은`, tr`「먼작귀 서바이버즈」는 「치이카와(ちいかわ)」를 좋아하는 팬이 만든 비공식 · 비영리 팬게임입니다. 원작자 나가노(ナガノ)와 권리자와는 관계가 없으며, 원작의 저작권은 원작자와 권리자에게 있습니다.`,
+        tr`게임은 무료이며, 돈을 내는 아이템이나 광고가 없습니다.`, tr`권리자가 요청하면 게임을 바로 고치거나 닫을 수 있습니다.`),
+      sec(tr`2. 이용과 로그인`, tr`로그인 없이 누구나 할 수 있습니다. 로그인(카카오 · Google)은 선택이며, 기록을 계정에 저장하고 무한 모드 랭킹에 오를 때 씁니다.`, tr`처음 로그인할 때 이 약관에 동의해야 계정을 쓸 수 있습니다.`,
+        tr`만 14세 미만은 보호자와 함께 로그인해 주세요.`, tr`개인정보는 「개인정보 처리방침」을 따릅니다.`),
+      sec(tr`3. 닉네임`, tr`2~12자, 한글 · 영어 · 일본어 · 중국어 · 숫자로 정하며, 다른 사람과 같은 이름은 쓸 수 없습니다.`, tr`욕설, 남을 놀리거나 상처 주는 말, 운영자 · 관리자인 척하는 이름은 쓸 수 없습니다.`,
+        tr`7일에 한 번 바꿀 수 있습니다.`, tr`규칙에 맞지 않는 닉네임은 운영자가 바꾸거나 지울 수 있습니다.`),
+      sec(tr`4. 랭킹`, tr`무한 모드 기록이 오릅니다. 전체 순위는 계정마다 가장 좋은 기록 하나, 캐릭터별 순위는 캐릭터마다 하나입니다.`, tr`기록은 서버가 확인하며, 확인을 통과하지 못한 기록은 오르지 않습니다.`, tr`운영자는 잘못된 기록을 지울 수 있습니다.`),
+      sec(tr`5. 하면 안 되는 것`, tr`게임 코드 · 저장 · 메모리를 고치거나, 게임 속도를 바꾸는 프로그램을 쓰는 것`, tr`자동으로 플레이하는 프로그램(매크로 · 봇)을 쓰는 것`, tr`서버로 가는 요청을 고치거나 만들어 보내는 것`,
+        tr`버그를 알면서 이용하는 것(버그를 찾으면 문의 메일로 알려 주세요)`, tr`서버에 무리를 주거나 다른 사람의 이용을 방해하는 것`),
+      sec(tr`6. 제재`, h('span', {}, tr`정직한 게임으로는 나올 수 없는 기록이나 5번의 행동이 확인되면`, h('ul', { class: 'pv' }, [tr`계정을 영구 정지합니다.`, tr`접속 IP 를 7일 동안 막으며, 그동안 이 사이트를 쓸 수 없습니다.`, tr`랭킹 기록을 지웁니다.`].map(x => h('li', {}, x)))),
+        tr`정지된 계정도 「계정 지우기」로 탈퇴할 수 있으며, 탈퇴하면 정지 · 차단 기록도 함께 지워집니다.`,
+        tr`보상금이 비정상적으로 빨리 늘어난 계정은 랭킹에서 뺄 수 있습니다.`, tr`학교 · 휴대폰 데이터처럼 여러 사람이 같이 쓰는 인터넷에서는 IP 차단이 다른 사람에게도 걸릴 수 있습니다.`,
+        tr`잘못 막혔다고 생각되면 화면에 나온 번호와 함께 문의 메일로 알려 주세요. 확인한 뒤 풀어 드립니다.`),
+      sec(tr`7. 저장`, tr`기록은 이 기기의 브라우저에 저장되고, 로그인하면 계정에도 저장됩니다.`, tr`브라우저 정보를 지우거나 기기를 바꾸면 기기의 기록은 사라질 수 있습니다. 소중한 기록은 로그인해서 계정에 두세요.`,
+        tr`게임 안의 보상금 · 의상 등은 게임 안에서만 쓰는 것으로 돈의 가치가 없으며, 사고팔거나 바꿀 수 없습니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있습니다.`),
+      sec(tr`8. 게임의 변경과 중단`, tr`게임은 더 좋아지기 위해 예고 없이 바뀔 수 있고(밸런스 · 기능 · 랭킹 초기화 포함), 사정에 따라 끝날 수 있습니다. 무료 게임이라 이에 따른 보상은 없습니다.`,
+        tr`약관을 바꿀 때는 시행 7일 전부터 게임 안에 알리고, 바뀐 약관은 다음 로그인 때 다시 동의를 받습니다.`),
+      sec(tr`9. 책임`, tr`게임은 지금 있는 그대로 제공됩니다. 운영자의 고의 또는 중대한 과실이 없는 한, 게임을 쓰다 생긴 손해(기록이 사라짐 · 서비스 중단 등)에 책임지지 않습니다.`, tr`카카오 · Google · Supabase · GitHub 같은 외부 서비스의 장애에는 책임지지 않습니다.`),
+      sec(tr`10. 문의`, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'), tr`이 약관은 대한민국 법을 따릅니다.`)),
+    h('div', { class: 'row' }, btn(tr`← 처음으로`, back, 'main'))))
+}
 /** 개인정보 처리방침 — 처음 화면 맨 아래 링크 · 주소 ?privacy 로 바로(카카오 · 구글 로그인 설정에 넣는 주소: https://chii-ka-wa.github.io/?privacy)
  *  고치면 PRIVACY_DAY(시행일)도. 실제와 같아야 한다 — 보관 기간은 supabase/account.sql 의 gc() · 비우기(scrub) · delete_me 와 맞춘다 */
 const PRIVACY_DAY = '2026-11-18'
-function privacy() {
+function privacy(back = title) {
   mode = 'privacy'
   const sec = (t, ...li) => [h('h3', { class: 'day' }, t), h('ul', { class: 'pv' }, li.map(s => h('li', {}, s)))]
   show(h('div', { class: 'panel guide pick' }, h('p', { class: 'h' }, tr`개인정보 처리방침`), h('p', { class: 'sub' }, tr`시행일 ${new Date(PRIVACY_DAY + 'T12:00').toLocaleDateString(LANG, { year: 'numeric', month: 'long', day: 'numeric' })}`),
@@ -4361,18 +4409,19 @@ function privacy() {
       sec(tr`1. 로그인하지 않으면`, tr`게임 기록은 이 기기 브라우저에만 저장되고 서버로 보내지 않습니다.`,
         tr`게임을 고치려고 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 등 개인을 알 수 없는 정보)와 방문 통계(Google 애널리틱스, 쿠키 사용)를 모읍니다. 처음 화면의 「보내지 않기」나 브라우저의 추적 거부 설정으로 끌 수 있습니다.`, tr`무한 모드를 하려면 통계 보내기를 켜야 합니다.`,
         tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
-      sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록`,
+      sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록, 이용약관 동의 기록(약관 시행일 · 동의한 시각)`,
         tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`,
         tr`로그인 중에는 랭킹 기록 확인을 위해 익명 플레이 통계를 항상 보냅니다(끌 수 없습니다).`),
-      sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남깁니다. 90일 뒤 지우고, 차단된 경우는 차단 기간이 끝날 때까지 보관합니다.`,
-        tr`말이 안 되는 기록이나 부정 플레이가 확인되면 계정은 영구 정지되고, 다시 가입하지 못하도록 로그인 식별자를 되돌릴 수 없게 변환한 값을 계속 보관합니다. 접속 IP(변환한 값)는 7일 동안 차단되며, 그동안 이 사이트를 이용할 수 없습니다. 잘못 막혔다면 문의 메일로 알려 주세요.`),
-      sec(tr`4. 보관과 삭제`, tr`계정 정보는 탈퇴할 때까지 보관합니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있고, 계정 · 게임 저장 · 랭킹 기록이 바로 지워집니다. 이 기기 브라우저의 기록은 남습니다.`, tr`정지된 계정은 탈퇴해도 재가입 방지 값은 남습니다.`),
+      sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남기며 90일 뒤 지웁니다.`,
+        tr`말이 안 되는 기록이나 부정 플레이가 확인되면 계정은 영구 정지되고, 접속 IP(변환한 값)는 7일 동안 차단되며 그동안 이 사이트를 이용할 수 없습니다.`,
+        tr`정지 기록은 탈퇴할 때까지, IP 차단 기록은 7일이 지날 때까지 보관하며, 탈퇴하면 그 계정의 정지 · 차단 · 부정 이용 기록을 바로 지웁니다.`, tr`잘못 막혔다면 문의 메일로 알려 주세요.`),
+      sec(tr`4. 보관과 삭제`, tr`계정 정보는 탈퇴할 때까지 보관합니다.`, tr`「계정 지우기」로 언제든 직접 탈퇴할 수 있고, 계정 · 게임 저장 · 랭킹 기록이 바로 지워집니다. 이 기기 브라우저의 기록은 남습니다.`),
       sec(tr`5. 처리를 맡기는 곳`, tr`Supabase — 계정 · 저장 · 랭킹 · 통계 보관(서버 위치 호주 시드니)`, tr`Google — 방문 통계, 구글 로그인`, tr`Kakao — 카카오 로그인`, tr`GitHub — 사이트 호스팅`,
         tr`국외 이전 — 위 정보는 서비스를 쓸 때 네트워크로 호주의 Supabase 서버와 미국의 Google · GitHub 로 전송됩니다. 목적: 게임 서비스 · 통계 / 보관: 위 기간 / 거부: 로그인과 통계를 쓰지 않으면 게임 기록은 전송되지 않습니다. 사이트를 열 때 차단 여부를 확인하고, 랭킹 화면을 열 때 랭킹을 받아 오려고 Supabase 에 접속합니다(사이트를 여는 접속 정보는 GitHub 로 갑니다).`,
         tr`Supabase · Google · GitHub 는 접속할 때의 IP 등 접속 기록을 각자의 방침에 따라 잠깐 보관합니다(Supabase 는 약 1일).`),
       sec(tr`6. 만 14세 미만`, tr`로그인은 선택입니다. 만 14세 미만은 보호자와 함께 로그인해 주세요.`),
       sec(tr`7. 문의`, h('a', { href: 'mailto:super.godbono@gmail.com' }, 'super.godbono@gmail.com'))),
-    h('div', { class: 'row' }, btn(tr`← 처음으로`, title, 'main'))))
+    h('div', { class: 'row' }, btn(tr`← 처음으로`, back, 'main'))))
 }
 function notes() {   // 패치노트 — 위 · 아래 고정, 가운데만 스크롤
   mode = 'notes'; save.seen = PATCH_ID; persist()
@@ -4591,7 +4640,7 @@ function frame(ts) {
   requestAnimationFrame(frame)
 }
 size()
-if (/[?&]privacy\b/.test(location.search)) privacy(); else title()
+if (/[?&]privacy\b/.test(location.search)) privacy(); else if (/[?&]terms\b/.test(location.search)) terms(); else title()
 if (GUARD) blockCheck()
 requestAnimationFrame(frame)
 if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 로그인했으면 0.3초 넘게 걸릴 때만 「로그인 중이에요」 — 금방 끝나면 번쩍이지 않게 · 닉네임부터)

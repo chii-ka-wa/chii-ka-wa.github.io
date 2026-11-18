@@ -44,7 +44,7 @@ create or replace function public.my_ip_h() returns text language sql stable as 
   select public.ip_hash(nullif(coalesce(h->>'cf-connecting-ip', trim(split_part(h->>'x-forwarded-for', ',', 1))), ''))
   from (select coalesce(nullif(current_setting('request.headers', true), '')::json, '{}') as h) x
 $$;
-revoke all on function public.ip_hash, public.my_ip_h from public;
+revoke all on function public.ip_hash, public.my_ip_h from public, anon, authenticated;   -- Supabase 는 새 함수에 anon · authenticated 실행 권한을 기본으로 준다 — public 만 빼면 그대로 열려 있다
 
 -- 넣는 문 — 게임은 POST /rest/v1/rpc/report_run 만 부른다. 시각(created_at)은 서버가 찍는다(인자에 없다)
 --   요청 횟수 제한: 같은 IP 한 시간 30판 · 모두 합쳐 한 시간 3000판까지(넘으면 조용히 버린다). IP 는 비밀값을 섞은 해시(ip_hash)로만 한 시간 들고 있다가 지운다
@@ -64,7 +64,7 @@ begin
   insert into run_gate (h) values (ipk);
   insert into runs (v, ch, diff, result, t, lvl, kills, killer, boss, weapons, touch, up) values (v, ch, diff, result, t, lvl, kills, killer, boss, weapons, touch, up);
 end $$;
-revoke all on function public.report_run from public;
+revoke all on function public.report_run from public, anon, authenticated;
 grant execute on function public.report_run to anon;
 notify pgrst, 'reload schema';
 -- 시각을 한국 시간으로 보기: created_at 은 그 순간을 그대로 저장하지만 Supabase 는 UTC(한국 −9시간)로 보여 준다 — 이 줄을 Run 하면 대시보드 · SQL 결과가 한국 시간(+09)으로 나온다(저장된 값은 그대로)

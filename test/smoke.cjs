@@ -2,6 +2,7 @@
 //   처음 화면 → 캐릭터 → 판 → 상자 → 최종보스까지 빨리 돌리기(무적) → 세이렌 → 클리어. 콘솔 에러가 하나라도 있으면 실패
 const { chromium } = require('playwright')
 const OUT = __dirname + '/shots/'; require('fs').mkdirSync(OUT, { recursive: true })
+const TERMS_DAY = /const TERMS_DAY = '([\d-]+)'/.exec(require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'))[1]   // 이용약관 시행일 — 흉낸 서버가 「이미 동의함」으로 답할 때
 const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END = 30 * 60, M_INF = { rest: 12, gap: 60, dark: 180 }   // 무한 — game.js INF 와 같게
 
 ;(async () => {
@@ -11,7 +12,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
-    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
+    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis', 'terms'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
     await page.route('**/rpc/blocked', r => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }))   // IP 차단 확인(?secure · ?guard 면 묻는다) — 진짜 서버 대신 「안 막힘」. ban 은 따로
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
@@ -443,7 +444,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const sent = []; let body = null
     await page.route('**/*.supabase.co/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); sent.push(u.split('/').pop())
       if (u.includes('top_ranks')) return j([row(1, 'A', 'usagi'), row(2, '치이카와팬', 'chiikawa', true)]); if (u.includes('my_rank')) return j([row(2, '치이카와팬', 'chiikawa', true)])
-      if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('submit_rank')) { body = r.request().postDataJSON(); return j({ r: 'ok', rank: 2 }) } if (u.includes('start_run')) return j('tok-1'); if (u.includes('delete_me')) return j('ok'); if (u.includes('saves?select')) return j([])
+      if (u.includes('agreed')) return j({ day: TERMS_DAY }); if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('submit_rank')) { body = r.request().postDataJSON(); return j({ r: 'ok', rank: 2 }) } if (u.includes('start_run')) return j('tok-1'); if (u.includes('delete_me')) return j('ok'); if (u.includes('saves?select')) return j([])
       return r.fulfill({ status: 204 }) })
     await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, diff: 'inf', seen: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
     await page.reload(); await page.waitForTimeout(800)
@@ -475,7 +476,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.route('**/*.supabase.co/**', async r => { const q = r.request(), u = q.url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) })
       if (u.includes('saves?select')) { reads++; return j(cloud) }
       if (u.includes('saves?on_conflict') && q.method() === 'POST') { const b = q.postDataJSON(); await new Promise(f => setTimeout(f, 300)); cloud = [{ data: b.data, updated_at: b.updated_at }]; return r.fulfill({ status: 201 }) }   // 올리기는 조금 걸린다
-      if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' })
+      if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('agreed')) return j({ day: TERMS_DAY })
       return r.fulfill({ status: 204 }) })
     await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ runs: 17, seen: 1, last: Date.parse('2026-11-18T09:08:07Z') })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'kakao' })) })
     await page.reload(); await page.waitForTimeout(800)
@@ -488,7 +489,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   await run('gis', { width: 390, height: 844 }, async page => {   // Google 공식 단추(?gis — 진짜 주소 흉내) — 구글 스크립트 대신 흉내, 받은 ID 토큰을 Supabase 세션으로(nonce 는 구글엔 해시 · Supabase 엔 원래 값)
     let tokenBody = null
     await page.route(/\/auth\/v1\/token/, r => { tokenBody = r.request().postDataJSON(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: 'a.eyJzdWIiOiJ1MiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6Imdvb2dsZSJ9fQ.b', refresh_token: 'r2', expires_in: 3600 }) }) })
-    await page.route('**/rest/v1/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); return u.includes('saves?select') ? j([]) : u.includes('my_nick') ? j({ nick: '구글팬', next: '2026-11-25' }) : u.includes('suspended') ? j(null) : r.fulfill({ status: 204 }) })
+    await page.route('**/rest/v1/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); return u.includes('saves?select') ? j([]) : u.includes('my_nick') ? j({ nick: '구글팬', next: '2026-11-25' }) : u.includes('suspended') ? j(null) : u.includes('agreed') ? j({ day: TERMS_DAY }) : r.fulfill({ status: 204 }) })
     await page.goto(new globalThis.URL('?gis', URL).href); await page.waitForTimeout(600)
     await page.evaluate(() => { window.google = { accounts: { id: { initialize: o => { window.__gis = o }, renderButton: (el, o) => { const b = document.createElement('button'); b.className = 'gis-btn'; b.textContent = 'G ' + o.text; el.append(b) } } } } })
     await page.locator('button.acct').click(); await page.waitForTimeout(300)
@@ -501,7 +502,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (o.btn !== 1 || o.old || !o.cid || !/^[0-9a-f]{64}$/.test(o.hashed || '') || o.provider !== 'google' || o.idt !== 'h.e30.s' || !o.nonceOk || o.auth !== 'google' || o.nick !== '구글팬' || o.busy) errors.push('[gis] ' + JSON.stringify(o))
   })
   await run('login', { width: 390, height: 844 }, async page => {   // 로그인 중 — 카카오로 가는 동안 · 돌아와서 기록을 불러오는 동안(0.3초 넘으면) 세 친구가 걷는 창
-    await page.route('**/rest/v1/**', async r => { await new Promise(f => setTimeout(f, 400)); r.fulfill({ status: 200, contentType: 'application/json', body: r.request().url().includes('saves?select') ? '[]' : 'null' }) })   // 기록 불러오기는 조금 걸린다(정지 확인 · 저장 · 닉네임 — 하나에 0.4초)
+    await page.route('**/rest/v1/**', async r => { await new Promise(f => setTimeout(f, 400)); r.fulfill({ status: 200, contentType: 'application/json', body: r.request().url().includes('saves?select') ? '[]' : r.request().url().includes('agreed') ? JSON.stringify({ day: TERMS_DAY }) : 'null' }) })   // 기록 불러오기는 조금 걸린다(정지 확인 · 저장 · 닉네임 — 하나에 0.4초)
     await page.evaluate(() => { window.__close = window.__mjg.busy('카카오 로그인 화면으로 가는 중이에요', { prov: 'kakao', going: true }) }); await page.waitForTimeout(300)   // 카카오로 넘어가는 동안(넘어가기 시작하면 점검이 페이지를 못 읽어서 직접 띄운다)
     const go = { sub: await page.locator('.busy .sub').textContent(), friends: await page.locator('.busy .friends canvas').count(), logo: await page.locator('.busy .sub .brand svg').count() }
     await page.screenshot({ path: OUT + 'busy.png' }); await page.mouse.click(10, 10); go.stays = await page.locator('.busy').count(); await page.evaluate(() => window.__close())
@@ -510,6 +511,30 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.evaluate(() => localStorage.removeItem('mjg.auth'))
     console.log('login', { go, back })
     if (!go.sub?.includes('카카오 로그인 화면으로') || go.friends !== 3 || go.logo !== 1 || go.stays !== 1 || !back.mid?.includes('내 기록을 불러오는') || back.end) errors.push('[login] ' + JSON.stringify({ go, back }))
+  })
+  await run('terms', { width: 390, height: 844 }, async page => {   // 이용약관 — 처음 화면 링크 · ?lang=en&terms, 처음 로그인(새 계정)은 동의를 묻고 「동의하지 않아요」면 계정을 지우고 로그아웃, 약관이 바뀐 기존 계정은 동의하면 그대로
+    await page.locator('.fine .linkish', { hasText: '이용약관' }).click(); await page.waitForTimeout(200)
+    const doc = { h: await page.locator('#ui .panel .h').textContent(), n: await page.locator('#ui ul.pv li').count(), mode: await page.evaluate(() => window.__mjg.mode) }
+    await page.screenshot({ path: OUT + 'terms.png' }); await page.keyboard.press('Escape'); await page.waitForTimeout(150); doc.back = await page.evaluate(() => window.__mjg.mode)
+    await page.goto(new globalThis.URL('?lang=en&terms', URL).href); await page.waitForTimeout(800)
+    doc.en = await page.locator('#ui .panel .h').textContent(); doc.han = await page.evaluate(() => (document.querySelector('#ui').innerText.match(/[가-힣]+/g) || []).slice(0, 4))
+    const sent = [], state = { day: null, nick: null }
+    await page.route('**/*.supabase.co/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); sent.push(u.split('/').pop().split('?')[0])
+      if (u.includes('saves?select')) return j(state.nick ? [{ data: { runs: 0 }, updated_at: '2026-11-18T00:00:00Z' }] : []); if (u.includes('agreed')) return j({ day: state.day }); if (u.includes('my_nick')) return j(state.nick)
+      if (u.includes('rpc/agree')) { state.agreeBody = r.request().postDataJSON(); return j('ok') } if (u.includes('delete_me')) return j('ok'); if (u.includes('suspended')) return j(null); return r.fulfill({ status: 204 }) })
+    const login = async () => { await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ seen: 1, lang: 'ko' })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'kakao' })) }); await page.goto(URL); await page.waitForTimeout(900) }
+    await login()   // 새 계정 — 닉네임도 동의 기록도 없다
+    await page.screenshot({ path: OUT + 'terms-agree.png' }); const fresh = { h: await page.locator('.modal .h').textContent() }; await page.keyboard.press('Escape'); await page.waitForTimeout(100); fresh.stays = await page.locator('.modal').count()
+    await page.locator('.modal .btn', { hasText: '동의하지 않아요' }).click(); await page.waitForTimeout(500)
+    Object.assign(fresh, { deleted: sent.includes('delete_me'), auth: await page.evaluate(() => localStorage.getItem('mjg.auth')), modal: await page.locator('.modal').count() })
+    state.day = '2000-01-01'; state.nick = { nick: '치이카와팬', next: '2026-11-24' }; sent.length = 0; await login()   // 기존 계정 — 예전 약관에 동의했다
+    const old = { h: await page.locator('.modal .h').textContent() }; await page.locator('.modal .btn.main', { hasText: '동의하고 시작' }).click(); await page.waitForTimeout(500)
+    Object.assign(old, { day: state.agreeBody?.day, auth: !!(await page.evaluate(() => localStorage.getItem('mjg.auth'))), modal: await page.locator('.modal').count(), deleted: sent.includes('delete_me') })
+    await page.evaluate(() => localStorage.removeItem('mjg.auth'))
+    console.log('terms', { doc, fresh, old })
+    if (doc.h !== '이용약관' || doc.n < 30 || doc.mode !== 'terms' || doc.back !== 'title' || doc.en !== 'Terms of Service' || doc.han.length) errors.push('[terms] 화면 ' + JSON.stringify(doc))
+    if (fresh.h !== '처음 오셨네요!' || fresh.stays !== 1 || !fresh.deleted || fresh.auth || fresh.modal) errors.push('[terms] 새 계정 ' + JSON.stringify(fresh))
+    if (old.h !== '이용약관이 바뀌었어요' || old.day !== TERMS_DAY || !old.auth || old.modal || old.deleted) errors.push('[terms] 기존 계정 ' + JSON.stringify(old))
   })
   await run('susp', { width: 390, height: 844 }, async page => {   // 정지된 계정 — 켜면 로그아웃되고 처음 화면에 번호. 로그인 중에는 「보내지 않기」 대신 글
     await page.route('**/*.supabase.co/**', r => r.request().url().includes('rpc/suspended') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{"id":7}' }) : r.fulfill({ status: 204 }))

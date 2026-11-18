@@ -24,7 +24,7 @@
 - 날아오는 것은 크게, 빨간 테와 꼬리를 달아 보석과 구별되게 그립니다. 쏘기 직전에는 머리 위에 빨간 ! 가 뜨고, 겨누는 것은 조준선도 나옵니다.
 - 토벌 보상금 · 영구 강화 상점: 판이 끝나면 버틴 시간(10초에 1) · 처치(200에 1) · 보스(15) · 클리어(60)에 난이도 배수(`DIFF.coin` — 쉬움 1 · 보통 1.25 · 어려움 1.5)를 곱한 보상금(`bounty`). 처음 화면 「상점」의 「강화」 탭에서 `SHOP` 표의 영구 강화를 산다(n 번째 칸 = cost × n). 한 칸이 같은 아이템 한 레벨의 1/5쯤이라 다 사도 아이템 한 레벨 몫 — 판의 밸런스를 지키려고 일부러 작게. 이 브라우저(`save.coin` · `save.up`)에만
 - 부활석(`STONE` = 1,000, `save.stone`): 상점에서 사 두면 쓰러졌을 때 「부활할까요?」 창 — 하나 써서 체력 가득 · 레벨 업 빛기둥처럼 밀쳐 내고 1.2초 무적 · 화면 안 일반 몬스터 토벌. 한 판에 `DIFF.revive` 번(쉬움 3 · 보통 2 · 어려움 1)
-- 떠돌이 보물상자(`WANDER` · `LOOT`): 앵커에서 1500 멀어질 때마다(제자리 · 작은 원으로 맴돌면 안 나온다) 14% — 바닥에 하나 · 90초 간격 · 25초 뒤 사라짐. 토벌 보상금 10 ~ 200(클수록 드물게) · 잭팟 5,000(1%, 화려하게 — `LOOT_JACK`) · 부활석 3%(이번 판만 — 주웠으면 그 판엔 상점 부활석을 못 쓴다). 받은 보상금은 결과 화면에 따로(난이도 배수 없이)
+- 떠돌이 보물상자(`WANDER` · `LOOT`): 앵커에서 1500 멀어질 때마다(제자리 · 작은 원으로 맴돌면 안 나온다) 25% — 바닥에 하나 · 10초 간격 · 25초 뒤 사라짐. 토벌 보상금 10 ~ 200(클수록 드물게) · 잭팟 5,000(1%, 화려하게 — `LOOT_JACK`) · 부활석 3%(이번 판만 — 주웠으면 그 판엔 상점 부활석을 못 쓴다). 받은 보상금은 결과 화면에 따로(난이도 배수 없이)
 - 업적(`ACH` 표 — 처음 화면 「업적」): 12가지 × 동 · 은 · 금. 쉬운 것은 횟수를 많이(`tiers`), 어려운 것은 적게. 판이 끝날 때 `achieve()` 가 `save.ach` 에 더한다(판 수 · 클리어한 캐릭터는 원래 기록에서). 금메달 하나마다 토벌 보상금 +1%(`bounty`). 메달은 `medalSpr` 가 리본 · 판 · 가운데 그림(아이콘이나 캐릭터 그림)으로 직접 그린다
 - 테마(처음 화면 왼쪽 위, `save.theme`): 겨울(기본) — 눈밭 · 내리는 눈(`snow()`, 상태 없이 시간 · 카메라로만) · 적은 크리스마스 의상(`XMAS` 표 — 산타 모자 · 루돌프 뿔 · 호랑가시, 그 그림 함수 좌표라 보스도 같은 값) / 풀밭 — 예전 그대로. 바꾸면 바닥 · 적 그림만 다시 그린다(`sprites()`)
 - 겨울 맵(`STORM` · `ICE`, `winter()`): `STORM.every`(60)초마다 반반 확률로 눈보라 — 5초 전엔 오든 안 오든 「곧 눈보라가 와요!」(`tip()` 작은 안내), 오면 15초 동안 눈발이 거세지고(`snow()` 세기 `G.storm.k`) 쌓인 눈(`piles()`, 밟으면 `pl.vx · vy` 관성으로 미끄러지고 아픈 표정)과 받는 피해 ×1.2(`stormHurts()` — 5초 넘게 계속 움직이면 몸에 열이 나서 그대로, 불꽃 옷도 그대로). 그치면 쌓인 눈은 녹는다. 5초 넘게 가만히 있으면 최대 체력 1.5%씩 1초마다 줄고(무적일 땐 안 줄어든다) 파랗게 얼며 눈에 덮인다. 업적 「눈보라를 이겨 냈다」(버틴 눈보라) · 「겨울 토벌」(겨울 어려움 클리어 — 처음이면 불꽃 옷 `OUTFIT.fire`, 모든 캐릭터)
@@ -73,7 +73,7 @@
 - 랭킹 순서: 단계 ↓ → 잡은 보스 ↓ → 마지막 보스를 잡은 때 ↑ → 먼저 세운 기록. 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10(`top_ranks`), 내 순위(`my_rank`)
 - 서버 검증(`submit_rank`): 무한 판을 시작할 때 `start_run` 으로 시각을 남기고(로그인한 판만), 올릴 때 「실제 흐른 시간 ≥ 기록 ÷ 3(배속)」 · 시작한 지 6시간 안 · 단계와 시간이 맞는지 · 같은 판은 한 번. 브라우저 게임이라 손쉬운 위조만 막는다 — 이상한 기록은 대시보드에서 `delete from ranks where …`
 - 처음 한 번(대시보드):
-  1. SQL Editor 에 `supabase/schema.sql` → `supabase/account.sql` 순서로 통째로 Run(여러 번 돌려도 된다). account.sql 맨 아래 확인 표가 여섯 줄 모두 true 여야 한다(pg_cron 이 false 면 Database › Extensions 에서 pg_cron 을 켜고 다시 Run)
+  1. SQL Editor 에 `supabase/schema.sql` → `supabase/account.sql` 순서로 통째로 Run(여러 번 돌려도 된다). account.sql 맨 아래 확인 표가 다섯 줄 모두 true 여야 한다(pg_cron 이 false 면 Database › Extensions 에서 pg_cron 을 켜고 다시 Run)
   2. Authentication › URL Configuration — Site URL `https://chii-ka-wa.github.io`, Redirect URLs 에 `https://chii-ka-wa.github.io/**` (로컬 점검도 하려면 `http://127.0.0.1:8765/**`)
   3. Authentication › Providers › Kakao — 카카오 개발자 콘솔의 **REST API 키**(Client ID) · **Client Secret**, 「Allow users without an email」 켜기. 카카오 콘솔: 카카오 로그인 켜기 · Redirect URI `https://lvxkcaorsdicichwtcgd.supabase.co/auth/v1/callback` · 동의항목 닉네임 · 프로필 사진(이메일은 비즈 앱 전환 뒤 선택 동의)
   4. Authentication › Providers › Google — Google Cloud 콘솔 OAuth 클라이언트(웹)의 Client ID · Secret, 승인된 리디렉션 URI 는 위와 같은 callback 주소
@@ -81,14 +81,16 @@
   - 랭킹 체크섬: `start_run` 이 판마다 일회용 값(`tok`)을 주고, `submit_rank` 는 `sha256(tok|ch|lv|bosses|bt|t|kills|lvl|weapons|hit0|v|소금)` 을 다시 계산해 안 맞으면 그 판만 거절(`hold`) + 기록. 소금(`CK_SALT` · `'mjg|r7Q'`)은 game.js 와 SQL 이 같아야 한다
   - 보상금: 계정 저장이 바뀔 때(`saves_guard` — 처음 올리는 것은 빼고) 지난 저장부터 흐른 서버 시간(3시간까지) × 분당 1,000 + 6,000 보다 많이 늘면 기록 + 랭킹에서 빼 둔다(`bans` 에 coin — 저장은 그대로 받는다). 저장 지우기 권한은 없다(지우고 새로 넣어 검사를 피하지 못하게)
   - 의심 목록: SQL Editor 에서 `select * from suspects;` (한 대도 안 맞은 판 → 많이 걸린 순, 그 IP 에서 걸린 계정 수)
-  - 자동 정지(`ban_me` — 기획 결정): 정직한 게임이 못 내는 랭킹 기록(실제 시간 < 기록 ÷ 3 − 30초 · 처치 > 초당 100 · 레벨 > 4초에 1 + 20 · 그 단계까지 정직한 최소 시간 미달(쉬는 12초 + 무리 간격 60초 — 1단계 132 · 2~4단계 72 · 5단계부터 12초) · 보스 < 단계 — 모두 게임 시간 기준)이나 같은 계정에서 7일 안에 체크섬 어긋남 · 봉인 깨짐 · 자격 없는 3배속 3번 → 계정 영구 정지(로그인 식별자 해시 `pid_h` — 탈퇴 · 재가입해도 `mjg_rejoin` 이 바로 정지) + IP 7일. 범위 밖 숫자(음수 등)는 거절만(대개 버그).
+  - 자동 정지(`ban_me` — 기획 결정): 정직한 게임이 못 내는 랭킹 기록(실제 시간 < 기록 ÷ 3 − 30초 · 처치 > 초당 100 · 레벨 > 4초에 1 + 20 · 그 단계까지 정직한 최소 시간 미달(쉬는 12초 + 무리 간격 60초 — 1단계 132 · 2~4단계 72 · 5단계부터 12초) · 보스 < 단계 — 모두 게임 시간 기준)이나 같은 계정에서 7일 안에 체크섬 어긋남 · 봉인 깨짐 · 자격 없는 3배속 3번 → 계정 영구 정지(`bans.stop`) + IP 7일(그 줄에도 계정을 적는다). 탈퇴하면(`delete_me`) 그 계정의 정지 · IP 차단 · 부정 플레이 기록을 바로 지운다(사용자 결정 — 재가입 막기 없음). 범위 밖 숫자(음수 등)는 거절만(대개 버그).
   - 정지된 계정은 게임이 로그아웃시키고 처음 화면에 번호(`suspended()`), 로그인 없는 판은 그대로. IP 가 막히면 열 때 묻고(`blocked()`, 기다리지 않음 · 서버가 안 되면 연다) 게임 대신 안내 화면(번호 · 풀리는 때). GitHub Pages 라 진짜 네트워크 차단은 아니다 — 랭킹 · 통계는 서버도 막는다
-  - ★ 잘못 막혔다는 문의(번호 = `bans.id`): `delete from bans where id = <번호> or pid_h = (select pid_h from bans where id = <번호>);`
-  - 직접 차단(`bans`): 차단되면 랭킹 · 익명 통계에서 빠지고, IP 차단이면 사이트도 못 연다. 계정 정지 — `insert into bans (uid, pid_h, reason) values ('<uid>', pid_hash('<uid>'), '무적');` 계정 차단을 먼저 — `insert into bans (uid, reason) values ('<uid>', '무적');` IP 차단은 기간제로 — `insert into bans (ip_h, reason, until) values ('<ip_h>', '…', now() + interval '7 days');` (통신사 · 학교는 여러 사람이 IP 하나를 같이 쓴다. 원래 IP 를 알면 `ip_hash('1.2.3.4')`). 풀기 `delete from bans where id = …;`
+  - ★ 잘못 막혔다는 문의(번호 = `bans.id`): `delete from bans where id = <번호> or uid = (select uid from bans where id = <번호>);`
+  - 직접 차단(`bans`): 차단되면 랭킹 · 익명 통계에서 빠지고, IP 차단이면 사이트도 못 연다. 계정 정지 — `insert into bans (uid, stop, reason) values ('<uid>', true, '무적');` 계정 차단을 먼저 — `insert into bans (uid, reason) values ('<uid>', '무적');` IP 차단은 기간제로 — `insert into bans (ip_h, reason, until) values ('<ip_h>', '…', now() + interval '7 days');` (통신사 · 학교는 여러 사람이 IP 하나를 같이 쓴다. 원래 IP 를 알면 `ip_hash('1.2.3.4')`). 풀기 `delete from bans where id = …;`
 - 로그인 중에는 익명 통계(`report_run`, 계정 없이)를 늘 보낸다 — 처음 화면 「보내지 않기」 자리에 「로그인 중에는 통계를 보내요」. 방문 통계(GA)는 그대로 토글 · 추적 거부를 따른다. 로그인 안 하고 통계를 끄면 무한 모드는 「토벌 시작!」에서 켤지 묻는다
 - 계정 지우기: 계정 메뉴 맨 아래 작은 글씨 → 닉네임(없으면 「지우기」)을 똑같이 써야 눌린다 → `delete_me()` — `auth.users` 를 지우면 저장 · 닉네임 · 랭킹이 따라 지워지고, 그 계정의 부정 플레이 기록 · 로그인 기록도. 진행 중인 차단만 끝날 때까지 남긴다. 이 기기 기록은 그대로
 - 개인정보: 이메일 · 이름 · 사진은 남기지 않는다 — `auth.users` · `auth.identities` · 로그인 기록(`audit_log_entries`) · 세션에 들어오는 것을 트리거(`mjg_scrub`)가 넣기 · 고치기 때마다 비운다(남는 것은 제공자 사용자 번호 ↔ 계정 ↔ 닉네임). 그래서 같은 이메일이어도 카카오 · 구글 계정은 따로따로
 - 지울 때가 된 것(`gc()`, pg_cron 한 시간마다): 부정 플레이 기록 90일(차단 중인 계정 · IP 것은 차단이 끝날 때까지) · 끝난 차단 · 익명 통계 횟수 제한용 IP 해시 1시간. 처리방침과 같아야 한다
+- 이용약관: 게임 안 창(`terms()` — 처음 화면 맨 아래 · 로그인 창 링크), 주소 `https://chii-ka-wa.github.io/?terms`. 처음 로그인(새 계정)과 약관이 바뀐 뒤(`TERMS_DAY`) 첫 로그인에 동의 창(`termsBox` — 단추 하나, 체크박스 없음, 바깥 · Esc 로 안 닫힘). 동의는 `terms_ok`(시행일 · 시각, `agree` · `agreed`), 새 계정이 동의하지 않으면 계정을 지우고(`delete_me`) 로그아웃, 기존 계정은 로그아웃만. 개인정보는 동의가 아니라 처리방침으로 알린다(로그인 정보는 서비스에 꼭 필요한 정보). 약관을 바꾸면 `TERMS_DAY` 를 시행일로(7일 전부터 알리기) — 9번 「고의 또는 중대한 과실이 없는 한」은 남길 것
+- Google 로그인: 진짜 주소에선 Google 공식 단추(Google Identity Services — `gisButton` → ID 토큰을 `/auth/v1/token?grant_type=id_token` 으로, nonce). 리디렉트(supabase.co 를 거침)는 쓰지 않는다 — 구글 화면에 앱 이름을 보이려면 브랜드 인증이 필요하고, 인증은 승인된 도메인을 모두 소유 확인해야 해서 supabase.co 를 뺀다. 클라이언트 ID(`GOOGLE_ID`)는 공개 값
 - 개인정보 처리방침: 게임 안 창(`privacy()` — 처음 화면 맨 아래 링크), 주소 `https://chii-ka-wa.github.io/?privacy`(영어 `?lang=en&privacy`) — 카카오 · 구글 콘솔의 개인정보처리방침 주소 칸에 넣는다. 고치면 `PRIVACY_DAY`(시행일)도
 - 토큰은 `localStorage['mjg.auth']`(Supabase REST 를 `fetch` 로 직접 — 라이브러리 없음). 점검: `node test/smoke.cjs` 의 `acct`(서버를 흉내 낸다), SQL 은 Postgres 컨테이너에서 따로 돌려 봤다
 
