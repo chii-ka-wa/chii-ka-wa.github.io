@@ -123,6 +123,11 @@ const PATCH = [
     ['new', 'license', tr`이용약관이 생겼어요 — 처음 로그인할 때 동의를 받아요(처음 화면 맨 아래)`],
     ['new', LANGS.find(x => x[0] === LANG)[2], tr`처음 들어오면 브라우저 언어로 보여요 — 오른쪽 위 언어 단추로 고른 말은 계속 그 말로 열려요`],
     ['up', 'inf', tr`랭킹에 그 판을 플레이한 언어가 국기로 나와요 · 휴대폰에서 랭킹 줄이 두 줄로 넉넉해졌어요`],
+    ['new', 'slipper', tr`PC로 처음 하면 첫 판에 키보드 · 마우스 조작법을 15초 동안 보여 줘요`],
+    ['up', 'anoko', tr`어려움 · 무한: 아노코와 세이렌이 훨씬 단단해졌어요(아노코 약 6배 · 세이렌 약 10배)`],
+    ['fix', 'onigiri', tr`같은 아이템은 맵에 2개(무한 1개)까지만 떨어져요 — 오니기리는 5개(무한 3개)`],
+    ['up', 'coinbox', tr`떠돌이 보물상자가 멀리 움직일 때마다 반드시 나와요(10초마다) — 상자 표시가 다 차면 등장! 대신 12초 뒤 사라져요`],
+    ['fix', 'shirt', tr`의상 · 스킨 값이 10분의 1이 됐어요 — 일반 의상 500 · 고급 2,000(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 1,000) · 무기 스킨 · 스킬 스킨 1,000`],
   ]],
   ['2026-11-17', [
     ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
@@ -245,14 +250,14 @@ const ITEMS = {
   pajama: { name: tr`꿀맛 페스티벌 티켓`, note: tr`파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%` },
   battery: { name: tr`건전지`, note: tr`한잎이 · 두잎이가 6초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다` },
   chest: { name: tr`보물상자`, note: tr`보스가 떨어뜨린다 — 잭팟 확률 50%` },
-  coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 돌아다니면 가끔 나타난다(10초에 한 번까지 · 25초 뒤 사라진다) — 토벌 보상금 10 ~ 200(클수록 드물게), 1% 잭팟 5000, 3% 확률로 이번 판에서만 쓰는 부활석` },
+  coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 움직이면 반드시 나타난다(오른쪽 위 상자 표시가 다 차면 · 10초에 한 번까지 · 12초 뒤 사라진다) — 토벌 보상금 10 ~ 200(클수록 드물게), 0.2% 잭팟 5000, 0.3% 확률로 이번 판에서만 쓰는 부활석` },
   awaken: { name: tr`각성의 별`, note: tr`Lv 8 스킬이 있을 때 보스(중간보스 빼고)가 떨어뜨린다 — Lv 8 스킬 하나를 각성(조금 세지고 날아오는 것을 가끔 막는다)` },
 }
 
 // 떠돌이 보물상자 — 처음 자리(앵커)에서 d 만큼 멀어질 때마다 앵커를 옮기고 p 확률로 가는 쪽 앞에. 바닥에 하나만 · 앞 상자에서 gap 초 뒤부터 · life 초 뒤 사라진다
-const WANDER = { d: 1500, p: 0.25, gap: 10, life: 25 }   // 기획(2026-11-18): 14% · 90초 → 25% · 10초 — 35% 면 상자만으로 판 수입이 두 배를 넘어서
+const WANDER = { d: 1500, gap: 10, life: 12 }   // 떠돌이 보물상자 — 앵커에서 1500 + 10초가 지나면 반드시(기획 2026-11-18: 확률이면 「표시가 다 찼는데 왜 안 나와?」), 12초 뒤 사라짐 · 바닥에 하나만. 판마다 약 90~180개라 LOOT 의 부활석 · 잭팟을 0.3 · 0.2% 로(가끔 그대로)
 // 떠돌이 보물상자에서 나오는 것 — [토벌 보상금(또는 'stone' 부활석), 확률 %]. 합 100. 잭팟(LOOT_JACK) 말고는 200 을 넘지 않는다
-const LOOT_JACK = 5000, LOOT = [['stone', 3], [LOOT_JACK, 1], [10, 28], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
+const LOOT_JACK = 5000, LOOT = [['stone', 0.3], [LOOT_JACK, 0.2], [10, 31.5], [20, 21], [30, 15], [50, 11], [70, 8], [100, 6], [130, 3.5], [160, 2], [200, 1.5]]
 
 // 토벌 대상 — r 몸 반지름 · hp(시간이 갈수록 세진다) · spd 이동 · dmg 닿으면 · xp 떨어뜨리는 경험치 · col 터질 때 색
 const FOES = {
@@ -290,6 +295,7 @@ const BOSS = {
   siren: { name: tr`세이렌`, line: tr`내 노래를 들어 봐…`, note: tr`노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다`, st: 'charm', stCd: 14 },
 }
 const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인어는 그대로)
+const HARD_HP = { anoko: 6, siren: 10 }   // 어려움 · 무한 0단계(25분까지 어려움과 같은 진행)의 후반 보스 체력 배수 — 센 판 기준 아노코 약 50초(60초 「화남」 전) · 세이렌 약 90초(기획 2026-11-18). 무한 1단계부터는 단계 보정이 따로 있어 곱하지 않는다
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 // 무한 — 세이렌을 쓰러뜨리면 단계(lv)가 오른다. 단계마다 강해진 보스가 lv+1 마리씩 INF.gap 초마다(종류는 섞어서 BOSS 여섯이 다 나올 때까지), 다 쓰러뜨리면 세이렌 lv+1 명(인어 셋씩). INF.dark 초 안에 못 쓰러뜨리면 검은 별똥별
@@ -2204,7 +2210,7 @@ function sprites() {
 // ---------------------------------------------------------------- 의상 — 꾸미기만(능력치는 그대로). 캐릭터마다 셋: 저가(상점 · 수수한 그림) · 고가(상점 · 원작 의상 + 이펙트) · 업적(어려움 클리어 · 원작 의상 + 화려한 이펙트)
 //   그림은 mochi() 가 몸을 그리는 차례에 끼워 그린다 — back(몸 뒤 · 망토) · body(몸 안에 오려 그림 · 옷) · head(얼굴 뒤에 · 모자). q = 몸 크기(W · H · hw · t 머리 끝 · y(f) 위에서 f 만큼 · mid 머리와 몸 경계 · P 몸 테두리)
 //   save.owned = 산 의상 id, save.wear[캐릭터] = 입은 의상 id(없으면 기본). 업적 의상은 그 캐릭터로 어려움을 클리어하면(save.best[id].clears)
-const OUTFIT_COST = { cheap: 5000, rich: 20000 }, priceOf = oid => OUTFIT[oid].cost ?? OUTFIT_COST[OUTFIT[oid].tier] ?? 0   // priceOf — 상점 줄 순서(싼 것부터)   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 10,000)
+const OUTFIT_COST = { cheap: 500, rich: 2000 }, priceOf = oid => OUTFIT[oid].cost ?? OUTFIT_COST[OUTFIT[oid].tier] ?? 0   // priceOf — 상점 줄 순서(싼 것부터)   // 등급 값 — 의상에 cost 가 있으면 그 값(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 10,000)
 const crude = (g, fill, lw = 1.15) => { g.fillStyle = fill; g.fill(); g.lineJoin = 'round'; g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }   // 저가 — 칠만 하고 굵은 선(수수하게)
 const inHead = (g, q, fn) => { g.save(); g.clip(q.P); fn(); g.restore() }   // 머리 · 몸 테두리 안에만
 // 고가 · 업적 의상 그리기 도우미
@@ -2362,15 +2368,15 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       for (let i = 0; i < 6; i++) blob(g, bx - 4 + i * 1.6, by - 2.2 - Math.sin(i / 5 * Math.PI) * 2.8, 1.6, 1.4, '#f6efcf', 0.45); blob(g, bx + 1.4, by - 5.6, 1.4, 1.2, '#f6efcf', 0.45)   // 숙주 산더미
       g.beginPath(); g.moveTo(bx - 5.8, by - 1.4); g.lineTo(bx + 5.8, by - 1.4); g.quadraticCurveTo(bx + 5.2, by + 3.4, bx, by + 3.6); g.quadraticCurveTo(bx - 5.2, by + 3.4, bx - 5.8, by - 1.4); ink(g, '#fff', LW); g.strokeStyle = '#e8473b'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(bx - 5, by - 0.3); g.lineTo(bx + 5, by - 0.3); g.stroke()   // 라멘 그릇
     } },
-  crab: { tier: 'rich', cost: 10000, name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
+  crab: { tier: 'rich', cost: 1000, name: tr`게 머리띠`, note: tr`카니와 나눠 낀 분홍 게 집게 머리띠`,
     fx: { k: ['spark'], col: ['#ff9bb0', '#ffd0d8', '#ffffff'], rate: 5 },
     head: (g, q) => { g.strokeStyle = OUT; g.lineWidth = 1.6; g.beginPath(); g.arc(0, q.y(0.2), 9.4, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); g.strokeStyle = '#f08a9a'; g.lineWidth = 0.8; g.stroke(); for (const s of [-1, 1]) pincer(g, s * 4.2, q.t - 1.2, s, '#f08a9a', '#f7b0ba') } },
-  chestnut: { tier: 'rich', cost: 10000, name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
+  chestnut: { tier: 'rich', cost: 1000, name: tr`밤`, note: tr`핼러윈에 밤으로 변신 — 반들반들한 껍질 모자`, earsOver: true,
     fx: { k: ['nut', 'leaf'], col: ['#b5673b', '#d9a441', '#86c565'], rate: 3, fall: true },
     head: (g, q) => { const b = q.y(0.3); inHead(g, q, () => { g.beginPath(); g.moveTo(-16, b + 1); g.quadraticCurveTo(0, b - 3.6, 16, b + 1); g.lineTo(16, q.t - 4); g.lineTo(-16, q.t - 4); g.closePath(); g.fillStyle = '#d98b5f'; g.fill(); g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(-4.6, q.y(0.1), 3.4, 1.6, -0.4, 0, TAU); g.fill() })
       g.lineWidth = 0.8; g.strokeStyle = OUT; g.beginPath(); g.moveTo(-q.hw + 0.4, b + 0.6); g.quadraticCurveTo(0, b - 3.6, q.hw - 0.4, b + 0.6); g.stroke()
       g.beginPath(); g.moveTo(-2.4, q.t + 0.6); g.quadraticCurveTo(0, q.t - 4.6, 2.4, q.t + 0.6); g.closePath(); ink(g, '#c27548', LW) } },
-  daifuku: { tier: 'rich', cost: 10000, name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
+  daifuku: { tier: 'rich', cost: 1000, name: tr`딸기 찹쌀떡`, note: tr`핼러윈 만화에서 입은 딸기 찹쌀떡 — 이마 흉터는 그대로`, earsOver: true,
     fx: { k: ['dot'], col: ['#ffffff', '#fff6ec', '#ffe3e3'], rate: 6 },
     body: (g, q) => { g.fillStyle = '#f6f0e4'; g.fillRect(-20, q.neck - 0.4, 40, 40); g.fillStyle = '#fff'; for (const [x, k] of [[-6, 0.3], [4, 0.45], [-2, 0.75], [7, 0.8]]) { g.beginPath(); g.arc(x, q.neck + (-1 - q.neck) * k, 0.7, 0, TAU); g.fill() } },
     head: (g, q) => { const b = q.y(0.13); g.beginPath(); g.moveTo(-q.hw - 1.2, b); g.quadraticCurveTo(-q.hw - 1.4, q.t - 3.6, 0, q.t - 3.8); g.quadraticCurveTo(q.hw + 1.4, q.t - 3.6, q.hw + 1.2, b); g.quadraticCurveTo(0, b + 2.4, -q.hw - 1.2, b); ink(g, '#f6f0e4', LW)
@@ -2378,9 +2384,9 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
       g.fillStyle = '#ffe36e'; for (const [x, y] of [[-1.6, -7.6], [1.4, -7.2], [-0.4, -5.6], [1.8, -5.4], [-2, -5.8]]) { g.beginPath(); g.arc(x, q.t + y, 0.35, 0, TAU); g.fill() }
       for (const s of [-1, 0, 1]) { g.beginPath(); g.ellipse(s * 1.6, q.t - 9.8, 1.7, 0.8, s * 0.6, 0, TAU); ink(g, '#5da34a', 0.5) } } },
   // 고급 — 생일 · 핼러윈 만화의 원작 의상(반짝임만, 발밑 빛은 업적에)
-  cinder: { tier: 'rich', cost: 10000, name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
+  cinder: { tier: 'rich', cost: 1000, name: tr`신데렐라`, note: tr`생일 만화의 신데렐라 — 반짝이는 드레스 · 티아라`,
     of: ch => { const t = TONE[ch]; return { fx: { k: ['spark', 'note', 'heart'], col: [t[1], '#ffffff', t[0], '#fff3a1'], rate: 5 }, ...gown(t[0], t[1], ['chiikawa', 'usagi', 'momonga', 'kani'].includes(ch) ? 'heart' : 'star', t[2]) } } },
-  prince: { tier: 'rich', cost: 10000, name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
+  prince: { tier: 'rich', cost: 1000, name: tr`왕자님`, note: tr`생일 만화의 왕자님 — 단발 가발 · 금빛 견장 하얀 옷`, earsOver: true,
     fx: { k: ['spark', 'star'], col: ['#ff9be0', '#9fd8ff', '#fff3a1', '#b6f0c2'], rate: 5 },
     body: (g, q) => { suit(g, q, '#ffffff'); g.fillStyle = '#2e2e48'; g.fillRect(-0.9, q.neck - 0.4, 1.8, 30); for (let i = 0; i < 3; i++) blob(g, 2.2, q.neck + 1.4 + i * 2, 0.7, 0.7, '#e2b33c', 0.4) },
     head: (g, q) => { hoodRing(g, q, '#5a3a28'); g.fillStyle = '#5a3a28'; g.beginPath(); for (let i = -3; i <= 3; i++) { const x = i * 2.4 + q.look; g.moveTo(x - 1.4, q.y(0.21)); g.quadraticCurveTo(x, q.y(0.29), x + 1.4, q.y(0.21)) } g.fill()
@@ -2573,7 +2579,7 @@ setInterval(() => { if (mode === 'shop') ui.querySelector('.wr-pv')?._tick?.(0.0
 //   무기 스킨: 캐릭터마다 둘 — 상점(WSKIN_COST) · 업적(그 캐릭터로 보통 이상 클리어). 든 무기를 바꿔 그린다(모몽가 · 시사는 스킨을 끼우면 손에 든다)
 //   스킬 스킨: 스킬마다 하나 — 상점(SKIN_COST), 그 스킬을 각성해 본 적이 있으면 그냥 받는다. 그 스킬의 색을 바꾸고 지나간 자리에 작은 반짝이를 남긴다
 //   save.wskin[캐릭터] = 낀 무기 스킨 id, save.skin[스킬] = 켰는지, save.owned 에 산 것('sk:스킬')
-const WSKIN_COST = 10000, SKIN_COST = 10000
+const WSKIN_COST = 1000, SKIN_COST = 1000   // 2026-11-18 사용자: 의상 · 스킨 값 1/10
 function stickSkin(g, x, y, col, stripe, ends, bolt) {   // 토벌봉 모양 막대
   g.save(); g.translate(x, y); g.rotate(-1.3)
   for (const [c, lw] of [[OUT, 2.8], [col, 1.6]]) { g.strokeStyle = c; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath(); g.moveTo(-5, 0); g.lineTo(17, 0); g.stroke() }
@@ -2724,8 +2730,10 @@ if (TR) {   // index.html 의 한국어 이름표 · 탭 제목도 그 말로(�
   cv.setAttribute('aria-label', `${tr`먼작귀`} ${tr`서바이버즈`}`)   // 탭 제목(document.title)은 index.html 의 한국어 그대로 — 검색 결과 제목 · 구글 동의 화면 이름과 늘 맞게(기획)
   pauseBtn.setAttribute('aria-label', tr`일시정지`); document.getElementById('snd').setAttribute('aria-label', tr`소리 크기`); document.getElementById('spd').setAttribute('aria-label', '×2')
 }
+let PB = null   // 일시정지 단추 자리(떠돌이 보물상자 표시) — size() 가 비운다
 let SC = 1, VW = VIEW, VH = VIEW, DPR = 1, still = 2, LQ = 0   // LQ = 자동 화질 단계(0 · 1 · 2) — 느려지면 내려간다
-function size(drag) {   // drag === true — 배율 막대를 끄는 중: 배율만 바꾸고 그림은 놓을 때(change) 다시 그린다(다시 그리기는 0.3~0.6초)
+function size(drag) {
+  PB = null   // drag === true — 배율 막대를 끄는 중: 배율만 바꾸고 그림은 놓을 때(change) 다시 그린다(다시 그리기는 0.3~0.6초)
   const r = cv.getBoundingClientRect(), d0 = Math.min(devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / Math.max(1, r.width * r.height))), d = Math.max(Math.min(1, d0), d0 * [1, 0.75, 0.5][LQ])   // 자동 화질이 내려가면 픽셀을 줄인다(화면 1배보다는 안 낮춘다)
   cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d)); DPR = cv.width / Math.max(1, r.width)
   SC = Math.max(Math.min(cv.width, cv.height), Math.sqrt(cv.width * cv.height) / 1.15) / VIEW * save.zoom; VW = cv.width / SC; VH = cv.height / SC   // 짧은 쪽 또는 넓이 기준 중 큰 배율 — 세운 휴대폰에서도 캐릭터가 너무 작지 않게
@@ -2788,6 +2796,36 @@ let mode = 'title', G = null, pl = null, S = null, shake = 0, pickCi = 0, SRC = 
 const cam = { x: 0, y: 0 }
 const need = lv => Math.round((1 + 0.2 * Math.min(1, (lv - 1) / 15)) * (lv < 20 ? 5 + (lv - 1) * 7 : 138 + (lv - 20) * 12 + (lv - 20) ** 2))   // 다음 레벨까지 경험치
 
+/** 첫 판 조작법(처음 1번, 기존 이용자도 · startGame 이 부른다) — PC(hover + 고운 포인터: save.ctrlSeen) 키보드 · 마우스 4칸(아래 가운데) / 휴대폰 · 태블릿(save.touchSeen — 계정 저장이 기기끼리 맞춰져서 따로) 손가락 3칸(위쪽 · 엄지에 안 가리게). 끝 칸 아래 작게 화면 배율(기획 · 디자인). 15초(실제 시간 · 판(play)일 때만 흐르고 그 밖엔 숨김), 13~15초에 흐려지며 내려간다.
+ *  눌리지 않는다(pointer-events: none — 마우스 「누른 채로 끌기」가 곧 움직이기라 닫기 단추 없음 · 기획) */
+let CTRL = null
+const TRI = r => { const s = h('span', { class: 'tri' }); s.innerHTML = `<svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true" style="transform: rotate(${r}deg)"><path d="M5 1.5 9.2 8.5H.8z" fill="currentColor"/></svg>`; return s }
+function ctrlShow(pc) {
+  const tee = ks => h('span', { class: 'tee' }, ks.map((t, i) => h('span', { class: `kc k${i + 1}` }, t))), trail = h('span', { class: 'trail' })   // 거꾸로 된 T — ↑ ← ↓ → 차례로 눌린다(WASD 와 짝으로)
+  trail.innerHTML = '<svg viewBox="0 0 34 34" width="34" height="34" aria-hidden="true"><path d="M2 32 23 11" stroke="currentColor" stroke-width="2.5" stroke-dasharray="3.5 3.5" stroke-linecap="round" fill="none"/><path d="M29 5 21.6 7.5 26.5 12.4z" fill="currentColor"/></svg>'
+  const col = (pic, txt) => h('div', { class: 'cc' }, h('div', { class: 'pic' }, pic), h('p', {}, txt))   // txt 가 [글, 작은 글]이면 작은 글은 줄을 바꿔
+  const zoom = h('small', { class: 'zm' }, ic('zoom'), tr`멈춤 화면에서 화면 배율도 바꿀 수 있어요`), auto = col(h('span', { class: 'auto' }, h('i', { class: 'ring' }), ic(G.ch.w), h('i', { class: 'spark' })), tr`스킬은 저절로 나가요`)
+  const pz = h('span', { class: 'pz' }); pz.innerHTML = pauseBtn.innerHTML   // 오른쪽 위 ⏸ 단추와 같은 그림
+  const el = h('div', { id: 'ctrl', class: pc ? '' : 'touch', role: 'note' }, pc ? [
+    col([tee([TRI(0), TRI(-90), TRI(180), TRI(90)]), tee(['W', 'A', 'S', 'D'])], tr`방향키 · WASD로 움직여요`),
+    col(h('span', { class: 'mw' }, trail, h('span', { class: 'ms' }, h('i', { class: 'lb' }))), tr`마우스는 누른 채로 끌어요`),
+    auto, col([h('span', { class: 'kc esc' }, 'Esc'), h('span', { class: 'sl' }, '/'), h('span', { class: 'kc pk' }, 'P')], [tr`Esc · P로 잠깐 멈춰요`, zoom])
+  ] : [   // 휴대폰 3칸(세로는 그림 왼쪽 · 글 오른쪽 목록): 스틱 · 스킬 · 멈춤 단추 — 글 속 ⏸ 자리엔 단추 그림(이모지는 기기마다 달라서)
+    col(h('span', { class: 'fw' }, h('i', { class: 'tip' })), tr`화면을 누른 채로 끌어서 움직여요`),
+    auto, col(pz, [...tr`오른쪽 위 ${'\0'}로 잠깐 멈춰요`.split('\0').flatMap((t, i) => i ? [Object.assign(h('span', { class: 'pzi' }), { innerHTML: pauseBtn.innerHTML }), t] : [t]), zoom])
+  ], h('i', { class: 'bar' }))
+  const up = !pc && !matchMedia('(max-width: 1120px) and (max-height: 500px)').matches   // 세로 휴대폰은 위쪽 — 「토벌 시작!」 큰 글(약 2.5초)이 사라진 뒤에 나온다
+  CTRL?.el.remove(); document.body.append(el); CTRL = { el, g: G, c: 0, d: up ? 2.5 : 0.5, up, push: 0, still: matchMedia('(prefers-reduced-motion: reduce)').matches }
+}
+addEventListener('resize', () => { if (CTRL) CTRL.bot = undefined })   // 화면을 돌리면 카드 아래 끝을 다시 잰다
+function ctrlTick(dt) {
+  const C = CTRL, on = mode === 'play' && C.g === G
+  if (C.g !== G || C.c >= C.d + 14.8) { C.el.remove(); CTRL = null; return }   // 다른 판 · 처음 화면으로 갔거나 다 보여 줬다(카드는 15초에 다 흐려지고, 0.3초 더 — 밀어 둔 상태 글이 돌아오게)
+  C.el.classList.toggle('off', !on); if (!on) return   // 일시정지 · 레벨 업 상자 · 결과 — 숨기고 시계도 멈춤(움직임은 paused) · 상태 글 자리(push)는 그대로 둬서 돌아와도 튀지 않게
+  C.c += dt; const c = C.c - C.d + 0.5, a = c < 0.5 ? 0 : c < 0.8 ? (c - 0.5) / 0.3 : c > 13 ? Math.max(0, (15 - c) / 2) : 1   // c: PC 는 판 시작부터 — 0.5초 뒤 0.3초 동안 올라오며 · 13~15초 흐려지며(세로 휴대폰은 2초 늦게)
+  if (C.up) { C.bot ??= a > 0 ? C.el.getBoundingClientRect().bottom - (parseFloat(C.el.style.getPropertyValue('--y')) || 0) : undefined; C.push = c < 0.5 ? 0 : c < 0.8 ? (c - 0.5) / 0.3 : c > 15 ? Math.max(0, 1 - (c - 15) / 0.3) : 1 }   // 세로 휴대폰 — HUD 상태 글(얼어붙는 중 등)을 카드 아래로, 카드가 다 사라진 뒤(15초) 0.3초에 걸쳐 제자리로(흐려지는 카드 글과 섞이지 않게 · QA)
+  C.el.style.opacity = a; C.el.style.setProperty('--y', C.still ? '0px' : `${c < 1 ? 12 * (1 - a) : 8 * (1 - a)}px`); C.el.style.setProperty('--p', clamp(1 - c / 15, 0, 1))
+}
 function newGame(ch) {
   pl = { x: 0, y: 0, r: 12, hp: 1, inv: 0, hurtT: 0, slowT: 0, face: [1, 0], fx: 1, jump: 0, moving: false, vx: 0, vy: 0, idleT: 0, iced: false }   // vx · vy — 지금 속도(눈 위에서 미끄러질 때), idleT — 가만히 있은 시간(겨울엔 얼어붙는다)
   const b = 2 + (ch.mod.boxes || 0)
@@ -2817,7 +2855,7 @@ function statsAsk(i) {   // 무한 모드는 통계를 켜야 한다(랭킹 기�
 }
 function startGame(i) { if (DIFF[save.diff]?.inf && save.noStats && !auth) return statsAsk(i)   // 로그인 중이면 익명 통계를 늘 보내니 묻지 않는다
   if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
-  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
+  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); const pc = matchMedia('(hover: hover) and (pointer: fine)').matches, seen = pc ? 'ctrlSeen' : 'touchSeen'; if (!save[seen]) { save[seen] = 1; persist(); ctrlShow(pc) } if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -3015,7 +3053,7 @@ const dmgK = m => 1 + 0.055 * Math.min(m, 20) + 0.02 * clamp(m - 20, 0, 5) + 0.1
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
-  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) : hpK(mm) * (G.inf ? 1 + INF.foe * G.loop.lv : 1)) * G.D.hp * (big ? 1 : G.crowd || 1)
+  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) * (HARD_HP[type] && (G.diff === 'hard' || (G.inf && !G.loop.lv)) ? HARD_HP[type] : 1) : hpK(mm) * (G.inf ? 1 + INF.foe * G.loop.lv : 1)) * G.D.hp * (big ? 1 : G.crowd || 1)
   const e = {
     type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * dmgK(m), xp: F.xp * (big ? 1 : G.crowd || 1),
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
@@ -3063,7 +3101,7 @@ function phaseUp(e) {
   if (e.ph === 2) { e.angry = true; for (const m of G.final.mermaids) if (m.host === e && !m.dead) kill(m, true) }   // 화난 세이렌 — 인어 없이
   if (e.ph === 3) e.storm = true
   for (const b of G.eshots) b.dead = true
-  item(e.x, e.y, 'onigiri'); G.bosses++; G.bossT = G.t; progress()
+  item(e.x, e.y, 'onigiri', true); G.bosses++; G.bossT = G.t; progress()
   fx({ k: 'white', T: 0.3, a: 0.45 }); fx({ k: 'ring', x: e.x, y: e.y, R: 220, T: 0.5, col: P.col }); shake = Math.max(shake, 6); bubble(e, P.line, P.col); say(P.name, 2, P.col)
 }
 function progress() {   // 진행 시계 — 어느 세이렌이든 페이즈를 넘기면(쓰러뜨려도) 다시 3분, 와 있던 검은 별똥별은 물러난다
@@ -3395,9 +3433,9 @@ function kill(e, quiet = false) {
   for (let i = 0; i < (e.boss ? 36 : e.elite ? 14 : 3); i++) { const a = rnd() * TAU, s = 40 + rnd() * (e.boss ? 240 : 110); part(e.x, e.y - e.r, Math.cos(a) * s, Math.sin(a) * s - 60, i % 3 ? col : '#fff', 0.35 + rnd() * 0.35, 2 + rnd() * (e.boss ? 4 : 2.5)) }
   if (quiet) return
   if (e.elite || e.mid) { if (rnd() < 0.33 * S.luck * G.D.drop) item(e.x, e.y); for (let i = 0; i < 3; i++) gem(e.x + (rnd() - 0.5) * 40, e.y + (rnd() - 0.5) * 40, e.mid ? 10 : 5) }
-  else if (!e.boss && rnd() < 0.0013 * S.luck * G.D.drop) item(e.x, e.y, rnd() < 0.6 ? 'onigiri' : 'magnet')
+  else if (!e.boss && rnd() < 0.0013 * S.luck * G.D.drop) item(e.x, e.y, { onigiri: 6, magnet: 4 })
   else if (!e.boss && G.t >= 600 && rnd() < 0.0005 * S.luck * G.D.drop) item(e.x, e.y, 'earplug')
-  else if (!e.boss && G.t >= 180 && rnd() < 0.0004 * S.luck * G.D.drop) item(e.x, e.y, rnd() < 0.5 ? 'pajama' : 'battery')
+  else if (!e.boss && G.t >= 180 && rnd() < 0.0004 * S.luck * G.D.drop) item(e.x, e.y, { pajama: 1, battery: 1 })
   if (!e.boss) return
   const B = BOSS[e.kind]
   if (!e.mid && e.kind !== 'mermaid') { G.bossT = G.t; G.slain[e.kind] = (G.slain[e.kind] || 0) + 1 }   // 랭킹 — 마지막 보스를 잡은 때 · 종류별 마리 수
@@ -3412,7 +3450,7 @@ function kill(e, quiet = false) {
     for (const f of G.foes) if (!f.dead) kill(f, true)
   } else if (e.mid) { say(tr`${B.name} 격파!`, 1.6, '#ffb35e'); G.rest = { name: tr`중간보스 ${B.name}`, at: G.t + 1.2 } }
   // 보통 보스 — 각성의 별(다 각성했으면 대신 보물상자) · 보물상자 · 잠옷이나 전지
-  else { G.bosses++; if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); else if (G.weapons.length >= 6 && G.weapons.every(w => G.aw.has(w.id))) item(e.x - 26, e.y, 'chest'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery'); say(tr`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
+  else { G.bosses++; if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); else if (G.weapons.length >= 6 && G.weapons.every(w => G.aw.has(w.id))) item(e.x - 26, e.y, 'chest'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery', true); say(tr`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
 }
 /** 둘레 R 안 작은 적(보스 · 돌격대 빼고)을 밀쳐 낸다 — 세기 kb(밀리는 거리 ≈ kb / 9) */
 function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return; const [dx, dy] = toward(e); e.kx += dx * kb; e.ky += dy * kb }) }
@@ -3437,8 +3475,13 @@ function gem(x, y, v) {
   }
   G.gems.push({ x: x + (rnd() - 0.5) * 8, y: y + (rnd() - 0.5) * 8, v, pull: false, sp: 0 })
 }
-function item(x, y, k) {
-  if (!k) { const q = rnd(); k = G.t >= 600 && q < 0.15 ? 'earplug' : q < 0.32 ? 'onigiri' : q < 0.48 ? 'magnet' : q < 0.6 ? 'momonga' : q < 0.72 ? 'firework' : q < 0.86 ? 'pajama' : 'battery' }
+/** 줍는 것 — k: 종류 · 후보 { 종류: 무게 } · 없으면 정예 무작위(합 100). 소모 7종(ITEM_CAP)은 맵에 같은 종류 오니기리 5개(무한 3) · 그 밖 2개(무한 1)까지 —
+ *  다 찼으면 후보 안 다른 것, 그것도 없으면 안 떨어뜨린다(맵 전체로 센다 — 화면 밖에 쌓아 두는 「주먹밥 저금」 막기 · 기획). force: 보스 보상(셈에는 들어가도 늘 떨어뜨림) */
+const ITEM_CAP = ['earplug', 'onigiri', 'magnet', 'momonga', 'firework', 'pajama', 'battery']
+const itemFull = k => ITEM_CAP.includes(k) && G.items.reduce((n, i) => n + (i.k === k), 0) >= (k === 'onigiri' ? (G.inf ? 3 : 5) : G.inf ? 1 : 2)   // 오니기리 5(무한 3) · 그 밖 2(무한 1) — 사용자
+function item(x, y, k = { earplug: G.t >= 600 ? 15 : 0, onigiri: G.t >= 600 ? 17 : 32, magnet: 16, momonga: 12, firework: 12, pajama: 14, battery: 14 }, force = false) {
+  if (typeof k === 'object') { const ok = Object.entries(k).filter(([n, w]) => w > 0 && !itemFull(n)); let q = rnd() * ok.reduce((a, [, w]) => a + w, 0); k = (ok.find(([, w]) => (q -= w) < 0) || ok.at(-1))?.[0]; if (!k) return }
+  else if (!force && itemFull(k)) return
   G.items.push({ x, y, k, t: 0 })
 }
 const USE = {
@@ -3554,9 +3597,9 @@ function step(dt) {
   if (G.winter) winter(dt, dead)
   const siren = alive(G.final?.siren)
   if (siren && sick('charm') && !dead) { const [dx, dy] = toward(siren); pl.x += dx * 55 * dt; pl.y += dy * 55 * dt }   // 매혹 — 세이렌 쪽으로 끌려간다
-  if (!dead && !G.won && Math.hypot(pl.x - G.anchor[0], pl.y - G.anchor[1]) > WANDER.d) {   // 떠돌이 보물상자 — 멀리 돌아다닐 때만(제자리 · 작은 원으로 맴돌면 안 나온다)
+  if (!dead && !G.won && Math.hypot(pl.x - G.anchor[0], pl.y - G.anchor[1]) > WANDER.d && G.t - G.lastBox > WANDER.gap && !G.items.some(i => i.k === 'coinbox')) {   // 떠돌이 보물상자 — 멀리 돌아다닐 때만(제자리 · 작은 원으로 맴돌면 안 나온다). 다 찼는데 쿨타임 · 바닥에 있으면 찬 채로 기다린다(HUD 고리)
     G.anchor = [pl.x, pl.y]
-    if (G.t - G.lastBox > WANDER.gap && !G.items.some(i => i.k === 'coinbox') && rnd() < WANDER.p) {
+    {
       const R = Math.min(VW, VH) * 0.36, x = pl.x + pl.face[0] * R, y = pl.y + pl.face[1] * R
       G.lastBox = G.t; item(x, y, 'coinbox'); fx({ k: 'ring', x, y, R: 40, T: 0.6, col: '#ffd23f' }); fx({ k: 'text', x, y: y - 40, s: tr`보물상자!`, col: '#ffd23f', T: 1.2 })
     }
@@ -4263,6 +4306,30 @@ function nextLine() {
   if (nx && nx[0] < FINAL_T) return [tr`다음 보스 ${BOSS[nx[1]].name}${nx[2] ? tr`(중간)` : ''} ${fmt(nx[0] - G.t)}`, '#fff']
   return [tr`최종보스 세이렌까지 ${fmt(Math.max(0, FINAL_T - G.t))}`, '#ff9be0']
 }
+/** 떠돌이 보물상자 표시(디자인 2026-11-18) — 일시정지 단추 바로 밑(모든 화면 같은 곳). 고리 = 앵커에서 1500 중 얼마나 왔나(금색 + 잉크 테),
+ *  다 찼는데 기다리면 고리가 숨 쉬고, 쿨타임 중엔 아이콘을 흐리게 + 남은 초, 바닥에 상자가 있으면 통통 · 퍼지는 흰 고리 · 반짝 · 상자 쪽 화살촉(LQ · 움직임 줄이기면 멈춘 흰 고리 하나) */
+const RM = matchMedia('(prefers-reduced-motion: reduce)')
+function boxHud(c) {
+  const b = PB ||= pauseBtn.getBoundingClientRect(); if (!b.width) { PB = null; return }
+  const x = b.left + b.width / 2, y = b.bottom + 34, u = Math.min(1, Math.hypot(pl.x - G.anchor[0], pl.y - G.anchor[1]) / WANDER.d), cd = WANDER.gap - (G.t - G.lastBox), box = G.items.find(i => i.k === 'coinbox'), calm = LQ || RM.matches
+  const ring = (r, col, lw, a0 = 0, a1 = TAU) => { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); c.arc(x, y, r, a0, a1); c.stroke() }
+  c.save(); c.lineCap = 'round'
+  c.globalAlpha = 0.85; c.fillStyle = '#fff'; oval(c, x, y, 15, 15); c.fill(); c.globalAlpha = 1
+  ring(17, 'rgba(74,59,53,.22)', 4)
+  if (u > 0) { const lw = u >= 1 && (cd > 0 || box) && !calm ? 4.5 + 0.5 * Math.sin(tnow * TAU / 1.2) : 4, a0 = -Math.PI / 2; ring(17, OUT, lw + 2.5, a0, a0 + u * TAU); ring(17, '#ffc93c', lw, a0, a0 + u * TAU) }
+  if (box) {
+    if (calm) ring(21, '#fff', 2.5)
+    else { const f = tnow % 1; c.globalAlpha = 0.9 * (1 - f); ring(17 + 9 * f, '#fff', 2.5); c.globalAlpha = 1 }
+    const a = Math.atan2(box.y - pl.y, box.x - pl.x), tip = (r, d) => [x + Math.cos(a + d) * r, y + Math.sin(a + d) * r]   // 상자 쪽 화살촉(고리 바깥)
+    c.fillStyle = '#ffc93c'; c.strokeStyle = OUT; c.lineWidth = 1.5; c.beginPath(); c.moveTo(...tip(28, 0)); c.lineTo(...tip(22, 0.2)); c.lineTo(...tip(22, -0.2)); c.closePath(); c.fill(); c.stroke()
+  }
+  const sc = box && !calm ? 1 + 0.12 * Math.sin(Math.min(1, (tnow % 0.6) / 0.3) * Math.PI) : 1, cool = !box && cd > 0.5
+  c.globalAlpha = cool ? 0.35 : 1; c.drawImage(SPR.E.coinbox.c, x - 11 * sc, y - 11 * sc, 22 * sc, 22 * sc); c.globalAlpha = 1
+  if (cool) txt(c, String(Math.ceil(cd)), x, y + 5.5, 15)
+  if (box) { const k = calm ? 1 : Math.abs(Math.sin(tnow * Math.PI)), sx = x + 11, sy = y - 11, R = 5 * k   // 네 갈래 반짝
+    if (R > 0.5) { c.fillStyle = '#ffd23f'; c.strokeStyle = OUT; c.lineWidth = 1.5; c.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? R * 0.35 : R, aa = i * Math.PI / 4; c[i ? 'lineTo' : 'moveTo'](sx + Math.cos(aa) * rr, sy + Math.sin(aa) * rr) } c.closePath(); c.fill(); c.stroke() } }
+  c.restore()
+}
 function hud(c) {
   const W = cv.width / DPR, H = cv.height / DPR
   c.fillStyle = 'rgba(74,59,53,.45)'; c.fillRect(0, 0, W, 10)
@@ -4284,10 +4351,12 @@ function hud(c) {
   x = 10
   for (const id in G.passives) { c.drawImage(SPR.E[id].c, x, top + 32, 20, 20); txt(c, String(G.passives[id]), x + 17, top + 52, 10); x += 22 }
   let sy = top + 72
+  if (CTRL?.push && CTRL.bot) sy += Math.max(0, CTRL.bot + 16 - sy) * CTRL.push   // 조작법 카드가 덮는 동안은 카드 밑으로
   for (const id in G.sts) { const left = G.sts[id] - G.t; if (left > 0) { txt(c, tr`${STATUS[id].name} ${Math.ceil(left)}초 — ${STATUS[id].note}`, W / 2, sy + 2, 13, STATUS[id].col, W - 16); sy += 18 } }
   if (G.storm.on > 0) { const n = Math.ceil(G.storm.on); txt(c, G.fire ? tr`눈보라 ${n}초 — 불꽃 옷: 받는 피해 그대로` : G.storm.warm ? tr`눈보라 ${n}초 — 몸이 따뜻해서 받는 피해 그대로` : tr`눈보라 ${n}초 — 받는 피해 +${Math.round((STORM.hurt - 1) * 100)}%`, W / 2, sy + 2, 13, G.fire || G.storm.warm ? '#ffb36b' : '#bfe6ff', W - 16); sy += 18 }
   if (G.winter && pl.idleT >= 3 && !G.dying) { txt(c, pl.idleT >= ICE.after ? tr`꽁꽁 얼어붙는 중 — 움직이면 풀려요` : tr`몸이 차가워져요 — 움직여요!`, W / 2, sy + 2, 13, '#9fd8ff', W - 16); sy += 18 }
   for (const h of G.help) { txt(c, tr`${h.k === 'pajama' ? tr`♪ 파자마 파티즈 공연` : tr`한잎이 · 두잎이가 지키는 중`} ${Math.ceil(h.T - h.t)}초`, W / 2, sy + 2, 13, h.k === 'pajama' ? '#ffb3e6' : '#b9f09a', W - 16); sy += 18 }
+  boxHud(c)
   const boss = G.final ? alive(G.final.siren) : G.foes.find(e => e.boss && !e.dead)   // 보스 체력 — 아래에
   if (boss) {
     const bw = Math.min(420, W - 40), bx = (W - bw) / 2, by = H - 34
@@ -4336,8 +4405,9 @@ function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) 
 function title() {
   if (mode === 'blocked') return
   SND.play(fieldSong())
+  const again = !ui.hidden && !!ui.querySelector(':scope > .panel.home')   // 이미 처음 화면 — 계정을 불러온 뒤 · 로그인 · 닉네임 뒤 다시 그릴 때는 나타나는 연출(pop)을 빼서 두 번 번쩍이지 않게
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
-  show(h('div', { class: 'panel home' }, themePick(), h('div', { class: 'corner' }, acctPick(), langPick()),
+  show(h('div', { class: 'panel home' + (again ? ' again' : '') }, themePick(), h('div', { class: 'corner' }, acctPick(), langPick()),
     h('div', { class: 'trio' }, CHARS.map(ch => portrait(ch.id))),
     h('h1', { class: 'logo' }, tr`먼작귀`, ' ', h('span', {}, tr`서바이버즈`)),   // 사이 띄어쓰기 — 글자로는 「먼작귀 서바이버즈」(구글 브랜드 인증이 홈페이지의 앱 이름과 맞춰 본다)
     LANG !== 'ko' && h('p', { class: 'appname', lang: 'ko' }, '먼작귀 서바이버즈'),   // 다른 말 화면도 앱 이름이 늘 보이게(기획 — 인증 · 검색)
@@ -4609,7 +4679,7 @@ function finish(win, quit = false) {
       : [stat(tr`버틴 시간`, fmt(G.t), rec), stat(tr`레벨`, G.lvl), stat(tr`처치`, G.kills.toLocaleString()), stat(tr`보스`, G.bosses)]),
     h('div', { class: 'coin pay' },   // 토벌 보상금 · 떠돌이 보물상자 · 합계를 줄마다
       h('p', {}, ic('coin'), h('span', {}, tr`토벌 보상금`, h('small', {}, `${pay.parts.filter(p => p[1]).map(p => `${p[0]} ${p[1]}`).join(' · ') || tr`조금 더 버텨 봐요`}${G.D.coin > 1 ? ` (${G.D.name} ×${G.D.coin})` : ''}`)), h('b', {}, `+${pay.base.toLocaleString()}`)),
-      h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 돌아다니면 가끔 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
+      h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 움직이면 10초마다 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
       h('p', { class: 'sum' }, h('span', {}, tr`합계`), h('b', {}, `+${pay.sum.toLocaleString()}`))),
     (dress || fire) && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), [dress, fire && 'fire'].filter(Boolean).map(oid => h('span', {}, portrait(G.ch.id, oid), ` ${OUTFIT[oid].name}`)), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`)),   // 여러 벌이어도 제목 · 안내는 한 번
     wsk && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`겨울 무기 스킨을 받았어요!`), h('span', {}, portrait(G.ch.id, wornId(G.ch.id), wsk), ` ${WSKIN[wsk].name}`), h('small', {}, tr`상점 「무기 스킨」 탭에서 바꿀 수 있어요`)),
@@ -4663,6 +4733,7 @@ function autoQ(raw) {
 function frame(ts) {
   if (last) autoQ(ts - last)
   let dt = Math.min(0.05, last ? (ts - last) / 1000 : 0.016)
+  if (CTRL) ctrlTick(Math.min(0.25, last ? (ts - last) / 1000 : 0))   // 조작법 시계 — 실제 시간(배속 · 느린 기기의 0.05 묶음과 상관없이)
   last = ts; tnow += dt
   if (mode === 'play' && G) { guardIn(); if (G.dying > 0) dt *= 0.3; for (let i = 0; i < spd && mode === 'play'; i++) step(dt); guardOut() }   // 2배속은 한 프레임에 두 번(한 번에 길게 돌리면 빠른 탄이 적을 지나친다)
   else if (!G) cam.x += dt * 24
@@ -4679,4 +4750,4 @@ if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 �
   link().finally(() => { clearTimeout(t); done?.() })
 }
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

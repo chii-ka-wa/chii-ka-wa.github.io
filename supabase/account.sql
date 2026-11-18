@@ -96,9 +96,9 @@ drop policy if exists saves_own on public.saves;
 create policy saves_own on public.saves for all to authenticated using (uid = auth.uid()) with check (uid = auth.uid());
 revoke all on public.saves from anon, authenticated;
 grant select, insert, update on public.saves to authenticated;   -- 지우기는 없음 — 지우고 새로 넣어 아래 보상금 검사를 건너뛰지 못하게
--- 보상금 검사 — 지난 저장(서버 시각 srv_at)부터 흐른 시간(3시간까지) × 분당 1,000 + 여유 6,000(잭팟 5,000)보다 많이 늘었으면 기록 + 랭킹에서 빼 둔다.
+-- 보상금 검사 — 지난 저장(서버 시각 srv_at)부터 흐른 시간(3시간까지) × 분당 2,000 + 여유 6,000(잭팟 5,000)보다 많이 늘었으면 기록 + 랭킹에서 빼 둔다.
 --   저장은 그대로 받는다(잘못 걸린 아이의 진짜 진행이 기기와 계정에서 어긋나지 않게). 처음 올리는 것(insert — 기기에 모아 둔 것)은 검사하지 않는다
---   (정직한 최대는 3배속에서 분당 200~300). updated_at 은 게임이 보낸 값이라 검사엔 srv_at 만 쓴다
+--   (정직한 최대는 3배속에서 쉬지 않고 달릴 때 분당 약 1,100 — 기본 약 200 + 떠돌이 보물상자 약 900). updated_at 은 게임이 보낸 값이라 검사엔 srv_at 만 쓴다
 alter table public.saves add column if not exists srv_at timestamptz not null default now();
 create or replace function public.saves_guard() returns trigger language plpgsql security definer set search_path = public as $$
 declare
@@ -107,7 +107,7 @@ declare
   mins numeric := least(180, greatest(0, extract(epoch from now() - old.srv_at) / 60));
 begin
   new.srv_at := now();
-  if num - was > 1000 * mins + 6000 then
+  if num - was > 2000 * mins + 6000 then   -- 떠돌이 보물상자가 반드시 나오게 되어(2026-11-18) 3배속으로 쉬지 않고 달리면 분당 약 1,100
     perform report_cheat('coin', jsonb_build_object('got', num - was, 'mins', round(mins)));
     insert into bans (uid, reason) select new.uid, 'coin' where not exists (select 1 from bans b where b.uid = new.uid and b.reason = 'coin' and b.until is null);
   end if;
