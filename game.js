@@ -412,7 +412,50 @@ let AUTH_ERR = '', AUTH_NEW = false, NICK = null, MODAL = null, SUSP = 0   // �
   if (err) AUTH_ERR = err.slice(0, 120)
   if (q.get('access_token') || err) { for (const k of ['error', 'error_code', 'error_description']) qs.delete(k); history.replaceState(null, '', location.pathname + (qs.size ? '?' + qs : '')) }   // 주소의 토큰 · 오류는 지운다
 }
-const login = prov => { location.href = `${STATS.url}/auth/v1/authorize?provider=${prov}&redirect_to=${encodeURIComponent(location.origin + location.pathname)}` }
+const login = prov => { busy(prov === 'kakao' ? tr`카카오 로그인 화면으로 가는 중이에요` : tr`Google 로그인 화면으로 가는 중이에요`, { prov, going: true, retry: () => login(prov) }); location.href = `${STATS.url}/auth/v1/authorize?provider=${prov}&redirect_to=${encodeURIComponent(location.origin + location.pathname)}` }
+/** Google 공식 단추(Google Identity Services) — 리디렉트는 Supabase 를 거쳐서 구글 화면에 「lvx….supabase.co(으)로 이동」이 떠 수상해 보인다. 단추 팝업은 이 사이트 주소로 보인다
+ *  받은 ID 토큰을 Supabase 에 넘기면(grant_type=id_token) 같은 계정(구글 사용자 번호가 같다)으로 들어온다. nonce — 구글에는 해시, Supabase 에는 원래 값(다시 쓰기 막기)
+ *  진짜 주소(또는 ?gis)에서만 — 다른 곳은 Google 콘솔의 승인된 출처가 아니다. 스크립트를 못 불러오면 예전 리디렉트 단추 그대로 */
+const GOOGLE_ID = '259801945128-0dak7f309us5924j1e857sn29b9e1kbk.apps.googleusercontent.com'   // 공개 값(OAuth 클라이언트 ID — 비밀번호 아님)
+const gisOn = () => location.hostname === STATS.host || /[?&]gis\b/.test(location.search)
+let gisP = null
+const gisLoad = () => gisP ||= new Promise((ok, no) => { if (window.google?.accounts?.id) return ok(); const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = ok; s.onerror = no; document.head.append(s); setTimeout(no, 6000) }).catch(e => { gisP = null; throw e })
+const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('')
+async function gisButton(el) {
+  try {
+    await gisLoad(); if (!el.isConnected) return
+    const raw = hex(crypto.getRandomValues(new Uint8Array(16)).buffer), hashed = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw)))
+    google.accounts.id.initialize({ client_id: GOOGLE_ID, nonce: hashed, callback: r => gisDone(r.credential, raw) })
+    const w = Math.min(320, el.clientWidth || 280); el.replaceChildren(); google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'left', width: w, locale: LANG })   // 로고 왼쪽 — 카카오 심볼 자리와 맞춘다
+  } catch {}
+}
+async function gisDone(idt, nonce) {   // 구글 팝업에서 골랐다 — 토큰을 Supabase 세션으로 바꾸고 계정 기록을 맞춘다(「로그인 중이에요」를 띄운 채로)
+  MODAL?.(); const done = busy(tr`내 기록을 불러오는 중이에요`, { prov: 'google' })
+  try {
+    const r = await fetch(`${STATS.url}/auth/v1/token?grant_type=id_token`, { method: 'POST', headers: { apikey: STATS.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: 'google', id_token: idt, nonce }) }).catch(() => null)
+    const j = r?.ok ? await r.json().catch(() => null) : null
+    if (!j?.access_token) { AUTH_ERR = 'google'; if (mode === 'title') title(); return }
+    authSet(fromToken(j.access_token, j.refresh_token, j.expires_in)); AUTH_ERR = ''; AUTH_NEW = true; SUSP = 0
+    await link(); if (mode === 'title') title()
+  } finally { done() }
+}
+/** 로그인 중 — 카카오 · Google 로 넘어가는 동안(going) · 돌아와서 내 기록을 불러오는 동안(아무 반응이 없으면 되는지 몰라서). 세 친구가 오른쪽으로 걷고(점선 길이 흐른다) 차례로 통통
+ *  바깥을 눌러도 안 닫힌다. 가는 중이면 8초 뒤 「그만두기」, 20초면 「로그인이 늦어지고 있어요」 + 닫기 · 다시 해 보기(저절로 닫지 않는다 — 말없이 닫히면 더 헷갈린다)
+ *  뒤로 가기로 돌아오면(카카오 · Google 화면에서 취소 — 브라우저가 페이지를 그대로 되살린다) 닫는다 */
+let BUSY = null
+function busy(sub, { prov, going, retry } = {}) {
+  BUSY?.()
+  const pts = ['chiikawa', 'hachiware', 'usagi'].map(id => portrait(id)), head = h('p', { class: 'h' }, tr`로그인 중이에요`, h('span', { class: 'dots', 'aria-hidden': 'true' }, h('i', {}, '.'), h('i', {}, '.'), h('i', {}, '.'))), foot = h('div', {})
+  const box = h('div', { class: 'busy', role: 'status', 'aria-live': 'polite' }, h('div', { class: 'panel' }, h('div', { class: 'friends' }, pts), h('div', { class: 'road' }), head,
+    h('p', { class: 'sub' }, prov && svgIc(prov === 'kakao' ? KAKAO_IC : GOOGLE_IC, prov === 'kakao' ? 'brand kk' : 'brand'), sub), foot))
+  const stop = () => { window.stop(); close() }
+  let f = 0; const walk = setInterval(() => { f++; pts.forEach((c, i) => { if (!c._walk?.length) return; const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(c._walk[(f + i) % c._walk.length], 0, 0) }) }, 140)
+  const t8 = going && setTimeout(() => foot.replaceChildren(h('p', { class: 'fine' }, h('button', { type: 'button', class: 'linkish', onclick: stop }, tr`그만두기`))), 8000)
+  const t20 = setTimeout(() => { head.replaceChildren(tr`로그인이 늦어지고 있어요`); foot.replaceChildren(h('div', { class: 'row' }, btn(tr`닫기`, stop), btn(tr`다시 해 보기`, () => retry?.(), 'main'))) }, 20000)
+  const close = () => { clearInterval(walk); clearTimeout(t8); clearTimeout(t20); box.remove(); if (BUSY === close) BUSY = null }
+  document.body.append(box); BUSY = close; return close
+}
+addEventListener('pageshow', e => { if (e.persisted) BUSY?.() })
 function logout() {
   if (auth) fetch(`${STATS.url}/auth/v1/logout`, { method: 'POST', headers: { apikey: STATS.key, Authorization: `Bearer ${auth.at}` } }).catch(() => {})
   clearTimeout(cloudPush.t); cloudPush.t = 0; authSet(null); linked = false; NICK = null; try { localStorage.removeItem('mjg.sync') } catch {} title()
@@ -468,10 +511,12 @@ function modal(cls, ...kids) {
 const svgIc = (s, cls = 'brand') => { const e = h('span', { class: cls, 'aria-hidden': 'true' }); e.innerHTML = s; return e }
 const KAKAO_IC = '<svg viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.74l-.96 3.53c-.08.31.27.56.54.38l4.2-2.78c.49.06.99.1 1.5.1 5.52 0 10-3.58 10-8S17.52 3 12 3z"/></svg>'
 const GOOGLE_IC = '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
-function loginBox() {   // 로그인 창 — 카카오 · 구글
+function loginBox() {   // 로그인 창 — 카카오 · 구글(진짜 주소면 Google 공식 단추로 바꿔 그린다 — gisButton)
+  const gwrap = h('div', { class: 'gis' }, h('button', { type: 'button', class: 'btn sns google', onclick: () => login('google') }, svgIc(GOOGLE_IC), tr`Google로 시작하기`))
+  if (gisOn()) setTimeout(() => gisButton(gwrap))
   const close = modal('login', h('p', { class: 'h' }, tr`로그인`), h('p', { class: 'sub' }, tr`기록과 상점 구매를 계정에 저장하고 무한 랭킹에 올라가요`),
     h('button', { type: 'button', class: 'btn sns kakao', onclick: () => login('kakao') }, svgIc(KAKAO_IC), tr`카카오로 시작하기`),
-    h('button', { type: 'button', class: 'btn sns google', onclick: () => login('google') }, svgIc(GOOGLE_IC), tr`Google로 시작하기`),
+    gwrap,
     h('p', { class: 'fine' }, tr`로그인하지 않아도 지금처럼 이 기기에 저장돼요`, h('br'), tr`로그인하면 랭킹 기록을 확인하려고 익명 플레이 통계를 함께 보내요`, ' · ',
       h('button', { type: 'button', class: 'linkish', onclick: () => { close(); privacy() } }, tr`개인정보 처리방침`)),
     h('div', { class: 'row' }, btn(tr`닫기`, () => close())))
@@ -4549,6 +4594,9 @@ size()
 if (/[?&]privacy\b/.test(location.search)) privacy(); else title()
 if (GUARD) blockCheck()
 requestAnimationFrame(frame)
-if (auth) link()   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 로그인했으면 닉네임부터)
+if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 로그인했으면 0.3초 넘게 걸릴 때만 「로그인 중이에요」 — 금방 끝나면 번쩍이지 않게 · 닉네임부터)
+  let done = null; const t = AUTH_NEW && setTimeout(() => { done = busy(tr`내 기록을 불러오는 중이에요`, { prov: auth.prov, retry: () => location.reload() }) }, 300)
+  link().finally(() => { clearTimeout(t); done?.() })
+}
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

@@ -56,6 +56,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
+:root:lang(ko) body { word-break: keep-all; overflow-wrap: break-word }   /* 한국어는 낱말 중간에서 줄을 끊지 않는다(일본어 · 중국어는 띄어쓰기가 없어 걸면 넘친다) · 긴 영문(메일 주소)은 끊어서 */
 :root { --ink: #4a3b35; --soft: #7a655b; --pink: #ff8fab; --card: #fffdf8; --gold: #ffb400 }
 * { box-sizing: border-box }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page, #e6eff8); color: var(--ink); font-family: "Jua", var(--cjk, system-ui), system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none }
@@ -71,8 +72,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page, 
 /* 계정 · 랭킹 — 작은 창(바깥 · Esc · 닫기로 닫힌다) */
 .modal { position: fixed; inset: 0; z-index: 8; display: flex; padding: 16px; overflow-y: auto; background: rgba(74, 59, 53, .35) }
 .modal > .panel { width: min(360px, 100%) } .modal > .panel.choose { width: min(480px, 100%) } .modal > .panel.rinfo { width: min(420px, 100%) }
-.btn.sns { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin: 10px 0 0; font-size: 17px }
-.btn.sns.kakao { background: #FEE500; color: rgba(0, 0, 0, .85) } .btn.sns.google { background: #fff; color: #1f1f1f }
+.btn.sns { position: relative; display: flex; align-items: center; justify-content: center; width: min(320px, 100%); height: 40px; margin: 10px auto 0; padding: 0 40px; border: 1px solid transparent; border-radius: 20px; box-shadow: none; font: 700 15px system-ui, sans-serif; color: rgba(0, 0, 0, .85) }   /* 로그인 단추 — Google 공식 단추(large · pill)와 한 쌍으로: 높이 40 · 둥근 20 · 얇은 테 · 그림자 없음, 심볼은 왼쪽 18px */
+.btn.sns:active { transform: none; box-shadow: none; filter: brightness(.95) } .btn.sns .brand { position: absolute; left: 14px; width: 18px; height: 18px }
+.btn.sns.kakao { background: #FEE500 } .btn.sns.google { background: #fff; border-color: #747775; color: #1f1f1f }
+    .gis { display: flex; justify-content: center; min-height: 40px; margin: 10px 0 0 } .gis > .btn.sns { margin: 0 }   /* Google 공식 단추 자리(못 불러오면 예전 단추 — 같은 크기) */
 .brand { display: inline-flex; width: 20px; height: 20px; flex: none } .brand svg { width: 100%; height: 100% }
 label.nick { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 6px 16px; border: 3px solid var(--ink); border-radius: 999px; background: #fff }
 label.nick input { flex: 1; min-width: 0; font: inherit; font-size: 18px; border: 0; outline: 0; background: none; color: var(--ink) }
@@ -172,6 +175,15 @@ canvas.pt { height: 72px; width: auto; image-rendering: auto }
 .fine .linkish { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer }   /* 통계 보내지 않기 */
 .fine + .fine { margin-top: 4px }
 ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; line-height: 1.55 } ul.pv li { margin: 4px 0 }
+    .busy { position: fixed; inset: 0; z-index: 9; display: flex; padding: 16px; background: rgba(74, 59, 53, .35) } .busy .panel { width: min(320px, 100%) }   /* 로그인 중 — 세 친구가 오른쪽으로 걸으며 차례로 통통, 발밑 점선 길이 왼쪽으로 흐른다 */
+    .busy .friends { display: flex; justify-content: center; align-items: flex-end; gap: 12px; margin-top: 4px } .busy .friends canvas { height: 54px; width: auto; animation: hop .9s ease-in-out infinite }
+    .busy .friends canvas:nth-child(2) { animation-delay: .15s } .busy .friends canvas:nth-child(3) { animation-delay: .3s }
+    .busy .road { height: 2px; margin: 2px 24px 10px; background: repeating-linear-gradient(90deg, #d6c5b6 0 8px, transparent 8px 16px); animation: road .6s linear infinite }
+    .busy .dots i { font-style: normal; animation: blink 1.2s infinite } .busy .dots i:nth-child(2) { animation-delay: .2s } .busy .dots i:nth-child(3) { animation-delay: .4s }
+    .busy .sub .brand { display: inline-block; width: 16px; height: 16px; margin-right: 5px; vertical-align: -3px } .busy .sub .brand svg { width: 100%; height: 100% }
+    .busy .sub .brand.kk { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 5px; background: #fee500; vertical-align: -5px } .busy .sub .brand.kk svg { width: 12px; height: 12px }   /* 카카오 — 노란 바탕 둥근 네모 안에 검은 심볼(가이드) */
+    @keyframes hop { 0%, 60%, 100% { transform: translateY(0) } 30% { transform: translateY(-6px) } } @keyframes blink { 0%, 100% { opacity: .2 } 50% { opacity: 1 } } @keyframes road { to { background-position: -16px 0 } }
+    @media (prefers-reduced-motion: reduce) { .busy .friends canvas, .busy .road { animation: none } }   /* 걷기 · 점 깜빡임만 남긴다 */
     .panel.ban { width: min(420px, 100%); padding-top: 48px } .panel.ban .until { margin: 12px 0; font-size: 17px }   /* IP 차단 안내 — 좁게, 풀리는 때는 굵게 */   /* 개인정보 처리방침 */
 
 /* 캐릭터 고르기 */
@@ -441,6 +453,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611181142"></script>
+<script type="module" src="game.js?v=202611181309"></script>
 </body>
 </html>

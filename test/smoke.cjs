@@ -11,7 +11,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
-    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
+    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
     await page.route('**/rpc/blocked', r => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }))   // IP 차단 확인(?secure · ?guard 면 묻는다) — 진짜 서버 대신 「안 막힘」. ban 은 따로
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
@@ -484,6 +484,32 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     Object.assign(o, { modal: await page.locator('.modal').count(), mode: await page.evaluate(() => window.__mjg.mode), reads, runs: cloud[0].data.runs })
     console.log('sync', o)
     if (o.h !== '기록이 두 군데 있어요' || !o.when.every(t => /\d:\d\d:\d\d/.test(t)) || o.modal || o.mode !== 'title' || reads !== 2 || o.runs !== 17) errors.push('[sync] ' + JSON.stringify(o))
+  })
+  await run('gis', { width: 390, height: 844 }, async page => {   // Google 공식 단추(?gis — 진짜 주소 흉내) — 구글 스크립트 대신 흉내, 받은 ID 토큰을 Supabase 세션으로(nonce 는 구글엔 해시 · Supabase 엔 원래 값)
+    let tokenBody = null
+    await page.route(/\/auth\/v1\/token/, r => { tokenBody = r.request().postDataJSON(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token: 'a.eyJzdWIiOiJ1MiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6Imdvb2dsZSJ9fQ.b', refresh_token: 'r2', expires_in: 3600 }) }) })
+    await page.route('**/rest/v1/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); return u.includes('saves?select') ? j([]) : u.includes('my_nick') ? j({ nick: '구글팬', next: '2026-11-25' }) : u.includes('suspended') ? j(null) : r.fulfill({ status: 204 }) })
+    await page.goto(new globalThis.URL('?gis', URL).href); await page.waitForTimeout(600)
+    await page.evaluate(() => { window.google = { accounts: { id: { initialize: o => { window.__gis = o }, renderButton: (el, o) => { const b = document.createElement('button'); b.className = 'gis-btn'; b.textContent = 'G ' + o.text; el.append(b) } } } } })
+    await page.locator('button.acct').click(); await page.waitForTimeout(300)
+    const o = { btn: await page.locator('.modal .gis .gis-btn').count(), old: await page.locator('.modal .btn.sns.google').count(), cid: await page.evaluate(() => /\.apps\.googleusercontent\.com$/.test(window.__gis?.client_id)), hashed: await page.evaluate(() => window.__gis?.nonce) }
+    await page.evaluate(() => window.__gis.callback({ credential: 'h.e30.s' })); await page.waitForTimeout(800)
+    const sha = tokenBody && require('crypto').createHash('sha256').update(tokenBody.nonce).digest('hex')
+    Object.assign(o, { provider: tokenBody?.provider, idt: tokenBody?.id_token, nonceOk: sha === o.hashed, auth: await page.evaluate(() => JSON.parse(localStorage.getItem('mjg.auth') || 'null')?.prov), nick: await page.locator('.acct .nm').textContent().catch(() => null), busy: await page.locator('.busy').count() })
+    await page.evaluate(() => localStorage.removeItem('mjg.auth'))
+    console.log('gis', o)
+    if (o.btn !== 1 || o.old || !o.cid || !/^[0-9a-f]{64}$/.test(o.hashed || '') || o.provider !== 'google' || o.idt !== 'h.e30.s' || !o.nonceOk || o.auth !== 'google' || o.nick !== '구글팬' || o.busy) errors.push('[gis] ' + JSON.stringify(o))
+  })
+  await run('login', { width: 390, height: 844 }, async page => {   // 로그인 중 — 카카오로 가는 동안 · 돌아와서 기록을 불러오는 동안(0.3초 넘으면) 세 친구가 걷는 창
+    await page.route('**/rest/v1/**', async r => { await new Promise(f => setTimeout(f, 400)); r.fulfill({ status: 200, contentType: 'application/json', body: r.request().url().includes('saves?select') ? '[]' : 'null' }) })   // 기록 불러오기는 조금 걸린다(정지 확인 · 저장 · 닉네임 — 하나에 0.4초)
+    await page.evaluate(() => { window.__close = window.__mjg.busy('카카오 로그인 화면으로 가는 중이에요', { prov: 'kakao', going: true }) }); await page.waitForTimeout(300)   // 카카오로 넘어가는 동안(넘어가기 시작하면 점검이 페이지를 못 읽어서 직접 띄운다)
+    const go = { sub: await page.locator('.busy .sub').textContent(), friends: await page.locator('.busy .friends canvas').count(), logo: await page.locator('.busy .sub .brand svg').count() }
+    await page.screenshot({ path: OUT + 'busy.png' }); await page.mouse.click(10, 10); go.stays = await page.locator('.busy').count(); await page.evaluate(() => window.__close())
+    await page.goto(new globalThis.URL('#access_token=a.e30.b&refresh_token=r&expires_in=3600', URL).href); await page.reload(); await page.waitForTimeout(150)
+    const back = { mid: await page.locator('.busy .sub').textContent({ timeout: 2000 }).catch(() => null) }; await page.waitForTimeout(2500); back.end = await page.locator('.busy').count()
+    await page.evaluate(() => localStorage.removeItem('mjg.auth'))
+    console.log('login', { go, back })
+    if (!go.sub?.includes('카카오 로그인 화면으로') || go.friends !== 3 || go.logo !== 1 || go.stays !== 1 || !back.mid?.includes('내 기록을 불러오는') || back.end) errors.push('[login] ' + JSON.stringify({ go, back }))
   })
   await run('susp', { width: 390, height: 844 }, async page => {   // 정지된 계정 — 켜면 로그아웃되고 처음 화면에 번호. 로그인 중에는 「보내지 않기」 대신 글
     await page.route('**/*.supabase.co/**', r => r.request().url().includes('rpc/suspended') ? r.fulfill({ status: 200, contentType: 'application/json', body: '{"id":7}' }) : r.fulfill({ status: 204 }))
