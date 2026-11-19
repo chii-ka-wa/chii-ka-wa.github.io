@@ -9,12 +9,13 @@ select l.at, (select p.nick from players p where p.uid = l.uid) as nick, l.uid, 
 from cheat_log l order by l.at desc limit 100;
 
 -- 3) 랭킹 기록 점검 — 지금 규칙(새 서버 검사)으로 다시 보면 걸리는 기록. bad 칸에 이유가 나온다(비어 있으면 통과)
+--    winter = 겨울 맵 기록(true) · 풀밭(false) — 한 사람이 캐릭터마다 맵별로 하나씩 가진다
 --    real = 판 시작 → 올리기까지 실제 초(새로 생긴 칸 — 예전 기록은 비어 있다). real 이 t ÷ 3 에 가까우면 내내 3배속이거나 만든 기록일 수 있다
 with x as (
   select p.nick, r.*, (select coalesce(sum((regexp_match(s, '(\d+)$'))[1]::int), 0) from unnest(string_to_array(coalesce(r.slain, ''), ' ')) s where s <> '') as slain_sum
   from ranks r join players p using (uid)
 )
-select nick, ch, lv, bosses, t, kills, round(kills::numeric / greatest(t, 1), 1) as kps, lvl, real, weapons, slain, at, uid,
+select nick, ch, winter, lv, bosses, t, kills, round(kills::numeric / greatest(t, 1), 1) as kps, lvl, real, weapons, slain, at, uid,
   concat_ws(', ',
     case when bosses > case when lv = 0 then 6 else 4 + 15 * lv end + 2 then '보스가 너무 많음' end,
     case when bosses < slain_sum then '보스 < 종류별 합' end,

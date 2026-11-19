@@ -128,6 +128,11 @@ const PATCH = [
     ['fix', 'onigiri', tr`같은 아이템은 맵에 2개(무한 1개)까지만 떨어져요 — 오니기리는 5개(무한 3개)`],
     ['up', 'coinbox', tr`떠돌이 보물상자가 멀리 움직일 때마다 반드시 나와요(10초마다) — 상자 표시가 다 차면 등장! 대신 12초 뒤 사라져요`],
     ['fix', 'shirt', tr`의상 · 스킨 값이 10분의 1이 됐어요 — 일반 의상 500 · 고급 2,000(게 머리띠 · 밤 · 딸기 찹쌀떡 · 신데렐라 · 왕자님은 1,000) · 무기 스킨 · 스킬 스킨 1,000`],
+    ['new', 'shirt', tr`쉬움 · 보통 클리어 보상 — 캐릭터마다 토벌대 망토 넷(쉬움 · 쉬움 겨울 · 보통 · 보통 겨울)과 새싹 · 털실 감기 무기 스킨. 망토마다 그 캐릭터 능력치 +0.5% 보유 효과`],
+    ['fix', 'sword', tr`랏코 섬 화관의 보유 효과가 치명타 확률로 바뀌었어요(우사기와 겹치지 않게)`],
+    ['new', 'inf', tr`무한 랭킹을 겨울 · 풀밭 따로 봐요(처음엔 겨울) — 맵마다 한 사람당 최고 기록 하나`],
+    ['fix', 'shirt', tr`휴대폰 상점에서 단추 · 탭 글자가 넘쳐 잘리던 것을 고쳤어요 — 단추는 글 밑으로 내려가요`],
+    ['fix', 'inf', tr`무한 모드를 깨도 캐릭터 업적 의상을 받아요(어려움 클리어와 같게). 전에 무한만 깨서 알림만 뜨고 못 받았다면 이제 열려 있어요`],
   ]],
   ['2026-11-17', [
     ['new', 'cheer', tr`응원 카드에 지금 몇 단계인지 보여요 — 더 올릴 게 없으면 오니기리 · 응원 중에 하나를 골라요. 무한 모드는 응원이 끝없이 쌓이고, 일반 적도 단계마다 세져요`],
@@ -381,7 +386,7 @@ if (!DIFF[save.diff]) save.diff = 'normal'
 save.up ||= {}; save.coin = Math.max(0, save.coin | 0); save.stone = Math.max(0, save.stone | 0)   // 영구 강화 칸 수 · 모은 토벌 보상금 · 가진 부활석
 const STONE = 1000   // 부활석 값(상점) — 쓰러졌을 때 하나 써서 다시 일어난다(판마다 DIFF.revive 번까지)
 save.ach ||= { clear: save.clears || 0 }
-save.owned ||= []; save.wear ||= {}; save.skin ||= {}; save.wwin ||= []   // wwin — 겨울 맵을 보통 이상으로 클리어한 캐릭터(겨울 무기 스킨)   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
+save.owned ||= []; save.wear ||= {}; save.skin ||= {}; save.wwin ||= []; save.wlv ||= {}; for (const c of save.wwin) save.wlv[c] = Math.max(save.wlv[c] || 0, 2)   // wwin — 겨울 맵을 보통 이상으로 클리어한 캐릭터(겨울 무기 스킨)   // 의상 · 무기 스킨(wear['w:캐릭터']) — 산 것 · 입은 것, 스킬 스킨 — 켠 것   // 업적 누적(처음이면 예전 클리어를 세이렌 토벌로)
 save.theme ||= 'winter'; const fieldSong = () => save.theme === 'winter' ? 'winter' : 'field'   // 처음 화면 · 토벌 배경음 — 겨울이면 겨울 곡
 const pageColor = () => { const c = save.theme === 'winter' ? '#e6eff8' : '#cdeaa8'; document.documentElement.style.setProperty('--page', c); document.querySelector('meta[name=theme-color]')?.setAttribute('content', c) }   // 화면 밖 바탕 · 휴대폰 주소창 색 — 바닥 색(겨울 눈밭 · 풀밭)
 pageColor()   // 테마 — winter(눈밭 · 내리는 눈 · 적은 크리스마스 의상, 기본) · grass(예전 풀밭)
@@ -623,7 +628,7 @@ function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기
     const r = await rpc('submit_rank', { ...args, ck: await runCk(tok, args) })
     if (!r) set(h('span', {}, tr`랭킹에 올리지 못했어요 — 인터넷 연결을 확인해 주세요`))
     else if (r.r === 'nonick') set(h('span', {}, tr`닉네임을 정하면 이 기록이 랭킹에 올라가요`), btn(tr`닉네임 정하기`, () => nickBox(ok => ok && send())))
-    else if (r.r === 'ok' || r.r === 'kept') set(h('span', {}, r.r === 'ok' ? tr`랭킹 #${r.rank} · 최고 기록 갱신!` : tr`랭킹 #${r.rank} — 예전 기록이 더 좋아요`), btn(tr`랭킹 보기`, () => ranking()))
+    else if (r.r === 'ok' || r.r === 'kept') set(h('span', {}, r.r === 'ok' ? tr`랭킹 #${r.rank} · 최고 기록 갱신!` : tr`랭킹 #${r.rank} — 예전 기록이 더 좋아요`), btn(tr`랭킹 보기`, (w => () => ranking(null, w))(!!G?.winter)))
     else if (r.r === 'stale') set(h('span', {}, tr`게임이 새로 바뀌었어요 — 새로 고침하면 다음 판부터 랭킹에 올라가요`), btn(tr`새로 고침`, () => location.reload()))   // 바뀌기 전 game.js 로 한 판
     else if (r.r === 'hold' || r.r === 'ban') { set(h('span', {}, tr`이 판은 랭킹에 올라가지 않아요`)); if (r.r === 'ban') { blockCheck(); suspendCheck() } }   // 체크섬이 안 맞음 · 차단된 계정 · 방금 자동 차단(IP 가 막혔으면 안내 화면)
     else set(h('span', {}, tr`이 판은 랭킹에 올릴 수 없어요 — 로그인한 뒤 새로 시작한 판만 올라가요`))
@@ -633,18 +638,21 @@ function rankLine() {   // 무한 결과 화면 — 순위 / 닉네임 정하기
 const RK_COL = ['', 't3', 't2', 't1']   // 1 · 2 · 3등 — 금 · 은 · 동
 const icSafe = id => { try { return ic(id) } catch { return null } }   // 랭킹 기록은 서버 것 — 예전 판의 없어진 id 여도 화면이 멈추지 않게
 /** 랭킹 화면 — 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10. 줄을 누르면 자세히 */
-async function ranking(only = null) {
-  mode = 'rank'; G = null
+let rankW = true   // 랭킹 맵 — 겨울(기본) · 풀밭. 맵마다 따로(사람마다 맵마다 최고 하나)
+async function ranking(only = null, w = rankW) {
+  mode = 'rank'; G = null; rankW = w
+  const mapPick = h('div', { class: 'theme rmap', role: 'radiogroup', 'aria-label': tr`맵` }, [[true, 'snow', tr`겨울`], [false, 'clover', tr`풀밭`]].map(([v, pic, name]) =>
+    h('button', { type: 'button', role: 'radio', 'aria-checked': String(w === v), class: w === v ? 'on' : '', onclick: () => w !== v && ranking(only, v) }, ic(pic), ` ${name}`)))   // 처음 화면 테마 단추와 같은 모양
   const list = h('ol', { class: 'list rank scroll' }, h('li', { class: 'wait' }, tr`불러오는 중…`)), mine = h('div', { class: 'mine' })
   const head = h('li', { class: 'head', 'aria-hidden': 'true' }, h('span', {}), h('span', {}), h('span', {}, tr`닉네임`), h('span', {}, tr`단계`), h('span', {}, tr`버틴 시간`), h('span', {}, tr`보스`))   // 넓은 화면만 — 표 머리줄
   const ghost = (txt, b) => h('li', { class: 'ghost' }, h('span', {}, txt), b || h('span', {}))   // 내 기록 자리 · 빈 목록 — 목록 줄과 같은 모양의 점선 줄
   show(h('div', { class: 'panel wide pick rank' },
-    h('p', { class: 'h' }, ic('inf'), tr` 무한 랭킹`), h('p', { class: 'sub' }, only ? tr`${CHARS.find(c => c.id === only)?.name ?? only} TOP 10` : tr`전체 TOP 100 · 한 사람당 최고 기록 하나`),
-    h('div', { class: 'dex-nav' }, h('button', { type: 'button', class: only ? '' : 'on', onclick: () => ranking() }, tr`전체`),
-      CHARS.map(c => h('button', { type: 'button', class: only === c.id ? 'on' : '', onclick: () => ranking(c.id) }, ic(c.w), ` ${c.name}`))),
+    h('p', { class: 'h' }, ic('inf'), tr` 무한 랭킹`), mapPick, h('p', { class: 'sub' }, `${w ? tr`겨울` : tr`풀밭`} · `, only ? tr`${CHARS.find(c => c.id === only)?.name ?? only} TOP 10` : tr`전체 TOP 100 · 한 사람당 최고 기록 하나`),   // 맵이 캐릭터보다 큰 갈래 — 제목 바로 밑(디자인)
+    h('div', { class: 'dex-nav' }, h('button', { type: 'button', class: only ? '' : 'on', onclick: () => ranking(null, w) }, tr`전체`),
+      CHARS.map(c => h('button', { type: 'button', class: only === c.id ? 'on' : '', onclick: () => ranking(c.id, w) }, ic(c.w), ` ${c.name}`))),
     mine, list,
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title))))
-  const [rows, me] = await Promise.all([rpc('top_ranks', { only_ch: only }), auth ? rpc('my_rank', { only_ch: only }) : null])
+  const [rows, me] = await Promise.all([rpc('top_ranks', { only_ch: only, on_winter: w }), auth ? rpc('my_rank', { only_ch: only, on_winter: w }) : null])
   if (mode !== 'rank') return
   if (!rows) return list.replaceChildren(h('li', { class: 'wait' }, tr`랭킹을 불러오지 못했어요 — 인터넷 연결을 확인해 주세요`))
   list.replaceChildren(...(rows.length ? [head, ...rows.map(rankRow)] : [ghost(tr`아직 기록이 없어요 — 첫 번째가 되어 보세요!`)]))
@@ -985,10 +993,10 @@ function mochi(g, o, p = {}) {
   }
   const O = p.outfit, q = O && { W, H, hw, t, y: f => t + H * f, mid, ay, ax, P, look: p.look || 0, neck: ay - 0.5, fur: o.fur }   // neck — 목(팔이 붙는 높이), 옷은 여기서부터   // 의상 — 몸 크기를 넘겨 몸에 맞게 그린다
   g.save(); g.translate(0, -L)
-  if (!thin) { o.back?.(g, p); O?.back?.(g, q, p) }
+  if (!thin) { if (O?.backFirst) O.back(g, q, p); o.back?.(g, p); if (!O?.backFirst) O?.back?.(g, q, p) }
   if (!thin && o.feet !== false) for (const s of [-1, 1]) { const lift = Math.max(0, s * foot); blob(g, s * (3.3 + lift * 0.5), -0.9 - lift * 1.4, 2.3, 1.35, limb, LW) }   // 작은 발 — 걸을 때 번갈아 든다
   g.save(); g.translate(0, bob)
-  if (thin) { o.back?.(g, p); O?.back?.(g, q, p); legs(true); arms(true) }   // 주인공은 뒤(꼬리 · 갈기 · 집게)도 몸과 함께 오르내린다
+  if (thin) { if (O?.backFirst) O.back(g, q, p); o.back?.(g, p); if (!O?.backFirst) O?.back?.(g, q, p); legs(true); arms(true) }   // 주인공은 뒤(꼬리 · 갈기 · 집게)도 몸과 함께 오르내린다
   g.fillStyle = o.fur; g.fill(P)
   if (o.cap) { g.save(); g.clip(P); o.cap(g, p, P); g.restore() }
   if (O?.body) { g.save(); g.clip(P); O.body(g, q, p); g.restore() }   // 옷 — 몸 테두리 안에(테두리는 위에 다시 긋는다)
@@ -1003,7 +1011,7 @@ function mochi(g, o, p = {}) {
   g.save(); g.translate(p.look || 0, 0); o.face(g, p); g.restore()
   O?.head?.(g, q, p)   // 모자 · 머리띠 — 귀 · 얼굴 위에
   if (O?.earsOver && !O.noEars) ears()   // 모자는 귀가 뚫고 나온다
-  if (p.wskin && o.frontHold) p.wskin.front?.(g, p); else o.front?.(g, p)   // 무기 스킨을 끼우면 원래 든 것(앞에 그린 잔 · 책) 자리에 스킨을
+  if (p.wskin && o.frontHold && !p.wskin.over) p.wskin.front?.(g, p); else { o.front?.(g, p); if (p.wskin?.over) p.wskin.front?.(g, p) }   // over — 원래 무기 위에 덧그리는 스킨(쉬움 감기)   // 무기 스킨을 끼우면 원래 든 것(앞에 그린 잔 · 책) 자리에 스킨을
   if (hd && !p.bare) { hd(g, hx, hy); thin ? blob(g, hx + 0.1, hy + 0.1, 1.15, 1.25, af, 0.6) : blob(g, hx + 0.3, hy + 0.4, 1.7, 2.1, af, 0.6) }   // 든 것 — 쥔 손을 위에
   g.restore(); g.restore()
 }
@@ -2422,21 +2430,65 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
   fire: { tier: 'ach', name: tr`불꽃 옷`, note: tr`몸이 따끈따끈한 불꽃 옷 — 눈보라를 만나도 받는 피해가 늘지 않아요`, won: () => (save.ach.winter || 0) > 0, lock: ['snow', tr` 겨울 어려움 클리어`],
     fx: { k: ['flame', 'spark', 'flame'], col: ['#ff7a2f', '#ffd23f', '#fff3a1'], rate: 13, aura: 'rgba(255,150,60,.9)' }, ...hoodSuit({ col: '#ff8a3d', belly: '#ffd96b', top: flameTop }) },
 }
-const TIER_ORD = { cheap: 0, rich: 1, ach: 2 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier] || priceOf(a) - priceOf(b))   // 일반 → 고급 → 업적
-const achWon = id => (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 어려움 클리어(어려움 기록은 열쇠가 캐릭터 id)
+// 클리어 의상 — 「토벌대 망토」(디자인 2026-11-18) 캐릭터마다 넷: 쉬움 · 쉬움 겨울 · 보통 · 보통 겨울. 한 모양을 캐릭터 색(TONE)으로, 단계는 걸쇠(동 · 은) · 금실 테두리, 겨울은 털 장식 · 눈꽃 걸쇠.
+//   위 단계로 깨면 아래도 열린다(어려움 · 무한 ⊃ 보통 ⊃ 쉬움 — clearLv · winLv). 「풀밭」 칸은 맵 상관없이(겨울에서 깨도 · 기획)
+const CLR = { easy: 1, normal: 2, hard: 3, inf: 3 }
+const clearLv = id => Math.max(0, ...Object.keys(CLR).map(d => (save.best[bestKey(id, d)]?.clears || 0) > 0 ? CLR[d] : 0)), winLv = id => save.wlv[id] || 0
+function cape(ch, lv, wn) {   // 앞에서 망토로 읽히게 — 목에서 갈라져 양옆으로 벌어지는 앞자락(∧ 트임) + 몸 밖으로 이어지는 본체(디자인 2차)
+  const [c0, c1] = TONE[ch], gold = lv > 1, clasp = lv > 1 ? ['#dfe4ea', '#97a2ae'] : ['#e0a46a', '#a8683a']
+  const hem = (g, w1, yb) => { const st = 2 * w1 / 3; for (let i = 0; i < 3; i++) g.quadraticCurveTo(-w1 + st * (i + 0.5), yb - 0.8, -w1 + st * (i + 1), yb) }   // 밑단 얕은 물결 셋
+  const edge = (q, sx) => [[sx * 1.4, q.neck + 0.6], [sx * q.hw * 0.62, 1]]   // 앞자락 안쪽 변(트임)
+  const line = (g, [[x0, y0], [x1, y1]], col, lw, dash) => { g.strokeStyle = col; g.lineWidth = lw; if (dash) g.setLineDash(dash); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.setLineDash([]) }
+  const fur = (g, pts) => { for (const [c, d] of [[OUT, 0.4], ['#fff', 0]]) { g.fillStyle = c; g.beginPath(); pts.forEach(([x, y], i) => { const r = (i % 2 ? 1.3 : 1) + d; g.moveTo(x + r, y); g.arc(x, y, r, 0, TAU) }); g.fill() } }   // 한 덩이 털 — 테를 먼저 다 칠하고 흰 속을 위에(사이 선이 사라진다)
+  const along = ([[x0, y0], [x1, y1]], st = 1.3) => { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / st)); return Array.from({ length: n + 1 }, (_, i) => [x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n]) }
+  return {
+    backFirst: true,   // 꼬리가 망토 위로
+    back: (g, q) => {
+      const y0 = q.neck - 1, w0 = q.hw * 0.55, w1 = q.hw + 2.5, yb = -1.4, path = () => { g.beginPath(); g.moveTo(-w0, y0); g.quadraticCurveTo(-w1 - 1.5, q.y(q.mid + 0.2), -w1, yb); hem(g, w1, yb); g.quadraticCurveTo(w1 + 1.5, q.y(q.mid + 0.2), w0, y0); g.closePath() }
+      path(); g.fillStyle = c0; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()
+      if (gold) line(g, [[-w1 + 1, yb - 1.2], [w1 - 1, yb - 1.2]], '#e8c66a', 0.6, [1.2, 0.9])   // 보통 — 금실(밑단)
+      if (wn) fur(g, along([[-w1 + 0.4, yb - 0.2], [w1 - 0.4, yb - 0.2]]))
+    },
+    body: (g, q) => {   // 앞자락 두 장(몸 테두리 안) — 가운데는 ∧ 로 트이고 양옆을 덮는다
+      for (const sx of [-1, 1]) {
+        g.beginPath(); g.moveTo(sx * 1.4, q.neck + 0.6); g.lineTo(sx * (q.hw + 3), q.neck - 2); g.lineTo(sx * (q.hw + 3), 1); g.lineTo(sx * q.hw * 0.62, 1); g.closePath(); g.fillStyle = c0; g.fill()
+        const e = edge(q, sx), [[x0, y0], [x1, y1]] = e, k = sx * 0.55; line(g, [[x0 + k, y0], [x1 + k, y1]], c1, 1.1); line(g, e, OUT, 0.7)   // 안감 띠 · 테
+        if (gold) line(g, [[x0 + k * 2, y0 + 0.6], [x1 + k * 2, y1]], '#e8c66a', 0.6, [1.2, 0.9])
+      }
+      if (wn) fur(g, [...along(edge(q, -1)), ...along(edge(q, 1))])
+    },
+    head: (g, q) => {   // 걸쇠 — ∧ 꼭짓점(깃은 작은 손처럼 보여서 뺐다 · 디자인)
+      const y = q.neck + 0.8
+      g.beginPath(); g.arc(0, y, 2.1, 0, TAU); g.fillStyle = clasp[0]; g.fill(); g.lineWidth = 0.6; g.strokeStyle = clasp[1]; g.stroke(); blob(g, -0.7, y - 0.7, 0.6, 0.6, '#fff', 0); if (wn) flake(g, 0, y, 2.4, '#ffffff')
+    },
+    fx: wn ? { k: ['dot', 'spark'], col: ['#ffffff', '#bfe6ff'], rate: 4 } : gold ? { k: ['spark'], col: ['#ffffff', '#e8c66a'], rate: 3 } : null,
+  }
+}
+const CAPE = [['e', 1, false, 'easy', tr` 쉬움 클리어`], ['ew', 1, true, 'snow', tr` 겨울 쉬움 클리어`], ['n', 2, false, 'normal', tr` 보통 클리어`], ['nw', 2, true, 'snow', tr` 겨울 보통 클리어`]]
+const CAPE_STAT = { chiikawa: 'manju', hachiware: 'slipper', usagi: 'license', momonga: 'wage', kurimanju: 'clover', rakko: 'crit', shisa: 'coin', kani: 'pouch' }   // 망토 보유 효과 — 캐릭터마다 서로 다른 능력치(8캐릭이 같은 걸 모아도 안 쌓이게 · 기획)
+for (const { id } of CHARS) for (const [k, lv, wn, ico, lock] of CAPE) {
+  const { fx, ...art } = cape(id, lv, wn)
+  OUTFIT[`k_${id}_${k}`] = { ch: id, tier: 'clear', name: lv > 1 ? (wn ? tr`눈꽃 토벌대 망토` : tr`토벌대 망토`) : wn ? tr`눈꽃 새내기 토벌대 망토` : tr`새내기 토벌대 망토`,
+    note: lv > 1 ? (wn ? tr`털 장식 · 금실 테두리 망토 — 눈꽃 은색 걸쇠` : tr`금실 테두리를 두른 망토 — 은색 걸쇠`) : wn ? tr`털 장식을 단 새내기 망토 — 눈꽃 동색 걸쇠` : tr`토벌대에 갓 들어온 새내기 망토 — 동색 걸쇠`,
+    won: wn ? () => winLv(id) >= lv : () => clearLv(id) >= lv, lock: [ico, lock], ...(fx && { fx }), ...art }
+}
+const TIER_ORD = { cheap: 0, rich: 1, clear: 2, ach: 3 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier] || priceOf(a) - priceOf(b))   // 일반 → 고급 → 업적
+const achWon = id => clearLv(id) >= 3   // 그 캐릭터로 어려움 또는 무한 클리어(무한은 쓰러져도 세이렌을 한 번 쓰러뜨렸으면 — 클리어 단계 3)
 // 의상 보유 효과 — 고급 · 업적 의상을 가지고만 있어도(입지 않아도) 아주 작은 능력치. [SHOP 능력치 id(coin = 토벌 보상금), 비율]. 다 모아도 능력치마다 4 ~ 5%
 const BONUS = {
   crab: ['slipper', 0.01], chestnut: ['manju', 0.01], daifuku: ['clover', 0.02], cinder: ['wage', 0.01], prince: ['license', 0.01],
   fairy: ['pouch', 0.02], ramen: ['manju', 0.02], dark: ['license', 0.02], pantu: ['wage', 0.02], white: ['slipper', 0.02], fire: ['coin', 0.02],
-  a_chiikawa: ['manju', 0.01], a_hachiware: ['slipper', 0.01], a_usagi: ['license', 0.01], a_momonga: ['wage', 0.01], a_kurimanju: ['clover', 0.02], a_rakko: ['license', 0.01], a_shisa: ['coin', 0.02], a_kani: ['pouch', 0.02],
+  a_chiikawa: ['manju', 0.01], a_hachiware: ['slipper', 0.01], a_usagi: ['license', 0.01], a_momonga: ['wage', 0.01], a_kurimanju: ['clover', 0.02], a_rakko: ['crit', 0.01], a_shisa: ['coin', 0.02], a_kani: ['pouch', 0.02],
 }
-const BONUS_ORDER = ['manju', 'license', 'slipper', 'wage', 'pouch', 'clover', 'coin']
-const bonusLab = k => k === 'coin' ? tr`토벌 보상금` : SHOP[k].lab, bonusTxt = oid => { const [k, v] = BONUS[oid]; return `${bonusLab(k)} +${Math.round(v * 100)}%` }
+for (const [oid, o] of Object.entries(OUTFIT)) if (o.tier === 'clear') BONUS[oid] = [CAPE_STAT[o.ch], 0.005]   // 클리어 망토 한 벌 +0.5%(한 캐릭터 넷을 다 모으면 그 능력치 +2%)
+const BONUS_ORDER = ['manju', 'license', 'slipper', 'wage', 'pouch', 'clover', 'crit', 'coin']
+const bpct = v => v < 0.01 ? +(v * 100).toFixed(1) : Math.round(v * 100)   // 1% 아래는 소수 한 자리(0.5%)
+const bonusLab = k => k === 'coin' ? tr`토벌 보상금` : k === 'crit' ? tr`치명타 확률` : SHOP[k].lab, bonusTxt = oid => { const [k, v] = BONUS[oid]; return `${bonusLab(k)} +${bpct(v)}%` }
 const coll = k => Object.entries(BONUS).reduce((a, [oid, [s, v]]) => a + (s === k && OUTFIT[oid] && owns(oid) ? v : 0), 0)   // 그 능력치에 가진 의상 보유 효과 합
-const owns = oid => { const o = OUTFIT[oid]; return o.tier === 'ach' ? (o.won ? o.won() : achWon(o.ch)) : save.owned.includes(oid) }   // 업적 — 그 캐릭터 어려움 클리어(won 이 있으면 그 조건)
+const owns = oid => { const o = OUTFIT[oid]; return o.tier === 'ach' || o.tier === 'clear' ? (o.won ? o.won() : achWon(o.ch)) : save.owned.includes(oid) }   // 업적 — 그 캐릭터 어려움 클리어(won 이 있으면 그 조건)
 const wornId = id => { const o = save.wear[id], k = o && OUTFIT[o]; return k && (!k.ch || k.ch === id) && owns(o) ? o : null }
 const LOOK_OF = {}, outfitOf = (oid, ch) => { const o = oid && OUTFIT[oid]; return !o ? undefined : o.of ? (LOOK_OF[oid + ':' + ch] ||= { ...o, ...o.of(ch) }) : o }   // 그 캐릭터가 입은 모습(종류는 캐릭터마다 색 · 장식)
-const TIER_NAME = { cheap: tr`일반`, rich: tr`고급`, ach: tr`업적` }
+const TIER_NAME = { cheap: tr`일반`, rich: tr`고급`, clear: tr`클리어`, ach: tr`업적` }
 
 // 의상 이펙트 — 몸 둘레에 떠오르는 작은 모양. fx = { k: [모양], col: [색], rate: 1초에 몇 개, aura: 발밑 빛(업적) }. F = { list, acc } — 게임 · 미리 보기가 따로
 function cfxStep(F, fx, x, y, dt, dir = 1) {
@@ -2520,7 +2572,7 @@ function shop(tab = 'up', ci = 0) {
     : lock ? h('button', { type: 'button', class: 'btn buy', disabled: true }, ...lock) : buy(cost, done, label)
   const item = (cls, pic, name, mark, mcls, text, extra, act, id) => h('li', { class: cls + (id !== undefined && peek === id ? ' peek' : ''), onclick: id === undefined ? null : e => { if (e.target.closest('button')) return; peek = id; draw() } }, pic, h('div', {}, h('b', {}, name, mark && h('mark', { class: mcls }, mark)), h('span', {}, text), extra && h('em', {}, extra)), act)
   const bonusBox = () => {   // 의상 보유 효과(닫혀 있다가 펼친다) — 능력치마다 「지금 / 다 모으면」 + 막대. 벌마다 효과는 그 의상 줄에
-    const ids = Object.keys(BONUS).filter(k => OUTFIT[k]), pc = v => Math.round(v * 100)
+    const ids = Object.keys(BONUS).filter(k => OUTFIT[k]), pc = v => +(v * 100).toFixed(1)
     return h('li', { class: 'wr-bonus' }, h('details', {}, h('summary', {}, ic('coin'), tr` 의상 보유 효과 — ${ids.filter(owns).length} / ${ids.length}벌`),
       h('div', { class: 'sum' }, BONUS_ORDER.map(k => { const now = coll(k), all = ids.reduce((a, oid) => a + (BONUS[oid][0] === k ? BONUS[oid][1] : 0), 0)
         return h('div', { class: now ? 'on' : '' }, h('span', {}, bonusLab(k)), h('b', {}, `+${pc(now)}%`, h('small', {}, tr` · 최대 ${pc(all)}%`)), h('i', { style: `--w:${now / all * 100}%` })) })),
@@ -2536,14 +2588,14 @@ function shop(tab = 'up', ci = 0) {
           h('button', { type: 'button', class: 'btn buy', disabled: full || save.coin < cost, onclick: () => { if (full || save.coin < cost) return; save.coin -= cost; save.up[id] = lv + 1; persist(); draw() } }, full ? tr`다 샀어요` : [ic('coin'), ` ${cost}`]))
       })],
     outfit: ch => [null, ...OUTFITS_OF(ch.id)].map(oid => { const o = oid && OUTFIT[oid], on = wornId(ch.id) === oid, own = !o || owns(oid), fx = outfitOf(oid, ch.id)?.fx
-      const act = btnState(on, own, () => put(ch.id, oid), o?.tier === 'ach' && (o.lock ? [ic(o.lock[0]), o.lock[1]] : [ic('hard'), tr` 어려움 클리어`]), o && priceOf(oid), () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
+      const act = btnState(on, own, () => put(ch.id, oid), (o?.tier === 'ach' || o?.tier === 'clear') && (o.lock ? [ic(o.lock[0]), o.lock[1]] : [ic('hard'), tr` 어려움 클리어`]), o && priceOf(oid), () => { save.owned.push(oid); put(ch.id, oid) }, o?.name)
       const fxT = fx && (o.tier === 'ach' ? tr`이펙트: 아주 화려하게 반짝반짝!` : tr`이펙트: 반짝반짝`), bon = BONUS[oid] && h('span', { class: 'bon' + (own ? ' on' : '') }, tr`보유 효과 ${bonusTxt(oid)}`)   // 가지고 있으면 금빛
       return item(`wr-${o ? o.tier : 'base'}${on ? ' on' : ''}`, portrait(ch.id, oid, wornW(ch.id)), o ? o.name : tr`기본`, o && TIER_NAME[o.tier], o?.tier, o ? o.note : tr`평소 모습`, (fxT || bon) && [fxT, fxT && bon && ' · ', bon],
         own && !o?.ch ? h('div', { class: 'acts' }, act, h('button', { type: 'button', class: 'btn buy all', onclick: () => wearAll(oid) }, tr`모두 입기`)) : act, oid) }),
     weapon: ch => [null, ...WSKINS_OF(ch.id)].map(wid => { const w = wid && WSKIN[wid], on = wornW(ch.id) === wid
       const kind = w ? (w.tier === 'shop' ? 'rich' : w.tier) : 'base'   // 줄 색 — 상점(노랑) · 업적(분홍) · 겨울(하늘)
-      return item(`wr-${kind}${on ? ' on' : ''}`, portrait(ch.id, wornId(ch.id), wid), w ? w.name : tr`기본 무기`, w && (w.tier === 'ach' ? tr`업적` : w.tier === 'winter' ? tr`겨울` : tr`상점`), kind, w ? w.note : tr`원래 들고 있던 무기`, null,
-        btnState(on, !w || ownsW(wid), () => put('w:' + ch.id, wid), w?.tier === 'ach' ? [ic('normal'), tr` 보통 클리어`] : w?.tier === 'winter' && [ic('snow'), tr` 겨울 보통 클리어`], WSKIN_COST, () => { save.owned.push(wid); put('w:' + ch.id, wid) }, w?.name), wid) }),
+      return item(`wr-${kind}${on ? ' on' : ''}`, portrait(ch.id, wornId(ch.id), wid), w ? w.name : tr`기본 무기`, w && (w.tier === 'ach' ? tr`업적` : w.tier === 'winter' || w.tier === 'easyw' ? tr`겨울` : w.tier === 'easy' ? tr`클리어` : tr`상점`), kind, w ? w.note : tr`원래 들고 있던 무기`, null,
+        btnState(on, !w || ownsW(wid), () => put('w:' + ch.id, wid), WLOCK[w?.tier] && [ic(WLOCK[w.tier][0]), WLOCK[w.tier][1]], WSKIN_COST, () => { save.owned.push(wid); put('w:' + ch.id, wid) }, w?.name), wid) }),
     skill: () => Object.keys(SKIN).map(id => { const k = SKIN[id], own = ownsS(id), on = skOn(id)
       const act = on ? h('button', { type: 'button', class: 'btn buy on', onclick: () => { save.skin[id] = false; persist(); draw() } }, tr`끄기`) : own ? h('button', { type: 'button', class: 'btn buy', onclick: () => { save.skin[id] = true; persist(); draw() } }, tr`켜기`) : buy(SKIN_COST, () => { save.owned.push('sk:' + id); save.skin[id] = true }, k.name)
       return item(`wr-sk${on ? ' on' : ''}`, h('span', { class: 'sw', style: `--a:${k.col};--b:${k.col2}` }, ic(id)), k.name, WEAP[id].name, 'sk', k.note, !own && tr`각성해 본 스킬은 그냥 받아요`, act, id) }),
@@ -2653,11 +2705,37 @@ Object.assign(WSKIN, {   // 겨울 — 그 캐릭터로 겨울 맵을 보통 이
   s_shisa: { ch: 'shisa', tier: 'winter', name: tr`눈덩이 국자`, note: tr`동그란 눈덩이를 퍼 담은 국자`, hold: (g, x, y) => { ladle(g, x, y, '#bfe6ff'); g.save(); g.translate(x, y); g.rotate(-1.2); blob(g, 13.2, -0.4, 2.3, 2.1, '#ffffff', 0.6); g.restore() } },
   s_kani: { ch: 'kani', tier: 'winter', name: tr`겨울 동화책`, note: tr`남색 표지에 눈꽃이 그려진 동화책`, front: g => tome(g, '#2f4a8a', '#ffffff', false, true) },
 })
+/** 쉬움 무기 스킨 — 원래 무기 그대로 + 쥐는 자리 위에 감기(디자인 2026-11-18): sprout 새싹 덩굴(쉬움) · yarn 털실(쉬움 겨울). 돌린 좌표(축 = x)의 a0 → a1 구간을 굵기 th 로 */
+function wrap(g, a0, a1, th, kind, ch) {
+  const L = a1 - a0, h = th / 2, d = Math.sign(L)
+  if (kind === 'sprout') {
+    const kn = ch === 'kani'   // 카니 — 연두 책 위라 진한 초록 + 흰 테두리(디자인)
+    g.lineCap = 'round'; g.lineJoin = 'round'
+    for (const [c, lw] of kn ? [['#fff', 2.5], [OUT, 1.2], ['#2f6b2a', 0.8]] : [[OUT, 1.6], ['#6fb04f', 0.9]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); for (let i = 0; i < 3; i++) { g.moveTo(a0 + L * i / 3, -h); g.lineTo(a0 + L * (i + 1) / 3, h) } g.stroke() }   // 대각선 세 바퀴
+    const leaf = (x, y, rx, ry, a) => { g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, TAU); if (kn) { g.strokeStyle = '#fff'; g.lineWidth = 1.3; g.stroke() } g.fillStyle = kn ? '#3f8f3a' : '#9bd86f'; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.35; g.stroke() }
+    leaf(a1 + d * 1.2, -0.9, 1.7, 0.9, -0.61); leaf(a1 + d * 1.2, 0.9, 1.7, 0.9, 0.61); leaf(a0 - d * 0.8, 0, 1.1, 0.6, 0)
+  } else {
+    for (let k = 0; k < 4; k++) { g.beginPath(); g.rect(a0 + d * k * 1.4 - (d < 0 ? 1.1 : 0), -h, 1.1, th); g.fillStyle = k % 2 ? '#fff6e6' : TONE[ch][0]; g.fill(); g.strokeStyle = OUT; g.lineWidth = 0.35; g.stroke() }   // 털실 띠 넷(색 · 크림)
+    g.strokeStyle = TONE[ch][0]; g.lineWidth = 0.7; g.lineCap = 'round'; g.beginPath(); g.moveTo(a0, h); g.quadraticCurveTo(a0 - d * 0.6, h + 1.2, a0 - d * 0.3, h + 2); g.stroke(); blob(g, a0 - d * 0.3, h + 2.5, 0.75, 0.75, '#fff', 0.35)   // 실 꼬리 + 방울
+  }
+}
+const WRAPS = {   // [원래 무기, 감는 좌표계(손 자리에서), a0, a1, th] — 모몽가 · 시사는 원래 든 게 없어서 수수한 지팡이 · 국자
+  chiikawa: [sasuHold('#ff9ab8'), g => { g.rotate(-1.2); g.translate(-5, 0) }, 2, 7, 2.2],
+  hachiware: [guitarHold(), g => { g.translate(-4, 2.4); g.rotate(-0.75) }, 9, 11.6, 2],
+  usagi: [(g, x, y) => stickSkin(g, x, y, '#ffd54a', null, '#fff1a6'), g => g.rotate(-1.3), 0, 5, 2.4],
+  momonga: [(g, x, y) => wand(g, x, y, '#d8b07a', 'gem', '#bfe6ff'), g => g.rotate(-1.25), 1, 5, 2],
+  rakko: [(g, x, y) => blade(g, x, y, '#d6dde6', '#ffd23f'), g => g.rotate(-1.35), -3.2, 0.6, 2.4],
+  shisa: [(g, x, y) => ladle(g, x, y, '#e8e4dc'), g => g.rotate(-1.2), 1, 6, 2],
+}
+for (const { id } of CHARS) for (const [k, kind, tier, name, note] of [['e', 'sprout', 'easy', tr`새싹 감기`, tr`손잡이에 새싹 덩굴을 감았어요`], ['y', 'yarn', 'easyw', tr`털실 감기`, tr`따끈한 털실을 감고 방울을 달았어요`]]) {
+  const W = WRAPS[id], over = id === 'kurimanju' ? g => { g.save(); g.translate(0, -7.5); wrap(g, 11, 14.4, 1.4, kind, id); g.restore() } : id === 'kani' ? g => { g.save(); bookAt(g); g.rotate(Math.PI / 2); wrap(g, -2.8, 2.8, 1.2, kind, id); g.restore() } : null   // 잔 · 책 — 앞에 그린 원래 것 위에 띠
+  WSKIN[`${k}_${id}`] = { ch: id, tier, name, note, ...(over ? { over: true, front: over } : { hold: (g, x, y) => { W[0](g, x, y); g.save(); g.translate(x, y); W[1](g); wrap(g, W[2], W[3], W[4], kind, id); g.restore() } }) }
+}
+const WLOCK = { ach: ['normal', tr` 보통 클리어`], winter: ['snow', tr` 겨울 보통 클리어`], easy: ['easy', tr` 쉬움 클리어`], easyw: ['snow', tr` 겨울 쉬움 클리어`] }
 const WSPOT = { chiikawa: [15, -21, 13], hachiware: [10, -9, 13], usagi: [12, -14, 13], momonga: [14, -15, 11], kurimanju: [12.7, -8, 7], rakko: [14, -16, 13], shisa: [15, -14, 13], kani: [-11.6, -5.4, 7] }   // 반짝일 자리 [x, y, 퍼짐] — 든 무기 둘레
-for (const w of Object.values(WSKIN)) w.fx = w.tier === 'winter' ? { k: ['spark', 'spark', 'dot'], col: ['#ffffff', '#bfe6ff', '#9fd8ff'], rate: 6, spot: WSPOT[w.ch] } : w.tier === 'ach' ? { k: ['spark', 'spark', 'star'], col: ['#ffffff', '#ffd23f', '#fff6a8'], rate: 7, spot: WSPOT[w.ch] } : { k: ['spark'], col: ['#ffffff', '#fff6a8'], rate: 3.5, spot: WSPOT[w.ch] }   // 무기 스킨 반짝이 — 업적은 더 자주 · 금빛 별
+for (const w of Object.values(WSKIN)) w.fx = w.tier === 'easy' ? { k: ['spark'], col: ['#ffffff', '#c8f0a8'], rate: 3, spot: WSPOT[w.ch] } : w.tier === 'easyw' ? { k: ['spark'], col: ['#ffffff', '#ffe3ea'], rate: 3, spot: WSPOT[w.ch] } : w.tier === 'winter' ? { k: ['spark', 'spark', 'dot'], col: ['#ffffff', '#bfe6ff', '#9fd8ff'], rate: 6, spot: WSPOT[w.ch] } : w.tier === 'ach' ? { k: ['spark', 'spark', 'star'], col: ['#ffffff', '#ffd23f', '#fff6a8'], rate: 7, spot: WSPOT[w.ch] } : { k: ['spark'], col: ['#ffffff', '#fff6a8'], rate: 3.5, spot: WSPOT[w.ch] }   // 무기 스킨 반짝이 — 업적은 더 자주 · 금빛 별
 const WSKINS_OF = id => Object.keys(WSKIN).filter(k => WSKIN[k].ch === id)
-const normalWon = id => (save.best[`${id}.normal`]?.clears || 0) + (save.best[id]?.clears || 0) > 0   // 그 캐릭터로 보통 · 어려움 클리어
-const ownsW = wid => { const w = WSKIN[wid]; return w.tier === 'ach' ? normalWon(w.ch) : w.tier === 'winter' ? save.wwin.includes(w.ch) : save.owned.includes(wid) }   // 상점 · 업적(보통 이상 클리어) · 겨울(겨울 맵 보통 이상 클리어)
+const ownsW = wid => { const w = WSKIN[wid]; return w.tier === 'ach' ? clearLv(w.ch) >= 2 : w.tier === 'winter' ? winLv(w.ch) >= 2 : w.tier === 'easy' ? clearLv(w.ch) >= 1 : w.tier === 'easyw' ? winLv(w.ch) >= 1 : save.owned.includes(wid) }   // 상점 · 업적(보통 이상 클리어) · 겨울(겨울 맵 보통 이상 클리어)
 const wornW = id => { const w = save.wear['w:' + id]; return w && WSKIN[w] && ownsW(w) ? w : null }
 // 스킬 스킨 — col 큰 색 · col2 둘째 색 · trail 지나간 자리 반짝이(cfxDraw 모양)
 const SKIN = {
@@ -2873,7 +2951,7 @@ function stats() {
     magnet: 80 * (1 + 0.3 * L('pouch') + perm('pouch') + (m.magnet || 0)),
     luck: 1 + 0.1 * L('clover') + perm('clover') + (m.luck || 0),
     growth: 0.8 * (1 + 0.08 * L('wage') + perm('wage') + (m.growth || 0)),   // 줍는 경험치 — 기본 0.8배
-    crit: 0.03 + 0.02 * L('clover') + (m.crit || 0),
+    crit: 0.03 + 0.02 * L('clover') + (m.crit || 0) + coll('crit'),   // 의상 보유 효과(랏코 섬 화관 · 망토)
     critX: 2 + (m.critX || 0),
     bossX: 1 + (m.bossX || 0),   // 보스 · 정예에게
   }
@@ -4658,11 +4736,13 @@ function finish(win, quit = false) {
   save.runs++; save.kills += G.kills
   report(quit ? 'quit' : !win ? 'dead' : G.endKind === 'time' ? 'survive' : 'clear')
   const hardish = G.diff === 'hard' || G.inf; win ||= G.inf && G.loop.lv > 0   // 무한 — 쓰러져도 세이렌을 한 번 쓰러뜨렸으면 클리어(업적 · 의상 · 보상금)
-  const dress = win && hardish && !b.clears && OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach' && OUTFIT[k].ch)   // 그 캐릭터로 처음 어려움 클리어 — 업적 의상
+  const crown = OUTFITS_OF(G.ch.id).find(k => OUTFIT[k].tier === 'ach' && OUTFIT[k].ch), crown0 = !!crown && owns(crown)   // 업적 의상(섬 화관 등) — 판 전에 없고 판 뒤에 생겼을 때만 알림(어려움 뒤 무한 · 무한 뒤 어려움에 또 뜨지 않게)
   const fire = win && hardish && G.winter && !OUTFIT.fire.won()   // 겨울 맵을 처음 어려움으로 클리어 — 불꽃 옷(모두)
-  const wsk = win && G.winter && G.diff !== 'easy' && !save.wwin.includes(G.ch.id) && WSKINS_OF(G.ch.id).find(k => WSKIN[k].tier === 'winter')   // 그 캐릭터로 겨울 맵을 처음 보통 이상 클리어 — 겨울 무기 스킨
-  if (wsk) save.wwin.push(G.ch.id)
+  const id = G.ch.id, had = [...OUTFITS_OF(id).filter(k => OUTFIT[k].tier === 'clear' && owns(k)), ...WSKINS_OF(id).filter(ownsW)]   // 클리어 보상(망토 · 무기 스킨) — 이번 판으로 새로 열린 것을 결과 화면에
   if (win) { save.clears++; b.clears++ }
+  const dress = !crown0 && !!crown && owns(crown) && crown
+  if (win && G.winter) { save.wlv[id] = Math.max(winLv(id), CLR[G.diff] || 0); if (G.diff !== 'easy' && !save.wwin.includes(id)) save.wwin.push(id) }   // 겨울 — 난이도별(wlv) · 예전 칸(wwin)
+  const newO = OUTFITS_OF(id).filter(k => OUTFIT[k].tier === 'clear' && owns(k) && !had.includes(k)), newW = WSKINS_OF(id).filter(k => WSKIN[k].tier !== 'shop' && ownsW(k) && !had.includes(k))
   const pay = bounty(win); save.coin += pay.sum
   const got = achieve(win, pay.sum)
   if (G.inf) b.lv = Math.max(b.lv || 0, G.loop.lv); save.last = Date.now()   // 무한 최고 단계 · 마지막으로 한 때(기록 고르기 창)
@@ -4682,7 +4762,7 @@ function finish(win, quit = false) {
       h('p', { class: 'found' }, ic('coinbox'), h('span', {}, tr`떠돌이 보물상자`, h('small', {}, tr`멀리 움직이면 10초마다 나와요`)), h('b', {}, `+${pay.found.toLocaleString()}`)),
       h('p', { class: 'sum' }, h('span', {}, tr`합계`), h('b', {}, `+${pay.sum.toLocaleString()}`))),
     (dress || fire) && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`업적 의상을 받았어요!`), [dress, fire && 'fire'].filter(Boolean).map(oid => h('span', {}, portrait(G.ch.id, oid), ` ${OUTFIT[oid].name}`)), h('small', {}, tr`상점 「의상」 탭에서 입을 수 있어요`)),   // 여러 벌이어도 제목 · 안내는 한 번
-    wsk && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`겨울 무기 스킨을 받았어요!`), h('span', {}, portrait(G.ch.id, wornId(G.ch.id), wsk), ` ${WSKIN[wsk].name}`), h('small', {}, tr`상점 「무기 스킨」 탭에서 바꿀 수 있어요`)),
+    (newO.length || newW.length) > 0 && h('div', { class: 'ach-new dress' }, h('p', { class: 'dt' }, tr`클리어 보상을 받았어요!`), newO.map(oid => h('span', {}, portrait(id, oid), ` ${OUTFIT[oid].name}`)), newW.map(wid => h('span', {}, portrait(id, wornId(id), wid), ` ${WSKIN[wid].name}`)), h('small', {}, tr`상점 「의상」 · 「무기 스킨」 탭에서 바꿀 수 있어요`)),
     got.length > 0 && h('div', { class: 'ach-new' }, h('p', { class: 'dt' }, tr`업적 달성!`), got.map(([id, t]) => h('span', {}, medal(id, t), ` ${ACH[id].name} ${TIER[t]}${t === 3 ? tr` — 보상금 +1%` : ''}`))),
     chips(), dmgTable(),
     h('div', { class: 'row' }, btn(tr`처음으로`, title), btn(tr`상점`, () => shop()), btn(tr`캐릭터 바꾸기`, chars), btn(tr`다시 하기`, () => startGame(pickCi), 'main'))))
@@ -4750,4 +4830,4 @@ if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 �
   link().finally(() => { clearTimeout(t); done?.() })
 }
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, portrait, ranking, owns, ownsW, get S() { return S }, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

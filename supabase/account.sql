@@ -157,8 +157,13 @@ create table if not exists public.ranks (
   winter   boolean not null default false,                                -- 겨울 맵
   v        text not null check (v ~ '^\d{4}-\d{2}-\d{2}#\d{1,3}$'),       -- 게임 버전
   at       timestamptz not null default now(),
-  primary key (uid, ch)   -- 그럴듯한지는 submit_rank 가 본다(어긋나면 차단)
+  primary key (uid, ch, winter)   -- 계정 · 캐릭터 · 맵(겨울 · 풀밭)마다 하나. 그럴듯한지는 submit_rank 가 본다(어긋나면 차단)
 );
+do $$ begin   -- 예전 표(계정 · 캐릭터마다 하나)를 맵마다로 — 예전 기록은 그 판의 winter 값대로 남는다
+  if (select array_length(i.indkey::int2[], 1) from pg_index i where i.indrelid = 'public.ranks'::regclass and i.indisprimary) = 2 then
+    alter table public.ranks drop constraint ranks_pkey; alter table public.ranks add primary key (uid, ch, winter);
+  end if;
+end $$;
 alter table public.ranks drop constraint if exists ranks_check;   -- 예전 판의 「그럴듯한 기록만」(단계마다 60초 — 고수의 진짜 기록도 걸릴 수 있었다)
 create index if not exists ranks_order on public.ranks (lv desc, bosses desc, bt, at);
 alter table public.ranks add column if not exists real int;   -- 판 시작(start_run) → 올리기까지 실제 흐른 초(살펴보기용 — 기록 ÷ 3 에 가까우면 3배속으로 내내 · 빠르게 만든 기록일 수도)
@@ -246,7 +251,7 @@ begin
   if submit_rank.hit0 < 0 and submit_rank.t >= 1500 then perform report_cheat('nohit', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t)::jsonb); end if;
   if now() - st < make_interval(secs => submit_rank.t / 3.0 - 5) then return json_build_object('r', 'fast'); end if;
   if now() - st > interval '6 hours' then return json_build_object('r', 'old'); end if;   -- 시작해 두고 오래 묵힌 것
-  select * into old from ranks r where r.uid = auth.uid() and r.ch = submit_rank.ch;
+  select * into old from ranks r where r.uid = auth.uid() and r.ch = submit_rank.ch and r.winter = submit_rank.winter;
   if found and (old.lv, old.bosses, -old.bt, old.t) >= (submit_rank.lv, submit_rank.bosses, -submit_rank.bt, submit_rank.t) then res := 'kept';   -- 보스 수 · 잡은 때가 같으면 더 오래 버틴 판(기획 2026-11-18)
   else
     insert into ranks (uid, ch, lv, bosses, bt, t, kills, lvl, weapons, passives, slain, winter, v, real, outfit, wskin, lang)
@@ -256,17 +261,17 @@ begin
       on conflict on constraint ranks_pkey do update set lv = excluded.lv, bosses = excluded.bosses, bt = excluded.bt, t = excluded.t, kills = excluded.kills, lvl = excluded.lvl,
         weapons = excluded.weapons, passives = excluded.passives, slain = excluded.slain, winter = excluded.winter, v = excluded.v, real = excluded.real, outfit = excluded.outfit, wskin = excluded.wskin, lang = excluded.lang, at = now();
   end if;
-  select x.rank into my from top_ranks() x where x.me;
+  select x.rank into my from top_ranks(null, submit_rank.winter) x where x.me;
   return json_build_object('r', res, 'rank', my);
 end $$;
 
-drop function if exists public.top_ranks(text); drop function if exists public.my_rank(text);   -- 돌려주는 칸(의상)이 늘어서 다시 만든다
+drop function if exists public.top_ranks(text); drop function if exists public.my_rank(text);   -- 돌려주는 칸(의상)이 늘고 맵 인자가 생겨서 다시 만든다
 -- 랭킹 보기 — only_ch 가 없으면 모두에서 사람마다 가장 좋은 기록 하나씩 TOP 100, 있으면 그 캐릭터 TOP 10. me = 내 기록인지
-create or replace function public.top_ranks(only_ch text default null)
+create or replace function public.top_ranks(only_ch text default null, on_winter boolean default true)   -- 맵마다(기본 겨울) · 사람마다 최고 하나
 returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean, outfit text, wskin text, lang text)
 language sql stable security definer set search_path = public as $$
   with best as (
-    select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
+    select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and r.winter = on_winter and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
     order by r.uid, r.lv desc, r.bosses desc, r.bt, r.t desc, r.at
   )
   select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.t desc, b.at), p.nick, b.ch, b.lv, b.bosses, b.bt, b.t, b.kills, b.lvl, b.weapons, b.passives, b.slain, b.winter, b.at, b.uid = auth.uid(), b.outfit, b.wskin, b.lang
@@ -276,11 +281,11 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- 내 순위(TOP 밖이어도) — 랭킹 화면 위 「내 기록」 줄
-create or replace function public.my_rank(only_ch text default null)
+create or replace function public.my_rank(only_ch text default null, on_winter boolean default true)
 returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t int, kills int, lvl int, weapons text, passives text, slain text, winter boolean, at timestamptz, me boolean, outfit text, wskin text, lang text)
 language sql stable security definer set search_path = public as $$
   with best as (
-    select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
+    select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and r.winter = on_winter and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
     order by r.uid, r.lv desc, r.bosses desc, r.bt, r.t desc, r.at
   ), ranked as (
     select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.t desc, b.at) as rank, b.* from best b join players p on p.uid = b.uid

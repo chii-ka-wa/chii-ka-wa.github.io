@@ -480,14 +480,38 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (Math.abs(hd.hp[0] / nm.hp[0] / (1 / 0.8) - 6) > 0.01 || Math.abs(hd.hp[1] / nm.hp[1] / (1 / 0.8) - 10) > 0.01) errors.push('[cap] 어려움 보스 체력 ' + JSON.stringify({ nm: nm.hp, hd: hd.hp }))
     if (Math.abs(inf.hp[0] / hd.hp[0] - 1.5) > 0.01 || Math.abs(inf.hp[1] / hd.hp[1] - 1.5) > 0.01 || Math.abs(inf.hp1[0] / inf.hp[0] - 1 / 6) > 0.01 || Math.abs(inf.hp1[1] / inf.hp[1] - 0.1) > 0.01) errors.push('[cap] 무한 보스 체력 ' + JSON.stringify(inf))
   })
+  await run('clear', { width: 420, height: 900 }, async page => {   // 쉬움 · 보통 클리어 보상 — 망토 넷 · 감기 무기 스킨 둘(위 단계로 깨면 아래도 · 「풀밭」 칸은 맵 상관없이 · 겨울 칸은 그 단계 이상 겨울), 보유 효과 +0.5% · 랏코 치명타, 결과 화면 알림
+    const own = () => page.evaluate(() => { const M = window.__mjg, o = k => +M.owns(k), w = k => +M.ownsW(k); return ['e', 'ew', 'n', 'nw'].map(k => o('k_chiikawa_' + k)).join('') + '|' + ['e_chiikawa', 'y_chiikawa', 'v_chiikawa', 's_chiikawa'].map(w).join('') })
+    const set = async sv => { await page.evaluate(v => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, ...v })), sv); await page.reload(); await page.waitForTimeout(400) }
+    await set({}); const none = await own()
+    await set({ best: { 'chiikawa.easy': { t: 1, kills: 1, lvl: 1, clears: 1 } } }); const easy = await own()
+    await set({ best: { chiikawa: { t: 1, kills: 1, lvl: 1, clears: 1 } } }); const hard = await own()   // 어려움 ⊃ 보통 ⊃ 쉬움
+    await set({ wwin: ['chiikawa'] }); const oldWin = await own()   // 예전 저장(겨울 보통 이상) → 겨울 칸 둘 · 겨울 무기 스킨
+    await set({ wlv: { chiikawa: 1 } }); const easyWin = await own()
+    await set({ best: { rakko: { t: 1, kills: 1, lvl: 1, clears: 1 } }, wlv: { rakko: 3 } })
+    const crit = await page.evaluate(() => { const M = window.__mjg; M.startGame(5); return +M.S.crit.toFixed(3) })   // 랏코 0.03 + 0.15 + 섬 화관 0.01 + 망토 넷 0.02
+    await set({}); await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.diff = 'easy'; M.G.D = { ...M.G.D }; M.G.winter = true; M.finish(true) }); await page.waitForTimeout(300)
+    const res = await page.evaluate(() => ({ txt: document.querySelector('#ui .ach-new.dress')?.innerText.replace(/\s+/g, ' ') || '', wlv: JSON.parse(localStorage.getItem('mjg.v1')).wlv }))
+    await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.waitForTimeout(200)
+    const bon = await page.evaluate(() => [...document.querySelectorAll('.list.wr li.wr-clear .bon')].map(b => b.textContent))
+    console.log('clear', { none, easy, hard, oldWin, easyWin, crit, res, bon: bon.slice(0, 2) })
+    if (none !== '0000|0000' || easy !== '1000|1000' || hard !== '1010|1010' || oldWin !== '0101|0101' || easyWin !== '0100|0100' || crit !== 0.21 || !/클리어 보상을 받았어요/.test(res.txt) || !res.txt.includes('새내기 토벌대 망토') || !res.txt.includes('털실 감기') || res.wlv?.chiikawa !== 1 || bon.length !== 4 || !bon.every(b => b.includes('+0.5%'))) errors.push('[clear] ' + JSON.stringify({ none, easy, hard, oldWin, easyWin, crit, res, bon }))
+    const crownRun = (diff, lv, win) => page.evaluate(([diff, lv, win]) => { const M = window.__mjg; M.startGame(0); const g = M.G; g.diff = diff; g.inf = diff === 'inf'; g.winter = false; g.loop.lv = lv; M.finish(win)   // 업적 의상(섬 화관) — 무한 1단계 이상 클리어도 어려움 이상(기획), 알림은 판 뒤에 새로 생겼을 때만
+      return { note: !!document.querySelector('#ui .ach-new.dress')?.innerText.includes('업적 의상을 받았어요'), own: M.owns('a_chiikawa') } }, [diff, lv, win])
+    await set({}); const inf1 = await crownRun('inf', 1, false); await page.reload(); await page.waitForTimeout(300); inf1.kept = await page.evaluate(() => window.__mjg.owns('a_chiikawa'))
+    await set({}); const hard1 = await crownRun('hard', 0, true), infAfter = await crownRun('inf', 1, false)
+    await set({}); const inf0 = await crownRun('inf', 0, false)   // 무한 0단계에서 짐 — 클리어 아님
+    console.log('clear crown', { inf1, hard1, infAfter, inf0 })
+    if (!inf1.note || !inf1.own || !inf1.kept || !hard1.note || !hard1.own || infAfter.note || !infAfter.own || inf0.note || inf0.own) errors.push('[clear] 업적 의상 · 알림 ' + JSON.stringify({ inf1, hard1, infAfter, inf0 }))
+  })
   await run('acct', { width: 390, height: 844 }, async page => {   // 계정 · 랭킹 — Supabase 를 흉내 낸다(로그인 토큰 · 랭킹 · 닉네임 · 기록 올리기)
     const row = (rank, nick, ch, me) => ({ rank, nick, ch, lv: 9 - rank, bosses: 30 - rank, bt: 2000, t: 2400, kills: 9000, lvl: 300, weapons: 'sasu9 ramen8', passives: 'manju5', slain: 'siren3 chef2', winter: true, at: '2026-11-17T10:00:00Z', me, lang: me ? null : 'ja' })   // 플레이한 언어 — 예전 기록(null)은 국기 없음
-    const sent = []; let body = null
+    const sent = [], maps = []; let body = null
     await page.route('**/*.supabase.co/**', r => { const u = r.request().url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) }); sent.push(u.split('/').pop())
-      if (u.includes('top_ranks')) return j([row(1, 'A', 'usagi'), row(2, '치이카와팬', 'chiikawa', true)]); if (u.includes('my_rank')) return j([row(2, '치이카와팬', 'chiikawa', true)])
+      if (u.includes('top_ranks')) { maps.push(r.request().postDataJSON()?.on_winter); return j([row(1, 'A', 'usagi'), row(2, '치이카와팬', 'chiikawa', true)]) } if (u.includes('my_rank')) return j([row(2, '치이카와팬', 'chiikawa', true)])
       if (u.includes('agreed')) return j({ day: TERMS_VER }); if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('submit_rank')) { body = r.request().postDataJSON(); return j({ r: 'ok', rank: 2 }) } if (u.includes('start_run')) return j('tok-1'); if (u.includes('delete_me')) return j('ok'); if (u.includes('saves?select')) return j([])
       return r.fulfill({ status: 204 }) })
-    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, diff: 'inf', seen: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, diff: 'inf', seen: 1, theme: 'grass' })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
     await page.reload(); await page.waitForTimeout(800)
     const pill = await page.locator('.acct .nm').textContent(), onStats = await page.locator('#ui .fine', { hasText: '로그인 중에는 통계를 보내요' }).count()
     if (onStats !== 1) errors.push('[acct] 로그인 중 통계 글 ' + onStats)
@@ -495,6 +519,10 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!again.again || again.anim !== 'none') errors.push('[acct] 처음 화면 다시 그릴 때 pop ' + JSON.stringify(again))
     await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400)
     const rows = await page.locator('.list.rank li:not(.head)').count(), mine = await page.locator('.panel.rank .mine li.me').count()
+    const sub0 = await page.locator('.panel.rank .sub').innerText(); await page.locator('.panel.rank .rmap button').nth(1).click(); await page.waitForTimeout(300)   // 맵마다 랭킹 — 처음엔 겨울, 풀밭을 누르면 on_winter: false
+    const map = { maps: [...maps], sub0, sub1: await page.locator('.panel.rank .sub').innerText(), on: await page.locator('.panel.rank .rmap button.on').innerText() }
+    if (map.maps[0] !== true || map.maps.at(-1) !== false || !map.sub0.startsWith('겨울 · ') || !map.sub1.startsWith('풀밭 · ') || !map.on.includes('풀밭')) errors.push('[acct] 맵별 랭킹 ' + JSON.stringify(map))
+    await page.locator('.panel.rank .rmap button').nth(0).click(); await page.waitForTimeout(300)
     const flags = await page.evaluate(() => [...document.querySelectorAll('.list.rank li:not(.head)')].map(li => li.querySelector('.av > img.flag')?.alt ?? null))   // ja 기록 → 「日本語」, 예전 기록 → 없음
     if (flags.join() !== '日本語,') errors.push('[acct] 랭킹 국기 ' + JSON.stringify(flags))
     await page.locator('.list.rank li:not(.head)').first().click(); await page.waitForTimeout(150); const info = await page.locator('.modal .lvl-badge').textContent()
@@ -505,6 +533,9 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const line = await page.locator('.rankline').textContent()
     const ck = body && require('crypto').createHash('sha256').update(['tok-1', body.ch, body.lv, body.bosses, body.bt, body.t, body.kills, body.lvl, body.weapons, body.hit0, body.v, /const CK_SALT = '([^']*)'/.exec(require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'))[1]].join('|')).digest('hex')   // 체크섬 — SQL(submit_rank)과 같은 순서
     if (!body || body.ck !== ck || body.lang !== 'ko') errors.push('[acct] 체크섬 · 언어 ' + JSON.stringify({ body, ck }))
+    const n0 = maps.length; await page.locator('.rankline button', { hasText: '랭킹 보기' }).click(); await page.waitForTimeout(400)   // 결과 화면 랭킹 — 마지막에 본 건 겨울이지만 방금 판은 풀밭 → 풀밭 랭킹
+    const resMap = { winter: body?.winter, sent: maps.slice(n0), sub: await page.locator('.panel.rank .sub').innerText().catch(() => '') }
+    if (resMap.winter !== false || resMap.sent[0] !== false || !resMap.sub.startsWith('풀밭 · ')) errors.push('[acct] 결과 화면 랭킹 보기 — 그 판 맵으로 ' + JSON.stringify(resMap))
     console.log('acct', { pill, rows, mine, info, closed, still, line, sent: [...new Set(sent)] })
     await page.reload(); await page.waitForTimeout(800)   // 계정 지우기 — 닉네임을 똑같이 써야 눌리고, 지우면 로그아웃
     await page.locator('.acct summary').click(); await page.locator('.acct button.del').click(); await page.waitForTimeout(100)
