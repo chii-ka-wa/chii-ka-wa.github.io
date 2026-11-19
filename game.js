@@ -109,6 +109,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-19', [
+    ['new', 'guard', tr`무한 모드 1단계부터 보스와 세이렌을 쓰러뜨리면 「냄비뚜껑 방패」를 떨어뜨려요. 주울수록 적에게 닿아 받는 피해가 줄어들어요(이번 판만 · 화면에 −N%). 오래 버틸수록 세지는 적을 막아 줘요.`],
     ['new', 'coin', tr`출시 기념 쿠폰! 로그인한 뒤 계정 메뉴 → 쿠폰 입력에 「먼작귀서바이버즈」를 넣으면 토벌 보상금 1,000을 드려요 (한 계정 한 번 · 12월 20일까지)`],   // 날짜 = COUPON.ends · account.sql coupons.ends, 쿠폰 이름은 말마다 자기 이름(기획)
     ['fix', 'shirt', tr`쉬움 · 보통 토벌대 망토가 한눈에 달라 보여요 — 쉬움은 짧은 어깨 망토 · 동색 걸쇠, 보통은 땅까지 닿는 긴 망토 · 금 띠 · 금 고리 걸쇠`],
   ]],
@@ -259,6 +260,7 @@ const ITEMS = {
   pajama: { name: tr`꿀맛 페스티벌 티켓`, note: tr`파자마 파티즈가 10초 동안 넓게 돌며 공연 — 가까운 적에게 음표를 쏘고, 0.6초마다 음표 충격파로 밀쳐 낸다. 응원으로 쿨타임 -25%` },
   battery: { name: tr`건전지`, note: tr`한잎이 · 두잎이가 6초 동안 가장 가까운 날아오는 것(없으면 가까운 적) 쪽으로 돌아 서서 막고, 닿은 적을 세게 밀쳐 낸다` },
   chest: { name: tr`보물상자`, note: tr`보스가 떨어뜨린다 — 잭팟 확률 50%` },
+  guard: { name: tr`냄비뚜껑 방패`, note: tr`무한 1단계부터 보스 · 세이렌이 떨어뜨린다 — 주울수록 적에게 닿아 받는 피해가 줄어든다(이번 판만)` },
   coinbox: { name: tr`떠돌이 보물상자`, note: tr`한자리에 머물지 않고 멀리 움직이면 반드시 나타난다(오른쪽 위 상자 표시가 다 차면 · 10초에 한 번까지 · 12초 뒤 사라진다) — 토벌 보상금 10 ~ 200(클수록 드물게), 0.2% 잭팟 5000, 0.3% 확률로 이번 판에서만 쓰는 부활석` },
   awaken: { name: tr`각성의 별`, note: tr`Lv 8 스킬이 있을 때 보스(중간보스 빼고)가 떨어뜨린다 — Lv 8 스킬 하나를 각성(조금 세지고 날아오는 것을 가끔 막는다)` },
 }
@@ -315,6 +317,7 @@ const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [
   [1320, 'chef'], [1410, 'bigChimera', 1]]   // 20~25분은 보스 셋(예전 넷 — 24분 중간보스 데카츠요는 뺐다)
 // 영구 강화(처음 화면 「상점」) — 판마다 받는 토벌 보상금으로 산다. 한 칸이 같은 아이템 한 레벨의 1/5쯤, 다 사도 아이템 한 레벨 몫이라 판의 밸런스가 무너지지 않는다
 //   id = 같은 일을 하는 아이템(아이콘) · per = 한 칸 · max = 칸 수 · cost = 첫 칸 값(n 번째 칸은 cost × n)
+//   ⚠ max 를 늘리거나 새 강화를 넣을 때는 supabase/account.sql 의 save_bad(서버 칸 수 검사 — 넘으면 바로 정지 · IP 차단)를 먼저 올려 Run 하고, game.js 는 그다음에 올린다. 거꾸로 하면 정직한 사람이 모두 정지된다(기획)
 const SHOP = {
   manju: { name: tr`체력`, lab: tr`최대 체력`, per: 0.04, max: 5, cost: 40 },
   license: { name: tr`힘`, lab: tr`주는 피해`, per: 0.03, max: 5, cost: 50 },
@@ -411,7 +414,7 @@ if (SECURE) {   // 개발자 도구 단축키 · 오른쪽 클릭 메뉴 막기(
 //   표시된 판은 랭킹에 안 올리고(결과 화면에 한 줄 — 이유는 안 쓴다) 처음 걸린 때 서버에 한 번 알린다(report_cheat — IP 는 서버가 해시로만). 게임은 그대로 한다
 const GUARD = SECURE || /[?&]guard\b/.test(location.search)
 const h32 = t => { let a = 0x811c9dc5; for (let i = 0; i < t.length; i++) a = Math.imul(a ^ t.charCodeAt(i), 0x01000193); return a >>> 0 }
-const sealOf = () => h32([pl.hp, pl.inv, G.t, G.kills, G.lvl, G.xp, G.cheer, G.bosses, G.found, G.loop.lv, G.weapons.map(w => w.id + w.lv), Object.entries(G.passives), Object.values(S)].join())
+const sealOf = () => h32([pl.hp, pl.inv, G.t, G.kills, G.lvl, G.xp, G.cheer, G.bosses, G.found, G.loop.lv, G.guardN || 0, G.weapons.map(w => w.id + w.lv), Object.entries(G.passives), Object.values(S)].join())
 const spdMax = () => (save.ach.hard || 0) > 0 ? 3 : 2   // 3배속은 어려움을 클리어한 사람만
 function foul(why) {
   if (!GUARD || !G || G.bad?.includes(why)) return
@@ -2086,6 +2089,13 @@ const ICO = {
     g.rotate(-0.3); rr(g, 8.6, -2.8, 3, 5.6, 1); ink(g, '#c9ced6', 1.1); rr(g, -11, -6, 20, 12, 2.2); ink(g, '#fff', 1.5)
     g.fillStyle = '#7cd35a'; for (let i = 0; i < 3; i++) { rr(g, -9 + i * 5.8, -4, 4.8, 8, 1); g.fill() }
   },
+  guard: g => {   // 냄비뚜껑 방패 — 은색 뚜껑 · 빨간 손잡이(보조 스킬 갑옷씨의 갑옷 = 방패와 헷갈리지 않게 · 디자인)
+    g.rotate(-0.25)
+    el(g, 0, 0.5, 11.5, 10.5); ink(g, '#d8dde5', 1.5)
+    el(g, 0, 0.5, 7.8, 7); g.lineWidth = 1; g.strokeStyle = 'rgba(61,48,43,.35)'; g.stroke()
+    rr(g, -4.2, -1.7, 8.4, 4.4, 2.2); ink(g, '#e8473b', 1.3)
+    g.fillStyle = 'rgba(255,255,255,.85)'; el(g, -5.8, -4.2, 1.4, 2.6, 0.7); g.fill()
+  },
   chest: g => {
     rr(g, -11, -2, 22, 12, 1.5); ink(g, '#c27a3a', 1.5)
     g.beginPath(); g.moveTo(-11, -1); g.lineTo(-11, -5); g.quadraticCurveTo(0, -12.5, 11, -5); g.lineTo(11, -1); g.closePath(); ink(g, '#d98c45', 1.5)
@@ -3368,7 +3378,7 @@ function foes(dt) {
       if (!frozen) { e.x += e.rush[0] * dt; e.y += e.rush[1] * dt }
       e.fx = e.rush[0] < 0 ? -1 : 1
       if (Math.abs(e.x - cam.x) > VW + 200 || Math.abs(e.y - cam.y) > VH + 200) e.dead = true
-      else if (!frozen && d < e.r + pl.r - 2) ouch(e.dmg, e)
+      else if (!frozen && d < e.r + pl.r - 2) ouch(e.dmg, e, true)
       continue
     }
     if (!e.boss && d > far) { ring(e, true); continue }   // 너무 멀어진 적은 앞쪽으로 다시
@@ -3381,8 +3391,8 @@ function foes(dt) {
     const f = Math.exp(-9 * dt); e.kx *= f; e.ky *= f
     if (Math.abs(dx) > 0.15) e.fx = dx > 0 ? 1 : -1
     const SH = FOES[e.type].shot   // 멀리서 쏘는 적 — 가면 키메라 독침 · 복어 기름 그물 · 문어 간장
-    if (!frozen && SH && d < SH.range && (e.cd -= dt) <= 0) { e.cd = SH.cd + rnd(); G.eshots.push({ k: SH.k, x: e.x, y: e.y, vx: dx * SH.spd, vy: dy * SH.spd, t: 0, life: 2.6, dmg: e.dmg + 1, r: SH.r, slow: SH.slow }) }
-    if (!frozen && d < e.r + pl.r - 2 && e.z < 20) ouch((e.boss ? Math.max(e.dmg, pct(e.mid ? 0.08 : 0.1)) * (e.rage ? 1.4 : 1) : e.dmg) * (e.st === 'dash' ? 1.5 : 1), e)   // 뛰어오른 보스는 안 닿는다
+    if (!frozen && SH && d < SH.range && (e.cd -= dt) <= 0) { e.cd = SH.cd + rnd(); G.eshots.push({ k: SH.k, x: e.x, y: e.y, vx: dx * SH.spd, vy: dy * SH.spd, t: 0, life: 2.6, dmg: e.dmg + 1, grow: 1, r: SH.r, slow: SH.slow }) }
+    if (!frozen && d < e.r + pl.r - 2 && e.z < 20) ouch((e.boss ? Math.max(e.dmg, pct(e.mid ? 0.08 : 0.1)) * (e.rage ? 1.4 : 1) : e.dmg) * (e.st === 'dash' ? 1.5 : 1), e, true)   // 뛰어오른 보스는 안 닿는다
   }
 }
 // 돌진 — 걷다가 멈칫(붉게) 하고 그 방향으로
@@ -3565,6 +3575,7 @@ function kill(e, quiet = false) {
   shake = e.mid ? 6 : 10; fx({ k: 'ring', x: e.x, y: e.y, R: e.mid ? 120 : 180, T: 0.6, col: '#ffd23f' }); fx({ k: 'flash', x: e.x, y: e.y - 40, R: e.mid ? 110 : 160, col: '#ffd23f', T: 0.6 })   // 먼저 — 세이렌이 떠오르며 사라지는 그림이 빛 위에 보이게
   if (e.kind === 'mermaid') say(guarded() ? tr`인어 격파!` : tr`세이렌의 보호막이 사라졌다!`, 2, '#7fd8ff')
   else if (e.kind === 'siren' && G.inf) {   // 무한 — 세이렌을 다 쓰러뜨려야 다음 단계(판은 이어진다)
+    if (G.loop.lv) item(e.x + 26, e.y, 'guard', true)   // 냄비뚜껑 방패 — 한 명에 하나(0단계 첫 세이렌은 없음 · 기획)
     G.bosses++; G.loop.sirens++; const rest = (G.final?.sirens || []).filter(s => !s.dead)
     if (rest.length) { G.final.siren = rest[0]; progress(); say(tr`세이렌 격파! 남은 세이렌 ${rest.length}`, 2, '#ff9be0') }
     else { if (G.dark) fx({ k: 'bye', s: SPR.dark[0], x: G.dark.x, y: G.dark.y, T: 1.2 }); G.dark = null; stageClear(e) }
@@ -3573,15 +3584,15 @@ function kill(e, quiet = false) {
     for (const f of G.foes) if (!f.dead) kill(f, true)
   } else if (e.mid) { say(tr`${B.name} 격파!`, 1.6, '#ffb35e'); G.rest = { name: tr`중간보스 ${B.name}`, at: G.t + 1.2 } }
   // 보통 보스 — 각성의 별(다 각성했으면 대신 보물상자) · 보물상자 · 잠옷이나 전지
-  else { G.bosses++; if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); else if (G.weapons.length >= 6 && G.weapons.every(w => G.aw.has(w.id))) item(e.x - 26, e.y, 'chest'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery', true); say(tr`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
+  else { G.bosses++; if (G.inf && G.loop.lv) item(e.x + 26, e.y, 'guard', true); if (awCan().length > G.items.filter(i => i.k === 'awaken').length + G.queue.filter(q => q === 'awaken').length) item(e.x - 26, e.y, 'awaken'); else if (G.weapons.length >= 6 && G.weapons.every(w => G.aw.has(w.id))) item(e.x - 26, e.y, 'chest'); item(e.x, e.y, 'chest'); item(e.x + 26, e.y, rnd() < 0.5 ? 'pajama' : 'battery', true); say(tr`${B.name} 격파!`, 2.2, '#ffd23f'); G.rest = { name: B.name, at: G.t + 1.2 } }
 }
 /** 둘레 R 안 작은 적(보스 · 돌격대 빼고)을 밀쳐 낸다 — 세기 kb(밀리는 거리 ≈ kb / 9) */
 function shove(R, kb) { near(pl.x, pl.y, R, e => { if (e.boss || e.rush) return; const [dx, dy] = toward(e); e.kx += dx * kb; e.ky += dy * kb }) }
 /** 다침 — src: 때린 것(적 · 보스 · 날아온 것 · 장판, 또는 이름). 쓰러지면 G.killer 에 이름(익명 통계) */
-function ouch(d, src) {
+function ouch(d, src, grow) {   // grow — 단계 · 시간마다 세지는 피해(냄비뚜껑 방패가 줄인다)
   if (pl.inv > 0 || G.dying || G.won) return
   G.hit0 ??= G.t   // 처음 맞은 때(업적 「스치지도 않았다」)
-  d = Math.max(1, Math.round(d * G.D.dmg * (stormHurts() ? STORM.hurt : 1) - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
+  d = Math.max(1, Math.round(d * (grow ? 1 - guardCut() : 1) * G.D.dmg * (stormHurts() ? STORM.hurt : 1) - S.armor)); pl.hp -= d; pl.inv = 0.8; pl.hurtT = 0.35; shake = Math.max(shake, 4); SND.hurt(G.ch.id)
   shove(80, 380)   // 맞으면 0.8초 무적 + 둘레를 밀쳐 빠져나갈 틈
   num(pl.x, pl.y - 48, d, 'hurt')
   if (pl.hp <= 0) fall(src)
@@ -3600,6 +3611,8 @@ function gem(x, y, v) {
 }
 /** 줍는 것 — k: 종류 · 후보 { 종류: 무게 } · 없으면 정예 무작위(합 100). 소모 7종(ITEM_CAP)은 맵에 같은 종류 오니기리 5개(무한 3) · 그 밖 2개(무한 1)까지 —
  *  다 찼으면 후보 안 다른 것, 그것도 없으면 안 떨어뜨린다(맵 전체로 센다 — 화면 밖에 쌓아 두는 「주먹밥 저금」 막기 · 기획). force: 보스 보상(셈에는 들어가도 늘 떨어뜨림) */
+// 냄비뚜껑 방패(무한 1단계부터 보스 · 세이렌 보상 — 기획) — 받는 피해 × 1 / (1 + LID × 주운 개수). 단계마다 세지는 피해(닿기 · 보스 몸 · 일반 적 탄)에만, 최대 체력 % 기술(pct)엔 안 건다
+const LID = 0.03, guardCut = () => 1 - 1 / (1 + LID * (G.guardN || 0))
 const ITEM_CAP = ['earplug', 'onigiri', 'magnet', 'momonga', 'firework', 'pajama', 'battery']
 const itemFull = k => ITEM_CAP.includes(k) && G.items.reduce((n, i) => n + (i.k === k), 0) >= (k === 'onigiri' ? (G.inf ? 3 : 5) : G.inf ? 1 : 2)   // 오니기리 5(무한 3) · 그 밖 2(무한 1) — 사용자
 function item(x, y, k = { earplug: G.t >= 600 ? 15 : 0, onigiri: G.t >= 600 ? 17 : 32, magnet: 16, momonga: 12, firework: 12, pajama: 14, battery: 14 }, force = false) {
@@ -3616,6 +3629,7 @@ const USE = {
     for (const e of G.foes) if (!e.dead && !e.rush && onScreen(e, 40)) { if (e.boss) hurt(e, 300 * S.might, pl.x, pl.y); else kill(e) }
   },
   chest: () => G.queue.push('chest'),
+  guard: () => { G.guardN = (G.guardN || 0) + 1; G.guardT = G.t; fx({ k: 'ring', x: pl.x, y: pl.y - 20, R: 60, T: 0.4, col: '#9fd0ff' }); fx({ k: 'guard', T: 0.9 }) },   // 머리 위로 뚜껑 + 「받는 피해 −N%」(쌓인 합 · 배너는 안 띄운다 — 디자인)
   awaken: () => G.queue.push('awaken'),
   coinbox: () => {   // 떠돌이 보물상자 — LOOT 표대로
     let q = rnd() * 100, v = LOOT.at(-1)[0]
@@ -3765,7 +3779,7 @@ function step(dt) {
     if (b.dead) continue
     b.t += dt
     if (G.freeze <= 0) { if (b.wait > 0) b.wait -= dt; else { b.x += b.vx * dt; b.y += b.vy * dt } }   // wait — 음표 울타리: 멈춰 반짝이다가 모인다
-    if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < (pl.r + b.r) ** 2) { ouch(b.dmg, b); b.dead = true; if (b.slow) { pl.slowT = Math.max(pl.slowT, b.slow); fx({ k: 'text', x: pl.x, y: pl.y - 50, s: tr`끈적!`, col: '#f2c94c', T: 0.6 }) } }
+    if ((b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 < (pl.r + b.r) ** 2) { ouch(b.dmg, b, b.grow); b.dead = true; if (b.slow) { pl.slowT = Math.max(pl.slowT, b.slow); fx({ k: 'text', x: pl.x, y: pl.y - 50, s: tr`끈적!`, col: '#f2c94c', T: 0.6 }) } }
     if (b.t > b.life) b.dead = true
   }
   for (const g of G.gems) {   // 경험치 · 아이템 줍기
@@ -4172,7 +4186,8 @@ function world(c, ox, oy) {
   }
   // 보석 · 줍는 것
   for (const g of G.gems) if (Math.abs(g.x - cam.x) < VW / 2 + 20 && Math.abs(g.y - cam.y) < VH / 2 + 20) put(c, SPR.gem[g.v >= 20 ? 2 : g.v >= 3 ? 1 : 0], g.x, g.y)   // 화면 안만(바닥에 쌓인 것까지 매 프레임 그리면 구형 폰이 느려진다)
-  for (const it of G.items) { put(c, SPR.shadow, it.x, it.y, 0.5); c.globalAlpha = 0.35 + 0.2 * Math.sin(it.t * 5); c.fillStyle = '#fff'; oval(c, it.x, it.y - 12, 16, 16); c.fill(); c.globalAlpha = 1; put(c, SPR.E[it.k], it.x, it.y - 12 + Math.sin(it.t * 4) * 2) }
+  for (const it of G.items) { put(c, SPR.shadow, it.x, it.y, 0.5); c.globalAlpha = 0.35 + 0.2 * Math.sin(it.t * 5); c.fillStyle = it.k === 'guard' ? '#ffe27a' : '#fff'; oval(c, it.x, it.y - 12, 16, 16); c.fill(); c.globalAlpha = 1; put(c, SPR.E[it.k], it.x, it.y - 12 + Math.sin(it.t * 4) * 2)
+    if (it.k === 'guard') { const k = LQ || RM.matches ? 1 : Math.max(0, Math.sin(it.t * TAU / 1.2)); if (k) { starP(c, it.x + 10, it.y - 26, 4.5 * k, 1.4 * k, 4); c.fillStyle = '#ffd23f'; c.fill(); c.lineWidth = 1; c.strokeStyle = OUT; c.stroke() } } }   // 냄비뚜껑 — 눈밭에서도 보이게 노란 빛 + 1.2초에 한 번 반짝(디자인)
   // 그림자 → 몸(y 순, 화면 안만)
   const vis = e => Math.abs(e.x - cam.x) < VW / 2 + 90 && Math.abs(e.y - cam.y) < VH / 2 + 140
   for (const e of G.foes) if (e.storm && vis(e)) { c.fillStyle = 'rgba(30,40,80,.28)'; oval(c, e.x, e.y, e.r * 1.4, e.r * 0.5); c.fill() }   // 폭풍의 세이렌 — 그림자 밑 먹구름
@@ -4346,6 +4361,11 @@ function effect(c, f, ox, oy) {
     case 'flash': c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - u) * 0.5; c.fillStyle = f.col; oval(c, f.x, f.y, f.R, f.R); c.fill(); c.globalCompositeOperation = 'source-over'; break
     case 'white': c.globalAlpha = (1 - u) * (f.a || 0.8); c.fillStyle = '#fff'; c.fillRect(ox, oy, VW, VH); break
     case 'text': c.globalAlpha = 1 - Math.max(0, u - 0.6) / 0.4; txt(c, f.s, f.x, f.y - u * 18, 17, f.col); break
+    case 'guard': {   // 냄비뚜껑 방패를 주웠다 — 뚜껑이 머리 위로 떠오르고(처음 0.2초 톡) 밑에 「받는 피해 −N%」, 마지막 0.3초에 사라진다. 움직임 줄이기면 그 자리에서 보였다 사라지기만
+      const still = LQ || RM.matches, y = pl.y - (still ? 72 : 72 + 36 * u),   // 글자(뚜껑 밑 26)가 처음부터 머리(발에서 약 40) 위에(디자인)
+      k = still ? 1 : u < 0.2 / 0.9 ? (u < 0.1 / 0.9 ? 1.2 * u / (0.1 / 0.9) : 1.2 - 0.2 * (u - 0.1 / 0.9) / (0.1 / 0.9)) : 1
+      c.globalAlpha = 1 - Math.max(0, u - 0.6 / 0.9) / (0.3 / 0.9); c.drawImage(SPR.E.guard.c, pl.x - 14 * k, y - 14 * k, 28 * k, 28 * k); txt(c, tr`받는 피해 −${Math.floor(guardCut() * 100)}%`, pl.x, y + 26, 13, '#9fd0ff'); break
+    }
     case 'bolt': {   // 어떻게든 돼라! — 노란 별 번개
       c.globalAlpha = 1 - u; c.lineJoin = 'round'
       const k = G.sk[f.src]; for (const [col, lw] of k ? [[k.col + '55', 18], [k.col, 8], [k.col2, 3.5]] : [['#ffb400', 7], ['#fff7b0', 3]]) { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); f.pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke() }
@@ -4473,6 +4493,13 @@ function hud(c) {
   for (const w of G.weapons) { const p = Math.max(0, 1 - (G.t - (w.fire ?? -9)) / 0.25); if (p) { c.globalAlpha = p * 0.7; c.fillStyle = '#fff'; oval(c, x + 13, top + 13, 17, 17); c.fill(); c.globalAlpha = 1 } c.drawImage(SPR.E[w.id].c, x - 3 * p, top - 3 * p, 26 + 6 * p, 26 + 6 * p); txt(c, G.aw.has(w.id) ? '★' : String(w.lv), x + 22, top + 26, 11, G.aw.has(w.id) ? '#ff9be0' : w.lv === 8 ? '#ffd23f' : '#fff'); x += 28 }
   x = 10
   for (const id in G.passives) { c.drawImage(SPR.E[id].c, x, top + 32, 20, 20); txt(c, String(G.passives[id]), x + 17, top + 52, 10); x += 22 }
+  if (G.guardN) {   // 냄비뚜껑 방패 — 이번 판에 쌓인 피해 감소(디자인 — 보조 스킬 줄 끝 · 강철색, 주운 순간 0.3초 톡)
+    const s = `−${Math.floor(guardCut() * 100)}%`; c.font = `12px ${FONT}`; const tw = c.measureText(s).width, gx = x + (x > 10 ? 4 : 0), gy = top + 31, w = 22 + tw + 8
+    const k = LQ || RM.matches ? 1 : 1 + 0.25 * Math.max(0, 1 - (G.t - (G.guardT ?? -9)) / 0.3)
+    c.save(); c.translate(gx + w / 2, gy + 11); c.scale(k, k); c.translate(-(gx + w / 2), -(gy + 11))
+    c.fillStyle = '#6f8fb3'; c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); c.roundRect(gx, gy, w, 22, 11); c.fill(); c.stroke()
+    c.drawImage(SPR.E.guard.c, gx + 2, gy + 2, 18, 18); txt(c, s, gx + 22 + tw / 2, gy + 15.5, 12); c.restore()
+  }
   let sy = top + 72
   if (CTRL?.push && CTRL.bot) sy += Math.max(0, CTRL.bot + 16 - sy) * CTRL.push   // 조작법 카드가 덮는 동안은 카드 밑으로
   for (const id in G.sts) { const left = G.sts[id] - G.t; if (left > 0) { txt(c, tr`${STATUS[id].name} ${Math.ceil(left)}초 — ${STATUS[id].note}`, W / 2, sy + 2, 13, STATUS[id].col, W - 16); sy += 18 } }
@@ -4876,4 +4903,4 @@ if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 �
   link().finally(() => { clearTimeout(t); done?.() })
 }
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, portrait, ranking, owns, ownsW, get S() { return S }, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, portrait, ranking, owns, ownsW, get S() { return S }, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, ouch, guardCut, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

@@ -4,7 +4,7 @@
 -- 1) 의심 목록 — 계정 · IP 마다 걸린 횟수와 이유(한 대도 안 맞은 긴 판이 맨 위)
 select * from suspects limit 50;
 
--- 2) 최근 부정 신호 — 이유: ck(체크섬 어긋남) · seal(게임 봉인 깨짐 — 메모리 고치기) · spd(자격 없는 3배속) · rank(말이 안 되는 기록 → 자동 정지) · nohit(한 대도 안 맞은 긴 판) · coin(보상금 급증)
+-- 2) 최근 부정 신호 — 이유: save(저장 조작 — 바로 정지) · ck(체크섬 어긋남) · seal(게임 봉인 깨짐 — 메모리 고치기) · spd(자격 없는 3배속) · rank(말이 안 되는 기록 → 자동 정지) · nohit(한 대도 안 맞은 긴 판) · coin(보상금 급증)
 select l.at, (select p.nick from players p where p.uid = l.uid) as nick, l.uid, l.reason, l.detail, left(l.ip_h, 8) as ip
 from cheat_log l order by l.at desc limit 100;
 
@@ -32,7 +32,12 @@ from x order by (concat_ws('', case when bosses > case when lv = 0 then 6 else 4
 -- 4) 지금 차단 중
 select b.id, b.at, b.until, b.stop, b.reason, (select p.nick from players p where p.uid = b.uid) as nick, b.uid, left(b.ip_h, 8) as ip from bans b where b.until is null or b.until > now() order by b.at desc;
 
--- 5) 걸린 기록 정리(직접 고쳐서 Run) — 기록만 지우기 / 계정 정지(랭킹 제외 · 로그인 막기)
+-- 5) 저장 조작 — 상점 강화가 칸 수를 넘는 계정 저장(save_bad). 이런 계정은 다음에 저장이 올라가는 순간 자동으로 정지 + IP 7일이 된다(account.sql saves_check)
+--    지금 바로 막으려면 아래 주석을 풀어 Run(계정만 정지 — IP 는 저장을 올릴 때만 알 수 있어서 못 막는다)
+select p.nick, s.uid, s.data->'up' as up, s.updated_at from saves s left join players p using (uid) where save_bad(s.data) order by s.updated_at desc;
+--   insert into bans (uid, stop, reason) select s.uid, true, 'save' from saves s where save_bad(s.data) and not exists (select 1 from bans b where b.uid = s.uid and b.stop and b.until is null);
+
+-- 6) 걸린 기록 정리(직접 고쳐서 Run) — 기록만 지우기 / 계정 정지(랭킹 제외 · 로그인 막기)
 --   delete from ranks where uid = '<uid>';
 --   insert into bans (uid, stop, reason) values ('<uid>', true, '<이유>');
 --   잘못 막았으면:  delete from bans where id = <번호> or uid = (select uid from bans where id = <번호>);

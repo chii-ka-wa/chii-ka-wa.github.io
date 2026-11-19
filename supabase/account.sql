@@ -11,7 +11,7 @@ create table if not exists public.cheat_log (
   at     timestamptz not null default now(),
   uid    uuid,                                                        -- 로그인했으면 계정
   ip_h   text,                                                        -- IP 해시(md5 + 서버 비밀값 — 원래 IP 는 남기지 않는다)
-  reason text not null check (reason ~ '^[a-z]{2,12}$'),              -- seal(프레임 봉인 깨짐) · spd(3배속 자격 없음) · ck(랭킹 체크섬 어긋남) · nohit(한 대도 안 맞은 긴 무한 판) · coin(보상금이 너무 빨리 늚)
+  reason text not null check (reason ~ '^[a-z]{2,12}$'),              -- seal(프레임 봉인 깨짐) · spd(3배속 자격 없음) · ck(랭킹 체크섬 어긋남) · nohit(한 대도 안 맞은 긴 무한 판) · coin(보상금이 너무 빨리 늚) · save(저장 조작 — 상점 강화가 칸 수를 넘음 → 바로 정지)
   detail jsonb check (detail is null or pg_column_size(detail) < 2000)
 );
 create index if not exists cheat_log_at on public.cheat_log (at);
@@ -120,6 +120,31 @@ begin
 end $$;
 drop trigger if exists saves_guard on public.saves;
 create trigger saves_guard before update on public.saves for each row execute function public.saves_guard();
+-- 저장 조작 — 정직한 게임이 낼 수 없는 저장(상점 강화가 칸 수를 넘음 · 숫자가 아님)이면 그 자리에서 계정 영구 정지 + IP 7일(ban_me 'save'), 그 저장은 받지 않는다.
+--   값이 null 이면 없음(0)으로 본다(깨진 저장이 정지되지 않게 — 기획). 새로 만들기(첫 업로드)와 고치기 둘 다. 칸 수는 game.js SHOP 의 max 와 같게(처음 판부터 바뀐 적 없다 — 늘리면 여기도). 모르는 칸은 보지 않는다(예전 판 저장이 걸리지 않게)
+--   트리거는 이름 순서로 돈다 — saves_check 가 saves_guard 보다 먼저(받지 않을 저장으로 보상금 검사를 하지 않게)
+create or replace function public.save_bad(d jsonb) returns boolean language sql immutable as $$
+  select case when d->'up' is null or jsonb_typeof(d->'up') = 'null' then false when jsonb_typeof(d->'up') <> 'object' then true
+    else exists (select 1 from jsonb_each(d->'up') e(k, v) join (values ('manju', 5), ('license', 5), ('pudding', 5), ('slipper', 5), ('wage', 5), ('pouch', 5), ('clover', 5), ('armor', 1)) m(k, mx) using (k)
+                 where jsonb_typeof(e.v) <> 'null' and (jsonb_typeof(e.v) <> 'number' or (e.v::text)::numeric not between 0 and m.mx or (e.v::text)::numeric % 1 <> 0)) end   -- null 은 없음(0)과 같게(깨진 저장 · NaN — 기획)
+$$;
+create or replace function public.saves_check() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if save_bad(new.data) then
+    perform report_cheat('save', jsonb_build_object('up', new.data->'up'));
+    perform ban_me('save');
+    return null;   -- 받지 않는다(계정의 예전 저장은 그대로)
+  end if;
+  if tg_op = 'INSERT' and coalesce(case when jsonb_typeof(new.data->'coin') = 'number' then (new.data->>'coin')::numeric end, 0) + 1000 * coalesce(case when jsonb_typeof(new.data->'stone') = 'number' then (new.data->>'stone')::numeric end, 0) > 1000000 then
+    -- 첫 업로드(기기에 모아 둔 것)는 보상금 증가 검사(saves_guard)를 안 거친다 — 보상금 + 부활석 × 1,000 이 100만을 넘으면 'coin' 표시(랭킹 보류 · 정지는 아님 · 기획)
+    perform report_cheat('coin', jsonb_build_object('first', new.data->'coin', 'stone', new.data->'stone'));
+    insert into bans (uid, reason) select new.uid, 'coin' where not exists (select 1 from bans b where b.uid = new.uid and b.reason = 'coin' and b.until is null);
+  end if;
+  return new;
+end $$;
+revoke all on function public.save_bad, public.saves_check from public, anon, authenticated;
+drop trigger if exists saves_check on public.saves;
+create trigger saves_check before insert or update on public.saves for each row execute function public.saves_check();
 
 -- 2) 닉네임 — 랭킹에 보이는 이름. NFKC 로 맞춘 뒤 2~12자(한 · 영 · 일 · 중 · 숫자 · _), 대소문자 무시하고 겹치면 안 된다. 처음 정하기는 바로, 바꾸기는 하루에 한 번(사용자 결정 2026-11-18 — 예전엔 7일). 표는 함수로만
 create table if not exists public.players (

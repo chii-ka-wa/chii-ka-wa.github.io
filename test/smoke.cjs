@@ -413,7 +413,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const go = (sec, who = '') => page.evaluate(([sec, who]) => { const M = window.__mjg, G = M.G
       for (let i = 0; i < sec * 20; i++) { M.pl.inv = 9; G.next = 1e12; G.rest = null; M.step(0.05)
         for (const e of G.foes) if (e.boss && !e.dead && (who === 'boss' ? e.kind !== 'siren' && e.kind !== 'mermaid' : e.kind === who)) M.kill(e) }
-      return { lv: G.loop.lv, q: G.loop.queue.length, n: G.foes.filter(e => e.loop && !e.dead).length, sirens: G.final?.sirens?.filter(s => !s.dead).length || 0, dark: !!G.dark, mode: M.mode, ph: (G.final?.sirens || []).filter(s => !s.dead).map(s => s.ph).join(), bosses: G.bosses } }, [sec, who])
+      return { lv: G.loop.lv, q: G.loop.queue.length, n: G.foes.filter(e => e.loop && !e.dead).length, sirens: G.final?.sirens?.filter(s => !s.dead).length || 0, dark: !!G.dark, mode: M.mode, ph: (G.final?.sirens || []).filter(s => !s.dead).map(s => s.ph).join(), bosses: G.bosses, guard: G.items.filter(i => i.k === 'guard').length + (G.guardN || 0) } }, [sec, who])   // guard — 떨어진 냄비뚜껑 방패(무한 1단계부터 보스 · 세이렌)
     await page.locator('#ui .btn.main').click(); await page.waitForTimeout(150)   // 통계를 끈 채 무한 — 설명에 미리 알리고, 「토벌 시작!」에서 묻는다
     const gate = { note: await page.locator('.diff-note span.on').textContent() }; await page.locator('#ui .row .btn.main').click(); await page.waitForTimeout(150)
     Object.assign(gate, { modal: await page.locator('.modal .h').textContent(), mode: await page.evaluate(() => window.__mjg.mode) }); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(150)
@@ -429,6 +429,12 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (p.ph !== '2,2' || p.dark || p.bosses !== d.bosses + 2 || p.lv !== 1) errors.push('[inf] 페이즈 ' + JSON.stringify({ d, p }))
     console.log('inf', a, b, c, d, e)
     if (a.lv !== 1 || a.mode !== 'play' || b.n !== 2 || c.sirens !== 2 || !d.dark || e.lv !== 2 || e.dark) errors.push(`[inf] ${JSON.stringify({ a, b, c, d, e })}`)
+    if (a.guard !== 0 || c.guard !== 6 || p.guard !== 6 || e.guard !== 8) errors.push('[inf] 냄비뚜껑 방패 — 0단계 없음 · 1단계 보스 여섯 · 세이렌은 세 페이즈 다 쓰러뜨려야 하나씩 ' + JSON.stringify([a.guard, c.guard, p.guard, e.guard]))
+    const guard = await page.evaluate(() => { const M = window.__mjg, G = M.G, pl = M.pl
+      for (const it of G.items) if (it.k === 'guard') { it.x = pl.x; it.y = pl.y } pl.inv = 0; M.step(0.02)   // 주우면 이번 판 피해 감소 1 / (1 + 0.03 n)
+      const hit = grow => { pl.inv = 0; pl.hp = 1e6; G.dying = 0; G.won = 0; M.ouch(1000, null, grow); return 1e6 - pl.hp }
+      return { n: G.guardN, cut: Math.floor(M.guardCut() * 100), grow: hit(true), plain: hit(false) } })
+    if (guard.n !== 8 || guard.cut !== 19 || Math.abs(guard.grow / guard.plain - 1 / 1.24) > 0.01) errors.push('[inf] 방패 줍기 · 피해 감소 ' + JSON.stringify(guard))
   })
 
   await run('guard', { width: 900, height: 700 }, async page => {   // 부정 플레이 봉인(?guard) — 진짜 프레임으로 돌리며 상자 고르기 · 일시정지엔 표시가 없고, 프레임 사이에 체력을 고치면 표시
