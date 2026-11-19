@@ -12,7 +12,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2, locale: 'ko-KR' })   // 고른 말이 없으면 브라우저 언어 — 점검은 한국어 브라우저로
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
-    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis', 'terms'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
+    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis', 'terms', 'coupon'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
     await page.route('**/rpc/blocked', r => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }))   // IP 차단 확인(?secure · ?guard 면 묻는다) — 진짜 서버 대신 「안 막힘」. ban 은 따로
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
@@ -503,6 +503,36 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await set({}); const inf0 = await crownRun('inf', 0, false)   // 무한 0단계에서 짐 — 클리어 아님
     console.log('clear crown', { inf1, hard1, infAfter, inf0 })
     if (!inf1.note || !inf1.own || !inf1.kept || !hard1.note || !hard1.own || infAfter.note || !infAfter.own || inf0.note || inf0.own) errors.push('[clear] 업적 의상 · 알림 ' + JSON.stringify({ inf1, hard1, infAfter, inf0 }))
+  })
+  await run('coupon', { width: 360, height: 740 }, async page => {   // 쿠폰 — 계정 단추 점 · 빈칸이면 못 누름 · 실패는 모몽가(.no 흔들기 / .end 차분) · 성공은 셋이 축하 + 그 자리에서 보상금 · 받은 표시 · 저장 · 계정으로
+    const answers = [{ r: 'bad' }, 'net', { r: 'expired', id: 'launch' }, { r: 'ban' }, { r: 'ok', id: 'launch', coin: 10000 }, { r: 'ok', id: 'launch', coin: 10000 }], codes = []; let saved = null   // 마지막 ok — 계정 저장엔 아직 없어 서버가 다시 준 것(이 기기엔 이미 더했으니 또 더하면 안 된다)
+    await page.route('**/*.supabase.co/**', r => { const q = r.request(), u = q.url(), j = v => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(v) })
+      if (u.includes('rpc/redeem')) { codes.push(q.postDataJSON()?.code); const a = answers.shift(); return j(a === 'net' ? null : a) }   // net — api() 가 연결 실패 때 돌려주는 null 과 같다(abort 는 콘솔 오류라)
+      if (u.includes('agreed')) return j({ day: TERMS_VER }); if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' }); if (u.includes('saves?select')) return j([])
+      if (u.includes('saves?on_conflict')) saved = q.postDataJSON()
+      return r.fulfill({ status: 204 }) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, seen: 1, coin: 100 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'kakao' })) })
+    await page.reload(); await page.waitForTimeout(800)
+    const live = Date.now() < Date.parse('2026-12-20T23:59:59.999+09:00'), dot0 = await page.locator('.acct summary .dot').count()   // 기간이 끝나면 점이 없어야 한다
+    if (dot0 !== (live ? 1 : 0)) errors.push('[coupon] 계정 단추 점 ' + dot0)
+    await page.locator('.acct summary').click(); await page.locator('.acct div button', { hasText: '쿠폰 입력' }).click(); await page.waitForTimeout(150)
+    const go = page.locator('.modal .btn.main'), say = page.locator('.modal .cp-say'), off = await go.isDisabled(), hid = await say.isHidden()
+    await page.locator('.modal input').fill(' 먼작귀 서바이버즈 ')
+    const look = async () => { await go.click(); await page.waitForTimeout(300); return { cls: await say.getAttribute('class'), txt: await say.innerText(), pt: await say.locator('canvas.pt').count(), val: await page.locator('.modal input').inputValue() } }
+    const fails = [await look(), await look(), await look(), await look()]
+    const want = [['no', '그런 쿠폰 없어'], ['no', '연결이 안 돼'], ['end', '벌써 끝났어'], ['end', '쿠폰을 쓸 수 없어요']]
+    if (!off || !hid || fails.some((f, i) => !f.cls.split(' ').includes(want[i][0]) || !f.txt.includes(want[i][1]) || f.pt !== 1 || f.val !== ' 먼작귀 서바이버즈 ')) errors.push('[coupon] 실패 ' + JSON.stringify({ off, hid, fails }))
+    await go.click(); await page.waitForTimeout(600)
+    const ok = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('mjg.v1')); return { trio: document.querySelectorAll('.modal .cp-ok .cp-trio canvas.pt').length, gain: document.querySelector('.modal .cp-gain')?.textContent, coin: s.coin, cpn: s.cpn, input: document.querySelectorAll('.modal input').length, dot: document.querySelectorAll('.acct .dot').length } })
+    console.log('coupon', { codes, fails: fails.map(f => f.cls), ok, saved: saved && { coin: saved.data?.coin, cpn: saved.data?.cpn } })
+    if (codes.length !== 5 || codes.some(c => c !== '먼작귀 서바이버즈')) errors.push('[coupon] 보낸 코드 ' + JSON.stringify(codes))
+    if (ok.trio !== 3 || ok.gain !== '+10,000' || ok.coin !== 10100 || ok.cpn?.join() !== 'launch' || ok.input || ok.dot) errors.push('[coupon] 성공 ' + JSON.stringify(ok))
+    if (saved?.data?.coin !== 10100 || saved?.data?.cpn?.join() !== 'launch') errors.push('[coupon] 계정으로 바로 저장 ' + JSON.stringify(saved?.data && { coin: saved.data.coin, cpn: saved.data.cpn }))
+    await page.keyboard.press('Escape'); await page.locator('.modal').evaluate(m => m.remove()).catch(() => {}); saved = null
+    await page.locator('.acct summary').click(); await page.locator('.acct div button', { hasText: '쿠폰 입력' }).click(); await page.waitForTimeout(150)
+    await page.locator('.modal input').fill('먼작귀서바이버즈'); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(500)
+    const twice = await page.evaluate(() => ({ cls: document.querySelector('.modal .cp-say')?.className, ok: document.querySelectorAll('.cp-ok').length, coin: JSON.parse(localStorage.getItem('mjg.v1')).coin }))
+    if (twice.cls !== 'cp-say end' || twice.ok || twice.coin !== 10100 || saved?.data?.coin !== 10100) errors.push('[coupon] 이미 더한 기기에 ok 가 또 오면 ' + JSON.stringify({ twice, saved: saved?.data?.coin }))
   })
   await run('acct', { width: 390, height: 844 }, async page => {   // 계정 · 랭킹 — Supabase 를 흉내 낸다(로그인 토큰 · 랭킹 · 닉네임 · 기록 올리기)
     const row = (rank, nick, ch, me) => ({ rank, nick, ch, lv: 9 - rank, bosses: 30 - rank, bt: 2000, t: 2400, kills: 9000, lvl: 300, weapons: 'sasu9 ramen8', passives: 'manju5', slain: 'siren3 chef2', winter: true, at: '2026-11-17T10:00:00Z', me, lang: me ? null : 'ja' })   // 플레이한 언어 — 예전 기록(null)은 국기 없음

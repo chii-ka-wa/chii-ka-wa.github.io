@@ -105,9 +105,14 @@ declare
   num  numeric := case when jsonb_typeof(new.data->'coin') = 'number' then (new.data->>'coin')::numeric else 0 end;
   was  numeric := case when jsonb_typeof(old.data->'coin') = 'number' then (old.data->>'coin')::numeric else 0 end;
   mins numeric := least(180, greatest(0, extract(epoch from now() - old.srv_at) / 60));
+  gift numeric := 0;
 begin
   new.srv_at := now();
-  if num - was > 2000 * mins + 6000 then   -- 떠돌이 보물상자가 반드시 나오게 되어(2026-11-18) 3배속으로 쉬지 않고 달리면 분당 약 1,100
+  -- 쿠폰(8번) — 받은 표시(cpn)가 계정 저장에 처음 올라오면 그 쿠폰 몫을 한 번 봐주고 「반영됨」(synced)으로. 시간과 상관없이(받고 한참 뒤에 올라와도) 한 번만
+  with x as (update coupon_uses u set synced = true where u.uid = new.uid and not u.synced and coalesce(new.data->'cpn' ? u.id, false)
+             returning case when coalesce(old.data->'cpn' ? u.id, false) then 0 else u.coin end as c)
+  select coalesce(sum(x.c), 0) into gift from x;
+  if num - was > 2000 * mins + 6000 + gift then   -- 떠돌이 보물상자가 반드시 나오게 되어(2026-11-18) 3배속으로 쉬지 않고 달리면 분당 약 1,100
     perform report_cheat('coin', jsonb_build_object('got', num - was, 'mins', round(mins)));
     insert into bans (uid, reason) select new.uid, 'coin' where not exists (select 1 from bans b where b.uid = new.uid and b.reason = 'coin' and b.until is null);
   end if;
@@ -370,11 +375,12 @@ end $$;
 -- 6) 지울 때가 된 것 지우기 — 한 시간마다(pg_cron). 개인정보 처리방침에 적은 보관 기간 그대로
 --    부정 플레이 기록 90일(진행 중인 차단에 걸린 계정 · IP 것은 차단이 끝날 때까지) · 끝난 차단 · 익명 통계 횟수 제한용 IP 해시 1시간
 --    pg_cron 을 못 켜면 아래 확인 표에 false — 대시보드 Database › Extensions 에서 pg_cron 을 켜고 이 파일을 다시 Run
-create or replace function public.gc() returns void language sql security definer set search_path = public as $$
+create or replace function public.gc() returns void language plpgsql security definer set search_path = public as $$ begin   -- plpgsql — 아래 8번 쿠폰 표보다 먼저 만들어도 되게
   delete from cheat_log l where l.at < now() - interval '90 days' and not exists (select 1 from bans b where (b.uid = l.uid or b.ip_h = l.ip_h) and (b.until is null or b.until > now()));
   delete from bans where until <= now();
   delete from run_gate where at < now() - interval '1 hour';
-$$;
+  delete from coupon_uses u where not exists (select 1 from coupons c where c.id = u.id and c.ends > now() - interval '7 days');   -- 끝난 쿠폰의 사용 기록 — 7일 뒤(8번 · 끝나기 직전에 받고 며칠 뒤 올라오는 저장도 봐주게)
+end $$;
 revoke all on function public.gc from public, anon, authenticated;
 do $$ begin
   create extension if not exists pg_cron;
@@ -394,6 +400,39 @@ drop function if exists public.agreed();
 create or replace function public.agreed() returns json language sql stable security definer set search_path = public as $$ select json_build_object('day', (select day from terms_ok where uid = auth.uid())) $$;   -- 늘 { day } — 함수가 없을 때(이 파일을 아직 안 돌림)와 구분해 게임이 동의 창을 건너뛴다
 revoke all on function public.agree, public.agreed from public, anon, authenticated;
 grant execute on function public.agree, public.agreed to authenticated;
+
+-- 8) 쿠폰 — 계정 메뉴 「쿠폰」(로그인한 사람만). 코드는 띄어쓰기 · 대소문자 무시(NFKC). 한 쿠폰(id)에 이름 여럿(다섯 말 — 기획), 받는 건 계정마다 한 번
+--    그 계정 저장에 받은 표시(save.cpn)가 있어도 받은 것으로 본다(탈퇴해도 이 기기 기록은 남아 재가입하면 곧바로 새 계정에 올라간다 — 개인정보를 더 남기지 않고 또 받기 막기)
+--    보상금은 게임이 저장에 더한다 — 위 보상금 검사(saves_guard)는 받은 표시가 저장에 처음 올라올 때 그 쿠폰 몫을 한 번 봐주고 synced 를 켠다. 정지 · 차단(banned)이면 못 받는다
+--    응답을 못 받았으면(연결 끊김 · 탭 닫힘 — 서버엔 기록, 저장엔 아직 없음) 다시 눌러 받는다: synced 가 아니면 ok 를 또 준다(게임은 이 기기 저장에 표시가 없을 때만 더한다)
+--    사용 기록은 계정을 지우면(auth.users cascade) · 쿠폰이 끝나고 7일 뒤(gc) 지운다 — 개인정보 처리방침과 같게
+--    새 쿠폰: coupons 에 이름마다 한 줄(code = 띄어쓰기 없이 소문자 · NFKC, id = 저장 표시용 짧은 이름, ends = 끝나는 때 — game.js COUPON 과 패치노트 날짜도 같이)
+create table if not exists public.coupons (code text primary key, id text not null check (id ~ '^[a-z0-9_]{2,24}$'), coin int not null check (coin between 1 and 100000), ends timestamptz not null);
+alter table public.coupons enable row level security;
+revoke all on public.coupons from anon, authenticated;
+insert into public.coupons (code, id, coin, ends)   -- 출시 기념 — 한 달(game.js COUPON.ends)
+  select k, 'launch', 10000, '2026-12-20 23:59:59.999+09' from unnest(array['먼작귀서바이버즈', 'chiikawasurvivors', 'ちいかわサバイバーズ', '吉伊卡哇幸存者', '吉伊卡哇倖存者']) k
+  on conflict (code) do update set id = excluded.id, coin = excluded.coin, ends = excluded.ends;
+create table if not exists public.coupon_uses (uid uuid not null references auth.users on delete cascade, id text not null, coin int not null, at timestamptz not null default now(), primary key (uid, id));
+alter table public.coupon_uses add column if not exists synced boolean not null default false;   -- 받은 표시가 계정 저장에 올라왔다(saves_guard 가 켠다)
+alter table public.coupon_uses enable row level security;
+revoke all on public.coupon_uses from anon, authenticated;
+-- 쿠폰 받기 → { r: 'ok' | 'used' | 'expired' | 'bad'(없는 쿠폰) | 'ban' | 'nologin', id, coin }
+create or replace function public.redeem(code text) returns json language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); c coupons;
+begin
+  if me is null then return json_build_object('r', 'nologin'); end if;
+  select * into c from coupons k where k.code = lower(regexp_replace(normalize(coalesce(redeem.code, ''), NFKC), '\s+', '', 'g'));
+  if not found then return json_build_object('r', 'bad'); end if;
+  if now() > c.ends then return json_build_object('r', 'expired', 'id', c.id); end if;
+  if banned() then return json_build_object('r', 'ban'); end if;
+  if coalesce((select s.data->'cpn' ? c.id from saves s where s.uid = me), false) then return json_build_object('r', 'used', 'id', c.id); end if;
+  insert into coupon_uses (uid, id, coin) values (me, c.id, c.coin) on conflict do nothing;
+  if not found and (select u.synced from coupon_uses u where u.uid = me and u.id = c.id) then return json_build_object('r', 'used', 'id', c.id); end if;   -- 받아서 저장에도 올렸다(그 뒤 표시를 지웠어도)
+  return json_build_object('r', 'ok', 'id', c.id, 'coin', c.coin);   -- 처음 · 또는 받았는데 응답을 못 받아 아직 저장에 없다
+end $$;
+revoke all on function public.redeem from public, anon, authenticated;
+grant execute on function public.redeem to authenticated;
 
 notify pgrst, 'reload schema';
 -- 확인 — 다섯 줄 모두 true 여야 한다

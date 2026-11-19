@@ -108,6 +108,10 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 유치원 · 초등학생도 읽기 쉽게: 한 줄에 그림 하나(ic) · 꼬리표 하나 · 짧은 문장 하나. 새 항목을 맨 위에.
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
+  ['2026-11-19', [
+    ['new', 'coin', tr`출시 기념 쿠폰! 로그인한 뒤 계정 메뉴 → 쿠폰 입력에 「먼작귀서바이버즈」를 넣으면 토벌 보상금 10,000을 드려요 (한 계정 한 번 · 12월 20일까지)`],   // 날짜 = COUPON.ends · account.sql coupons.ends, 쿠폰 이름은 말마다 자기 이름(기획)
+    ['fix', 'shirt', tr`쉬움 · 보통 토벌대 망토가 한눈에 달라 보여요 — 쉬움은 짧은 어깨 망토 · 동색 걸쇠, 보통은 땅까지 닿는 긴 망토 · 금 띠 · 금 고리 걸쇠`],
+  ]],
   ['2026-11-18', [
     ['new', 'siren', tr`무한 세이렌은 3페이즈! 노래하는 세이렌 → 화난 세이렌(음표 울타리 — 초록 빈틈으로 빠져나가요) → 폭풍의 세이렌(큰 파도 — 초록 줄에 서요). 페이즈를 넘길 때마다 오니기리가 떨어지고 검은 별똥별 시계가 3분으로 돌아가요`],
     ['new', 'anoko', tr`무한 1단계부터 보스마다 새 기술 — 아노코 세 갈래 꼬리 · 데카츠요 쿵쿵 충격파 · 고블린 대장 돌격대 출동 · 거대 키메라 눈물 웅덩이 · 가위바위보 승부(이기는 손 원으로!) · 요리사 괴물 빙글빙글 소스`],
@@ -599,8 +603,42 @@ function choose(cloud, at) {
 /** 처음 화면 오른쪽 위 — 로그인 단추 / 로그인했으면 [로고 닉네임 ▾](닉네임 바꾸기 · 로그아웃) */
 function acctPick() {
   if (!auth) return h('button', { type: 'button', class: 'acct', onclick: loginBox }, tr`로그인`)
-  return h('details', { class: 'acct' }, h('summary', {}, svgIc(auth.prov === 'google' ? GOOGLE_IC : KAKAO_IC, `brand ${auth.prov}`), h('span', { class: 'nm' }, NICK?.nick || tr`로그인됨`)),
-    h('div', {}, h('button', { type: 'button', onclick: () => nickBox() }, NICK ? tr`닉네임 바꾸기` : tr`닉네임 정하기`), h('button', { type: 'button', onclick: () => ranking() }, tr`랭킹`), h('button', { type: 'button', onclick: logout }, tr`로그아웃`), h('button', { type: 'button', class: 'del', onclick: delBox }, tr`계정 지우기`)))
+  const dot = cpDot() && h('i', { class: 'dot', 'aria-hidden': 'true' })   // 쿠폰 기간 동안 아직 안 받았으면 작은 점(기획)
+  return h('details', { class: 'acct' }, h('summary', {}, svgIc(auth.prov === 'google' ? GOOGLE_IC : KAKAO_IC, `brand ${auth.prov}`), h('span', { class: 'nm' }, NICK?.nick || tr`로그인됨`), dot),
+    h('div', {}, h('button', { type: 'button', onclick: () => nickBox() }, NICK ? tr`닉네임 바꾸기` : tr`닉네임 정하기`), h('button', { type: 'button', onclick: () => ranking() }, tr`랭킹`), h('button', { type: 'button', onclick: couponBox }, tr`쿠폰 입력`, dot && dot.cloneNode()), h('button', { type: 'button', onclick: logout }, tr`로그아웃`), h('button', { type: 'button', class: 'del', onclick: delBox }, tr`계정 지우기`)))   // 하는 일 위 · 나가는 일 아래(디자인)
+}
+/** 쿠폰 — 서버 redeem(supabase/account.sql 8번)이 코드 · 기간 · 한 계정 한 번을 본다. 끝나는 때는 그 coupons.ends · 패치노트 날짜와 같게 */
+const COUPON = { id: 'launch', ends: Date.parse('2026-12-20T23:59:59.999+09:00') }
+const cpDot = () => !!auth && Date.now() < COUPON.ends && !save.cpn?.includes(COUPON.id)
+/** 쿠폰 입력 — 실패는 입력 칸 위 모몽가 말풍선(없는 코드 · 연결 = .no 흔들기, 이미 받음 · 기간 끝 · 정지 = .end 차분하게), 성공은 셋이 축하하는 새 창(디자인) */
+function couponBox() {
+  const inp = h('input', { type: 'text', maxlength: '40', placeholder: tr`쿠폰 코드`, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', enterkeyhint: 'done', 'aria-label': tr`쿠폰 코드` })
+  const bub = h('span', { class: 'bub' }), say = h('div', { class: 'cp-say', role: 'status', 'aria-live': 'polite', hidden: '' }, portrait('momonga', null, null), bub)
+  const fail = (k, s) => { say.hidden = false; bub.textContent = s; say.classList.remove('no', 'end'); void say.offsetWidth; say.classList.add(k); go.disabled = false; inp.focus(); inp.select() }   // 같은 실패여도 흔들기가 다시 돈다
+  const go = btn(tr`받기`, async () => {
+    go.disabled = true; const r = await rpc('redeem', { code: inp.value.trim().toUpperCase() })
+    if (r?.r === 'ok' && !save.cpn?.includes(r.id)) { save.coin += r.coin; (save.cpn ||= []).push(r.id); persist(); cloudPush(true); couponOk(r.coin) }   // 그 자리에서 보상금 · 받은 표시 · 이 기기 저장을 한 번에, 그다음 계정으로(기획)
+    else if (r?.r === 'ok') { cloudPush(true); fail('end', tr`한 번만이야! 나도 더 받고 싶단 말이야~`) }   // 이 기기엔 이미 더했다(계정으로 못 올렸을 뿐) — 또 더하지 않고 올리기만
+    else if (r?.r === 'nologin') { close(); loginBox() }
+    else if (r?.r === 'used') { if (!save.cpn?.includes(r.id)) { (save.cpn ||= []).push(r.id); persist() } fail('end', tr`한 번만이야! 나도 더 받고 싶단 말이야~`) }   // 다른 기기에서 받았다 — 점만 끈다
+    else if (r?.r === 'expired') fail('end', tr`아쉽지만 이 쿠폰은 벌써 끝났어!`)
+    else if (r?.r === 'ban') fail('end', tr`이 계정은 쿠폰을 쓸 수 없어요.`)
+    else if (r?.r === 'bad') fail('no', tr`그런 쿠폰 없어! 글자를 다시 봐 봐.`)
+    else fail('no', tr`연결이 안 돼! 인터넷을 확인하고 다시 해 봐.`)
+  }, 'main')
+  go.disabled = true; inp.oninput = () => { go.disabled = !inp.value.trim() }; inp.onkeydown = e => { if (e.key === 'Enter' && !go.disabled) go.click() }
+  const close = modal('nick cp', h('p', { class: 'h' }, tr`쿠폰 입력`), say, h('label', { class: 'nick cp' }, inp),
+    Date.now() < COUPON.ends && h('p', { class: 'fine' }, tr`출시 기념 쿠폰 · 한 계정에 한 번`, ' · ', h('span', { class: 'nw' }, tr`${new Date(COUPON.ends).toLocaleDateString(LANG, { month: 'long', day: 'numeric', timeZone: 'Asia/Seoul' })}까지`)),   // 날짜는 한 줄로(「12月20 / 日」 안 되게)
+    h('div', { class: 'row' }, btn(tr`닫기`, () => close()), go))
+  setTimeout(() => inp.focus(), 50)
+}
+function couponOk(coin) {   // 하치와레 · 치이카와 · 우사기(주인공 가운데 · 키 큰 우사기 오른쪽 끝) — 기본 모습으로, 차례로 콩콩(디자인)
+  if (mode === 'title') title()   // 처음 화면 보상금 · 점을 새로
+  const who = [['hachiware', tr`축하해!`], ['chiikawa', tr`와아…! 받았다…!`], ['usagi', tr`야하!`]], ok = btn(tr`좋아요!`, () => close(), 'main')
+  const close = modal('cp-ok', h('p', { class: 'h' }, tr`축하해요!`),
+    h('div', { class: 'cp-trio' }, Array.from({ length: 6 }, () => h('i')), who.map(([id, s]) => h('div', {}, h('span', { class: 'bub' }, s), portrait(id, null, null)))),
+    h('p', { class: 'cp-gain' }, ic('coin'), `+${coin.toLocaleString()}`), h('p', { class: 'sub' }, tr`토벌 보상금을 받았어요!`), h('div', { class: 'row' }, ok))
+  setTimeout(() => ok.focus(), 50)
 }
 /** 계정 지우기 — 닉네임(없으면 「지우기」)을 그대로 써야 눌린다(아이가 잘못 누르지 않게). 서버 delete_me → 로그아웃 → 처음 화면 */
 function delBox() {
@@ -2435,33 +2473,41 @@ const OUTFIT = { ...KINDS,   // 일반 · 고급 = 종류(id 하나 · 모든 �
 const CLR = { easy: 1, normal: 2, hard: 3, inf: 3 }
 const clearLv = id => Math.max(0, ...Object.keys(CLR).map(d => (save.best[bestKey(id, d)]?.clears || 0) > 0 ? CLR[d] : 0)), winLv = id => save.wlv[id] || 0
 function cape(ch, lv, wn) {   // 앞에서 망토로 읽히게 — 목에서 갈라져 양옆으로 벌어지는 앞자락(∧ 트임) + 몸 밖으로 이어지는 본체(디자인 2차)
-  const [c0, c1] = TONE[ch], gold = lv > 1, clasp = lv > 1 ? ['#dfe4ea', '#97a2ae'] : ['#e0a46a', '#a8683a']
+  //   쉬움(새내기) = 목과 땅 사이 반쯤에서 끝나는 어깨 망토(배 아래로 몸이 보인다) · 단색 테 · 작은 동색 걸쇠(새싹 잎은 당근처럼 보여 뺐다), 보통(토벌대) = 땅까지 · 가운데 ∧ 트임에 굵은 금 띠 · 금 고리 은색 걸쇠 — 34px 에서도 갈리게(디자인 3차)
+  const [c0, c1] = TONE[ch], gold = lv > 1, GOLD = '#e8c66a', clasp = gold ? ['#dfe4ea', '#97a2ae'] : ['#e0a46a', '#a8683a']
+  const low = q => gold ? -1.4 : q.neck + (-1.4 - q.neck) * 0.5   // 밑단 높이
   const hem = (g, w1, yb) => { const st = 2 * w1 / 3; for (let i = 0; i < 3; i++) g.quadraticCurveTo(-w1 + st * (i + 0.5), yb - 0.8, -w1 + st * (i + 1), yb) }   // 밑단 얕은 물결 셋
-  const edge = (q, sx) => [[sx * 1.4, q.neck + 0.6], [sx * q.hw * 0.62, 1]]   // 앞자락 안쪽 변(트임)
+  const edge = (q, sx) => { const x0 = sx * 1.4, y0 = q.neck + 0.6, x1 = sx * q.hw * 0.62, y1 = gold ? 1 : low(q); return [[x0, y0], [x0 + (x1 - x0) * (y1 - y0) / (1 - y0), y1]] }   // 앞자락 안쪽 변(트임) — 쉬움은 밑단 높이에서 자른다
   const line = (g, [[x0, y0], [x1, y1]], col, lw, dash) => { g.strokeStyle = col; g.lineWidth = lw; if (dash) g.setLineDash(dash); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.setLineDash([]) }
   const fur = (g, pts) => { for (const [c, d] of [[OUT, 0.4], ['#fff', 0]]) { g.fillStyle = c; g.beginPath(); pts.forEach(([x, y], i) => { const r = (i % 2 ? 1.3 : 1) + d; g.moveTo(x + r, y); g.arc(x, y, r, 0, TAU) }); g.fill() } }   // 한 덩이 털 — 테를 먼저 다 칠하고 흰 속을 위에(사이 선이 사라진다)
   const along = ([[x0, y0], [x1, y1]], st = 1.3) => { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / st)); return Array.from({ length: n + 1 }, (_, i) => [x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n]) }
+  const shift = ([[x0, y0], [x1, y1]], k) => [[x0 + k, y0], [x1 + k, y1]]
   return {
     backFirst: true,   // 꼬리가 망토 위로
     back: (g, q) => {
-      const y0 = q.neck - 1, w0 = q.hw * 0.55, w1 = q.hw + 2.5, yb = -1.4, path = () => { g.beginPath(); g.moveTo(-w0, y0); g.quadraticCurveTo(-w1 - 1.5, q.y(q.mid + 0.2), -w1, yb); hem(g, w1, yb); g.quadraticCurveTo(w1 + 1.5, q.y(q.mid + 0.2), w0, y0); g.closePath() }
-      path(); g.fillStyle = c0; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()
-      if (gold) line(g, [[-w1 + 1, yb - 1.2], [w1 - 1, yb - 1.2]], '#e8c66a', 0.6, [1.2, 0.9])   // 보통 — 금실(밑단)
+      const y0 = q.neck - 1, w0 = q.hw * 0.55, w1 = q.hw + (gold ? 2.5 : 2), yb = low(q), cx = w1 + (gold ? 1.5 : 1)
+      g.beginPath(); g.moveTo(-w0, y0); g.quadraticCurveTo(-cx, q.y(q.mid + 0.2), -w1, yb); hem(g, w1, yb); g.quadraticCurveTo(cx, q.y(q.mid + 0.2), w0, y0); g.closePath()
+      g.fillStyle = c0; g.fill(); g.lineWidth = LW; g.strokeStyle = OUT; g.stroke()
+      if (gold) line(g, [[-w1 + 1, yb - 1.2], [w1 - 1, yb - 1.2]], GOLD, 1.2)   // 보통 — 금 띠(밑단 · 양옆 끝에서 보인다)
       if (wn) fur(g, along([[-w1 + 0.4, yb - 0.2], [w1 - 0.4, yb - 0.2]]))
     },
     body: (g, q) => {   // 앞자락 두 장(몸 테두리 안) — 가운데는 ∧ 로 트이고 양옆을 덮는다
       for (const sx of [-1, 1]) {
-        g.beginPath(); g.moveTo(sx * 1.4, q.neck + 0.6); g.lineTo(sx * (q.hw + 3), q.neck - 2); g.lineTo(sx * (q.hw + 3), 1); g.lineTo(sx * q.hw * 0.62, 1); g.closePath(); g.fillStyle = c0; g.fill()
-        const e = edge(q, sx), [[x0, y0], [x1, y1]] = e, k = sx * 0.55; line(g, [[x0 + k, y0], [x1 + k, y1]], c1, 1.1); line(g, e, OUT, 0.7)   // 안감 띠 · 테
-        if (gold) line(g, [[x0 + k * 2, y0 + 0.6], [x1 + k * 2, y1]], '#e8c66a', 0.6, [1.2, 0.9])
+        const e = edge(q, sx), [[x0, y0], [x1, y1]] = e
+        g.beginPath(); g.moveTo(x0, y0); g.lineTo(sx * (q.hw + 3), q.neck - 2); g.lineTo(sx * (q.hw + 3), y1); g.lineTo(x1, y1); g.closePath(); g.fillStyle = c0; g.fill()
+        if (gold) { line(g, shift(e, sx * 0.7), GOLD, 1.4); line(g, shift(e, sx * 1.6), OUT, 0.4) }   // 보통 — 잉크 · 금 · 잉크로 끼운 금 띠(노랑 · 민트 망토에서도 테로 떨어져 보이게)
+        else line(g, shift(e, sx * 0.55), c1, 1.1)   // 안감 띠
+        line(g, e, OUT, 0.7)   // 테
       }
       if (wn) fur(g, [...along(edge(q, -1)), ...along(edge(q, 1))])
     },
     head: (g, q) => {   // 걸쇠 — ∧ 꼭짓점(깃은 작은 손처럼 보여서 뺐다 · 디자인)
       const y = q.neck + 0.8
-      g.beginPath(); g.arc(0, y, 2.1, 0, TAU); g.fillStyle = clasp[0]; g.fill(); g.lineWidth = 0.6; g.strokeStyle = clasp[1]; g.stroke(); blob(g, -0.7, y - 0.7, 0.6, 0.6, '#fff', 0); if (wn) flake(g, 0, y, 2.4, '#ffffff')
+      if (gold) { g.beginPath(); g.arc(0, y, 2.6, 0, TAU); g.lineWidth = 0.9; g.strokeStyle = GOLD; g.stroke(); g.beginPath(); g.arc(0, y, 3.1, 0, TAU); g.lineWidth = 0.4; g.strokeStyle = OUT; g.stroke() }   // 보통 — 금 고리(메달처럼)
+      g.beginPath(); g.arc(0, y, 2.1, 0, TAU); g.fillStyle = clasp[0]; g.fill(); g.lineWidth = 0.6; g.strokeStyle = clasp[1]; g.stroke(); blob(g, -0.7, y - 0.7, 0.6, 0.6, '#fff', 0)
+      if (wn) flake(g, 0, y, 2.4, '#ffffff')
     },
-    fx: wn ? { k: ['dot', 'spark'], col: ['#ffffff', '#bfe6ff'], rate: 4 } : gold ? { k: ['spark'], col: ['#ffffff', '#e8c66a'], rate: 3 } : null,
+    fx: wn ? { k: ['dot', 'spark'], col: ['#ffffff', '#bfe6ff'], rate: 4 } : gold ? { k: ['spark'], col: ['#ffffff', GOLD], rate: 3 } : null,
   }
 }
 const CAPE = [['e', 1, false, 'easy', tr` 쉬움 클리어`], ['ew', 1, true, 'snow', tr` 겨울 쉬움 클리어`], ['n', 2, false, 'normal', tr` 보통 클리어`], ['nw', 2, true, 'snow', tr` 겨울 보통 클리어`]]
@@ -2469,7 +2515,7 @@ const CAPE_STAT = { chiikawa: 'manju', hachiware: 'slipper', usagi: 'license', m
 for (const { id } of CHARS) for (const [k, lv, wn, ico, lock] of CAPE) {
   const { fx, ...art } = cape(id, lv, wn)
   OUTFIT[`k_${id}_${k}`] = { ch: id, tier: 'clear', name: lv > 1 ? (wn ? tr`눈꽃 토벌대 망토` : tr`토벌대 망토`) : wn ? tr`눈꽃 새내기 토벌대 망토` : tr`새내기 토벌대 망토`,
-    note: lv > 1 ? (wn ? tr`털 장식 · 금실 테두리 망토 — 눈꽃 은색 걸쇠` : tr`금실 테두리를 두른 망토 — 은색 걸쇠`) : wn ? tr`털 장식을 단 새내기 망토 — 눈꽃 동색 걸쇠` : tr`토벌대에 갓 들어온 새내기 망토 — 동색 걸쇠`,
+    note: lv > 1 ? (wn ? tr`털 장식 · 금 띠를 두른 긴 망토 — 눈꽃 은색 걸쇠` : tr`가운데 금 띠를 두른 긴 망토 — 금 고리 은색 걸쇠`) : wn ? tr`털 장식을 단 새내기 어깨 망토 — 눈꽃 동색 걸쇠` : tr`토벌대에 갓 들어온 새내기 어깨 망토 — 동색 걸쇠`,
     won: wn ? () => winLv(id) >= lv : () => clearLv(id) >= lv, lock: [ico, lock], ...(fx && { fx }), ...art }
 }
 const TIER_ORD = { cheap: 0, rich: 1, clear: 2, ach: 3 }, OUTFITS_OF = id => Object.keys(OUTFIT).filter(k => !OUTFIT[k].ch || OUTFIT[k].ch === id).sort((a, b) => TIER_ORD[OUTFIT[a].tier] - TIER_ORD[OUTFIT[b].tier] || priceOf(a) - priceOf(b))   // 일반 → 고급 → 업적
@@ -4578,7 +4624,7 @@ function terms(back = title) {
 }
 /** 개인정보 처리방침 — 처음 화면 맨 아래 링크 · 주소 ?privacy 로 바로(카카오 · 구글 로그인 설정에 넣는 주소: https://chii-ka-wa.github.io/?privacy)
  *  고치면 PRIVACY_DAY(시행일)도. 실제와 같아야 한다 — 보관 기간은 supabase/account.sql 의 gc() · 비우기(scrub) · delete_me 와 맞춘다 */
-const PRIVACY_DAY = '2026-11-18'
+const PRIVACY_DAY = '2026-11-19'
 function privacy(back = title) {
   mode = 'privacy'
   const sec = (t, ...li) => [h('h3', { class: 'day' }, t), h('ul', { class: 'pv' }, li.map(s => h('li', {}, s)))]
@@ -4588,6 +4634,7 @@ function privacy(back = title) {
         tr`게임을 고치려고 익명 플레이 통계(캐릭터 · 난이도 · 버틴 시간 · 쓰러진 원인 등 개인을 알 수 없는 정보)와 방문 통계(Google 애널리틱스, 쿠키 사용)를 모읍니다. 처음 화면의 「보내지 않기」나 브라우저의 추적 거부 설정으로 끌 수 있습니다.`, tr`무한 모드를 하려면 통계 보내기를 켜야 합니다.`,
         tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
       sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록(플레이한 언어 포함), 이용약관 동의 기록(약관 시행일 · 동의한 시각)`,
+        tr`쿠폰 사용 기록(계정 번호 · 쿠폰 · 받은 때): 쿠폰을 한 계정에 한 번만 드리려고 보관하며, 쿠폰 기간이 끝나고 7일 뒤 또는 계정을 지우면 지웁니다.`,
         tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`,
         tr`로그인 중에는 랭킹 기록 확인을 위해 익명 플레이 통계를 항상 보냅니다(끌 수 없습니다).`),
       sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남기며 90일 뒤 지웁니다.`,

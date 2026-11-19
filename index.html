@@ -81,6 +81,35 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page, 
 label.nick { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 6px 16px; border: 3px solid var(--ink); border-radius: 999px; background: #fff }
 label.nick input { flex: 1; min-width: 0; font: inherit; font-size: 18px; border: 0; outline: 0; background: none; color: var(--ink) }
 label.nick small { color: #a89488; font-size: 13px }
+/* 쿠폰 입력(디자인) — 실패는 입력 칸 위 모몽가 말풍선(.no 분홍 · 흔들기 / .end 회색 · 차분), 성공은 셋이 축하하는 새 창(.cp-ok) */
+label.nick.cp input { text-transform: uppercase; letter-spacing: .08em; font-variant-numeric: tabular-nums }
+.bub { position: relative; min-width: 0; padding: 5px 10px; border: 2px solid var(--ink); border-radius: 12px; background: #fff; font-size: 14px; line-height: 1.3; text-wrap: balance; overflow-wrap: break-word; animation: pop .2s ease-out both }
+.cp-say { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; text-align: left }
+.cp-say[hidden] { display: none }
+@media (max-width: 400px) { label.nick.cp input { font-size: 16px; letter-spacing: .04em } }   /* 「CHIIKAWA SURVIVORS」가 칸에 들어가게(16px — iOS 확대 안 함) */
+.panel.cp .fine { text-wrap: balance } .panel.cp .fine .nw { white-space: nowrap }   /* 날짜는 한 줄로 */
+:lang(ja) .bub, :lang(ja) .panel.cp .fine { word-break: auto-phrase }   /* 일본어 말풍선이 낱말 가운데서 끊기지 않게(크롬 · 엣지) */
+.cp-say canvas.pt { height: 56px; flex: none; transform-origin: 50% 90% }
+.cp-say .bub::before { content: ''; position: absolute; left: -7px; top: 50%; width: 10px; height: 10px; margin-top: -6px; background: inherit; border: solid var(--ink); border-width: 0 0 2px 2px; transform: rotate(45deg) }   /* 왼쪽(모몽가 쪽) 꼬리 */
+.cp-say.no .bub { background: #ffe3ea }
+.cp-say.no canvas.pt { animation: shake .1s 4 alternate }   /* 0.4초 흔들고 멈춤 */
+.cp-say.end .bub { background: #f1ece6; color: var(--soft) }
+.panel.cp-ok { background: linear-gradient(#fff3c4, var(--card) 60%) }
+.cp-ok .h { margin-bottom: 8px }
+.cp-trio { position: relative; display: grid; grid-template-columns: repeat(3, auto); justify-content: space-evenly; align-items: end; gap: 0 6px; margin: 0 0 6px }   /* 발밑을 한 줄로 · 칸은 내용 폭(일본어 문절이 같은 폭 칸을 넘던 것) */
+.cp-trio > div { position: relative; z-index: 1; display: grid; justify-items: center; gap: 9px }
+.cp-trio .bub { padding: 4px 8px; font-size: 13px }
+.cp-trio .bub::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 10px; height: 10px; margin-left: -6px; background: inherit; border: solid var(--ink); border-width: 0 2px 2px 0; transform: rotate(45deg) }   /* 아래(머리 쪽) 꼬리 */
+.cp-trio canvas.pt { height: 72px; max-width: 100%; object-fit: contain; animation: hop .9s ease-in-out 3 }   /* 세 번 뛰고 멈춤 */
+.cp-trio > div:nth-of-type(2) > * { animation-delay: .15s } .cp-trio > div:nth-of-type(3) > * { animation-delay: .3s }
+.cp-trio i { position: absolute; z-index: 0; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg) scale(0); animation: spark 1.2s ease-in-out 3 }
+.cp-trio i:nth-of-type(1) { left: 2%; top: 30%; background: #ff8fb0 } .cp-trio i:nth-of-type(2) { left: 31%; top: 2%; background: #ffd23f; animation-delay: .2s } .cp-trio i:nth-of-type(3) { left: 65%; top: 8%; background: #7fd6c2; animation-delay: .4s }
+.cp-trio i:nth-of-type(4) { right: 2%; top: 26%; background: #8fc8ff; animation-delay: .1s } .cp-trio i:nth-of-type(5) { left: 16%; top: 62%; background: #ffd23f; animation-delay: .5s } .cp-trio i:nth-of-type(6) { right: 14%; top: 66%; background: #ff8fb0; animation-delay: .3s }
+.cp-gain { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0 0; font-size: 30px; color: #c07a2c; animation: pop .3s .45s ease-out both }
+.cp-gain .ico { width: 32px; height: 32px }
+.cp-ok .sub { margin: 2px 0 12px; font-size: 14px }
+@media (max-width: 400px) { .cp-trio { gap: 0 4px } .cp-trio canvas.pt { height: 58px } .cp-trio .bub { padding: 3px 6px; font-size: 12px } .cp-gain { font-size: 26px } .cp-gain .ico { width: 28px; height: 28px } }
+@media (prefers-reduced-motion: reduce) { .bub, .cp-say canvas.pt, .cp-trio canvas.pt, .cp-gain { animation: none } .cp-trio i { animation: none; transform: rotate(45deg) scale(1) } }   /* 멈춘 그림 — 반짝이는 보이게 */
 .nmsg { min-height: 1.4em; margin: 6px 0 0; font-size: 14px } .nmsg.ok { color: #2f7a3a } .nmsg.no { color: #e8475f }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; transform: translateY(4px) }
 .pickrecs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 }
@@ -100,6 +129,9 @@ button.acct, .acct summary { display: flex; align-items: center; gap: 5px; paddi
 .acct div button { font: inherit; text-align: left; padding: 6px 12px; border: 0; border-radius: 10px; background: none; color: var(--ink); cursor: pointer; white-space: nowrap }
 .acct div button:hover { background: #ffe3ea }
 .acct div button.del { margin-top: 4px; padding: 6px 12px 2px; border-top: 1px solid #eadccd; border-radius: 0; font-size: 12px; color: #a89488 }   /* 계정 지우기 — 맨 아래 작은 글씨 */
+.acct summary { position: relative } .acct .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #ff5f87 }
+.acct summary .dot { position: absolute; top: -3px; right: -3px; width: 11px; height: 11px; border: 2px solid #fff; box-sizing: border-box }   /* 쿠폰 기간 동안 아직 안 받았으면(기획) */
+.acct div button .dot { display: inline-block; margin-left: 6px; vertical-align: 2px; width: 7px; height: 7px }
 .btn.danger { background: #e8475f; color: #fff; text-shadow: 0 1px 0 rgba(74, 59, 53, .5) }
 .rankline { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin: 0 0 6px; font-size: 15px }
 .rankline .btn { font-size: 15px; padding: 5px 14px; box-shadow: 0 3px 0 var(--ink) }
@@ -556,6 +588,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611191024"></script>
+<script type="module" src="game.js?v=202611191223"></script>
 </body>
 </html>
