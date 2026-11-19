@@ -411,7 +411,7 @@ create table if not exists public.coupons (code text primary key, id text not nu
 alter table public.coupons enable row level security;
 revoke all on public.coupons from anon, authenticated;
 insert into public.coupons (code, id, coin, ends)   -- 출시 기념 — 한 달(game.js COUPON.ends)
-  select k, 'launch', 10000, '2026-12-20 23:59:59.999+09' from unnest(array['먼작귀서바이버즈', 'chiikawasurvivors', 'ちいかわサバイバーズ', '吉伊卡哇幸存者', '吉伊卡哇倖存者']) k
+  select k, 'launch', 1000, '2026-12-20 23:59:59.999+09' from unnest(array['먼작귀서바이버즈', 'chiikawasurvivors', 'ちいかわサバイバーズ', '吉伊卡哇幸存者', '吉伊卡哇倖存者']) k
   on conflict (code) do update set id = excluded.id, coin = excluded.coin, ends = excluded.ends;
 create table if not exists public.coupon_uses (uid uuid not null references auth.users on delete cascade, id text not null, coin int not null, at timestamptz not null default now(), primary key (uid, id));
 alter table public.coupon_uses add column if not exists synced boolean not null default false;   -- 받은 표시가 계정 저장에 올라왔다(saves_guard 가 켠다)
@@ -419,7 +419,7 @@ alter table public.coupon_uses enable row level security;
 revoke all on public.coupon_uses from anon, authenticated;
 -- 쿠폰 받기 → { r: 'ok' | 'used' | 'expired' | 'bad'(없는 쿠폰) | 'ban' | 'nologin', id, coin }
 create or replace function public.redeem(code text) returns json language plpgsql security definer set search_path = public as $$
-declare me uuid := auth.uid(); c coupons;
+declare me uuid := auth.uid(); c coupons; u coupon_uses;
 begin
   if me is null then return json_build_object('r', 'nologin'); end if;
   select * into c from coupons k where k.code = lower(regexp_replace(normalize(coalesce(redeem.code, ''), NFKC), '\s+', '', 'g'));
@@ -428,8 +428,9 @@ begin
   if banned() then return json_build_object('r', 'ban'); end if;
   if coalesce((select s.data->'cpn' ? c.id from saves s where s.uid = me), false) then return json_build_object('r', 'used', 'id', c.id); end if;
   insert into coupon_uses (uid, id, coin) values (me, c.id, c.coin) on conflict do nothing;
-  if not found and (select u.synced from coupon_uses u where u.uid = me and u.id = c.id) then return json_build_object('r', 'used', 'id', c.id); end if;   -- 받아서 저장에도 올렸다(그 뒤 표시를 지웠어도)
-  return json_build_object('r', 'ok', 'id', c.id, 'coin', c.coin);   -- 처음 · 또는 받았는데 응답을 못 받아 아직 저장에 없다
+  select * into u from coupon_uses x where x.uid = me and x.id = c.id;
+  if u.synced then return json_build_object('r', 'used', 'id', c.id); end if;   -- 받아서 저장에도 올렸다(그 뒤 표시를 지웠어도)
+  return json_build_object('r', 'ok', 'id', c.id, 'coin', u.coin);   -- 처음 · 또는 받았는데 응답을 못 받아 아직 저장에 없다 — 금액은 처음 받을 때 것(쿠폰 금액을 바꿔도 · 보상금 검사 허용치와 같게)
 end $$;
 revoke all on function public.redeem from public, anon, authenticated;
 grant execute on function public.redeem to authenticated;
