@@ -87,8 +87,7 @@ label.nick.cp input { text-transform: uppercase; letter-spacing: .08em; font-var
 .cp-say { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; text-align: left }
 .cp-say[hidden] { display: none }
 @media (max-width: 400px) { label.nick.cp input { font-size: 16px; letter-spacing: .04em } }   /* 「CHIIKAWA SURVIVORS」가 칸에 들어가게(16px — iOS 확대 안 함) */
-.panel.cp .fine { text-wrap: balance } .panel.cp .fine .nw { white-space: nowrap }   /* 날짜는 한 줄로 */
-:lang(ja) .bub, :lang(ja) .panel.cp .fine { word-break: auto-phrase }   /* 일본어 말풍선이 낱말 가운데서 끊기지 않게(크롬 · 엣지) */
+:lang(ja) .bub { word-break: auto-phrase }   /* 일본어 말풍선이 낱말 가운데서 끊기지 않게(크롬 · 엣지) */
 .cp-say canvas.pt { height: 56px; flex: none; transform-origin: 50% 90% }
 .cp-say .bub::before { content: ''; position: absolute; left: -7px; top: 50%; width: 10px; height: 10px; margin-top: -6px; background: inherit; border: solid var(--ink); border-width: 0 0 2px 2px; transform: rotate(45deg) }   /* 왼쪽(모몽가 쪽) 꼬리 */
 .cp-say.no .bub { background: #ffe3ea }
@@ -588,6 +587,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611191223"></script>
+<script type="module" src="game.js?v=202611191241"></script>
 </body>
 </html>

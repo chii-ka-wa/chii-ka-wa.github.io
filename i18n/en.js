@@ -1064,8 +1064,6 @@ export default {
   "이 계정은 쿠폰을 쓸 수 없어요.": "This account can't use coupons.",
   "그런 쿠폰 없어! 글자를 다시 봐 봐.": "No such coupon! Check the spelling.",
   "연결이 안 돼! 인터넷을 확인하고 다시 해 봐.": "Can't connect! Check your internet.",
-  "출시 기념 쿠폰 · 한 계정에 한 번": "Launch coupon · once per account",
-  "{0}까지": "until {0}",
   "축하해!": "Congrats!",
   "와아…! 받았다…!": "Wahh…! Got it…!",
   "좋아요!": "Yay!",

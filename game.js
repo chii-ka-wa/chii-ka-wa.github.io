@@ -628,7 +628,6 @@ function couponBox() {
   }, 'main')
   go.disabled = true; inp.oninput = () => { go.disabled = !inp.value.trim() }; inp.onkeydown = e => { if (e.key === 'Enter' && !go.disabled) go.click() }
   const close = modal('nick cp', h('p', { class: 'h' }, tr`쿠폰 입력`), say, h('label', { class: 'nick cp' }, inp),
-    Date.now() < COUPON.ends && h('p', { class: 'fine' }, tr`출시 기념 쿠폰 · 한 계정에 한 번`, ' · ', h('span', { class: 'nw' }, tr`${new Date(COUPON.ends).toLocaleDateString(LANG, { month: 'long', day: 'numeric', timeZone: 'Asia/Seoul' })}까지`)),   // 날짜는 한 줄로(「12月20 / 日」 안 되게)
     h('div', { class: 'row' }, btn(tr`닫기`, () => close()), go))
   setTimeout(() => inp.focus(), 50)
 }
