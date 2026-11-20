@@ -111,6 +111,10 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-20', [
+    ['up', 'onigiri', tr`AI 대원이 똑똑해졌어요 — 보스 기술과 날아오는 것을 더 잘 피하고, 체력이 낮으면 오니기리를 먹으러 가요. 각성의 별은 꼭 줍고, 폭죽 · 자석 같은 아이템은 쓸모 있을 때 주워요`],   // 모의 토벌 AI · 무한 · 아이콘 밑 글(사용자 · 기획)
+    ['new', 'inf', tr`모의 토벌을 무한 모드에서도 볼 수 있어요(강화 최대 기준)`],
+    ['fix', 'wind', tr`무한 모드는 배속이 2배까지예요(모의 토벌 관전은 그대로 3배속)`],   // 무한 진짜 판 배속 — 사용자   // 모의 토벌 AI · 무한 · 아이콘 밑 글(사용자 · 기획)
+    ['new', 'book', tr`작전 짜기 아이콘 밑에 어떤 스킬인지 짧게 적어 두었어요`],   // 모의 토벌 AI · 무한 · 아이콘 밑 글(사용자 · 기획)
     ['new', 'chest', tr`「모의 토벌」이 생겼어요! 작전(캐릭터 · 스킬 순서 · 이동형/정착형)을 짜 두면 AI 대원이 대신 싸우는 모습을 3배속으로 볼 수 있어요. 끝까지 보면 토벌 보상금도 조금(하루 3번)!`],   // 캐릭터 고르기 → 모의 토벌(기획 · 디자인)
     ['fix', 'inf', tr`랭킹 순서를 바꿨어요 — 단계와 잡은 보스 수가 같으면 더 오래 버틴 기록이 위예요`],   // 단계 ↓ → 보스 ↓ → 버틴 시간 ↓ → 마지막 보스 잡은 때 ↑(account.sql — 기획)
     ['fix', 'shirt', tr`휴대폰 랭킹에서 기록이 많으면 겨울 · 풀밭 탭이 눌려 아래가 잘리던 것을 고쳤어요`],
@@ -337,7 +341,7 @@ const SHOP = {
   armor: { name: tr`단단함`, lab: tr`받는 피해`, per: 1, max: 1, cost: 400, val: v => `-${v}` },
 }
 for (const u of Object.values(SHOP)) u.val ||= v => `+${Math.round(v * 100)}%`   // 보여 주는 값 — 따로 없으면 %
-const perm = id => SIM ? 0 : SHOP[id].per * (save.up[id] || 0) + (BONUS_ORDER.includes(id) ? coll(id) : 0)   // 모의 토벌은 기준 조건(강화 · 보유 효과 없이)   // 상점 강화 + 의상 보유 효과(판 중에만 불린다 — 의상 표는 아래에)
+const perm = id => SIM ? (SIM.max ? SHOP[id].per * SHOP[id].max : 0) : SHOP[id].per * (save.up[id] || 0) + (BONUS_ORDER.includes(id) ? coll(id) : 0)   // 모의 토벌은 기준 조건(강화 · 보유 효과 없이 — 무한은 상점 강화 최대 · 보유 효과 없이 · 기획)   // 상점 강화 + 의상 보유 효과(판 중에만 불린다 — 의상 표는 아래에)
 // 업적 — 동 · 은 · 금. 쉬운 것은 횟수를 많이, 어려운 것은 적게. 금메달 하나마다 토벌 보상금 +1%. ico = 메달 가운데 그림(아이콘 id, a_ 는 캐릭터 그림)
 const ACH = {
   runs: { name: tr`토벌 대원`, note: tr`토벌에 나간 판`, ico: 'sasu', tiers: [10, 50, 200] },
@@ -423,14 +427,14 @@ if (SECURE) {   // 개발자 도구 단축키 · 오른쪽 클릭 메뉴 막기(
 const GUARD = SECURE || /[?&]guard\b/.test(location.search)
 const h32 = t => { let a = 0x811c9dc5; for (let i = 0; i < t.length; i++) a = Math.imul(a ^ t.charCodeAt(i), 0x01000193); return a >>> 0 }
 const sealOf = () => h32([pl.hp, pl.inv, G.t, G.kills, G.lvl, G.xp, G.cheer, G.bosses, G.found, G.loop.lv, G.guardN || 0, G.weapons.map(w => w.id + w.lv), Object.entries(G.passives), Object.values(S)].join())
-const spdMax = () => (save.ach.hard || 0) > 0 ? 3 : 2   // 3배속은 어려움을 클리어한 사람만
+const spdMax = inf => inf ? 2 : (save.ach.hard || 0) > 0 ? 3 : 2   // 3배속은 어려움을 클리어한 사람만 · 무한은 2배속까지(사용자 2026-11-20 — 모의 토벌 관전 3배속과는 따로)
 function foul(why) {
   if (SIM) return
   if (!GUARD || !G || G.bad?.includes(why)) return
   (G.bad ||= []).push(why)
   if (G.bad.length === 1 && auth && location.hostname === STATS.host) rpc('report_cheat', { reason: why, detail: { ch: G.ch.id, diff: G.diff, t: Math.round(G.t), v: PATCH_ID } })
 }
-const guardIn = () => { if (GUARD && G && !SIM) { if (G.seal != null && G.seal !== sealOf()) foul('seal'); if (spd > spdMax()) foul('spd') } }
+const guardIn = () => { if (GUARD && G && !SIM) { if (G.seal != null && G.seal !== sealOf()) foul('seal'); if (spd > spdMax(G.inf)) foul('spd') } }
 const guardOut = () => { if (GUARD && G && !SIM) G.seal = sealOf() }
 // ---------------------------------------------------------------- 익명 플레이 통계 — 한 판이 끝나면 Supabase(runs 표)에 한 줄
 //   캐릭터 · 난이도 · 결과 · 버틴 시간 · 레벨 · 처치 · 쓰러뜨린 것 · 그때의 보스 · 스킬 · 휴대폰 여부 · 버전. 이름 · 기기 정보 같은 개인을 알 수 있는 것은 보내지 않는다
@@ -2932,7 +2936,7 @@ const lift = e => { if (e.pointerId === joy.id) { joy.on = false; joy.id = null;
 cv.addEventListener('pointerup', lift); cv.addEventListener('pointercancel', lift)
 pauseBtn.addEventListener('click', () => { pauseBtn.blur(); pause() })
 let spd = 1   // 게임 배속(1 · 2 · 3) — 오른쪽 위 단추로 1 → 2 → 3 → 1. 3배속은 어려움을 클리어한 사람만(무한에서 세이렌을 잡아도)
-document.getElementById('spd').addEventListener('click', e => { const b = e.currentTarget; spd = spd >= spdMax() ? 1 : spd + 1; b.textContent = `×${Math.max(2, spd)}`; b.setAttribute('aria-pressed', spd > 1); b.setAttribute('aria-label', `×${Math.max(2, spd)}`); b.blur() })
+document.getElementById('spd').addEventListener('click', e => { const b = e.currentTarget; spd = spd >= spdMax(G && (mode === 'play' || mode === 'pause') ? G.inf : !!DIFF[save.diff]?.inf) ? 1 : spd + 1; b.textContent = `×${Math.max(2, spd)}`; b.setAttribute('aria-pressed', spd > 1); b.setAttribute('aria-label', `×${Math.max(2, spd)}`); b.blur() })
 
 // ---------------------------------------------------------------- 한 판
 let mode = 'title', G = null, pl = null, S = null, shake = 0, pickCi = 0, SRC = null   // SRC — 지금 피해를 주는 스킬 · 친구(스킬별 피해 표)
@@ -2998,6 +3002,7 @@ function statsAsk(i) {   // 무한 모드는 통계를 켜야 한다(랭킹 기�
 }
 function startGame(i) { if (DIFF[save.diff]?.inf && save.noStats && !auth) return statsAsk(i)   // 로그인 중이면 익명 통계를 늘 보내니 묻지 않는다
   if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
+  if (spd > spdMax(!!DIFF[save.diff]?.inf)) { spd = spdMax(!!DIFF[save.diff]?.inf); const b = document.getElementById('spd'); b.textContent = `×${spd}`; b.setAttribute('aria-label', `×${spd}`) }   // 보험 — 지금은 저장이 바뀌면 늘 다시 연다(reload). 나중에 안 그러는 길이 생겨도 정직한 사람이 spd 로 걸리지 않게(기획)
   Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); const pc = matchMedia('(hover: hover) and (pointer: fine)').matches, seen = pc ? 'ctrlSeen' : 'touchSeen'; if (!save[seen]) { save[seen] = 1; persist(); ctrlShow(pc) } if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
@@ -4595,7 +4600,6 @@ function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 �
   save.diff = k; persist()
   for (const b of ui.querySelectorAll('.diff button')) { const on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)) }
   for (const n of ui.querySelectorAll('.diff-note span')) n.classList.toggle('on', n.dataset.k === k)
-  const sb = ui.querySelector('.btn.sim'); if (sb) sb.disabled = !!DIFF[k]?.inf
   ui.querySelectorAll('.char .best').forEach((el, i) => { el.textContent = bestText(CHARS[i].id) })
 }
 function chars() {
@@ -4610,7 +4614,7 @@ function chars() {
     })),
     h('div', { class: 'diff', role: 'radiogroup', 'aria-label': tr`난이도` }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, [ic(k), ` ${d.name}`]))),
     h('p', { class: 'diff-note' }, Object.entries(DIFF).map(([k, d]) => h('span', { class: k === save.diff ? 'on' : '', 'data-k': k }, d.note, d.inf && save.noStats && !auth && tr` · 통계를 켜야 해요`))),   // 설명을 겹쳐 두고 고른 것만 — 높이가 그대로라 아래 단추가 출렁이지 않는다
-    h('button', { type: 'button', class: 'btn sim', disabled: !!DIFF[save.diff]?.inf, onclick: simOpen }, tr`모의 토벌`),   // AI 대원이 대신 — 무한은 안 됨(숨기지 않고 흐리게 · 아래가 출렁이지 않게)
+    h('button', { type: 'button', class: 'btn sim', onclick: simOpen }, tr`모의 토벌`),   // AI 대원이 대신(무한도 — 사용자 2026-11-20)
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title), btn(tr`토벌 시작!`, () => startGame(pickCi), 'main'))))
 }
 // ---------------------------------------------------------------- 모의 토벌(사용자 · 기획 · 디자인 2026-11-20)
@@ -4619,7 +4623,7 @@ function chars() {
 //   보상금: 끝까지 지켜본 판만 — 진짜 판 정산식(버틴 시간 · 처치 · 보스 · 클리어 × 난이도)의 20%, 한 판 150 · 하루 3판(기기 날짜). 건너뛰기 · 그만두기는 0
 //   그 밖은 없음: 업적 · 클리어 의상 · 랭킹 · 통계 · 서버 요청 — finish 를 타지 않는다(보상금은 보통 저장으로만). 부정 신호(foul · guard)는 끈다(보상은 한 판 · 하루 상한으로 막는다)
 //   고르기: 목록에서 가장 앞 → 가진 것 레벨업 → 목록 밖 새 것은 예약하지 않은 빈칸이 있을 때만 → 리롤 → 스킵 → 그래도 없으면 받기(「목록 밖」). 각성 · 상자는 늘 받는다
-const SIM_DT = 1 / 20, SIM_AI = 0.1, SIM_X = 3, SIM_PAY = { cut: 0.2, max: 150, day: 3 }, SIM_KEY = 'mjg.sim'
+const SIM_DT = 1 / 20, SIM_AI = 0.1, SIM_X = 3, SIM_INF_T = 60 * 60, SIM_PAY = { cut: 0.2, max: 150, day: 3 }, SIM_KEY = 'mjg.sim'
 const simStore = () => { try { return JSON.parse(localStorage.getItem(SIM_KEY)) || {} } catch { return {} } }
 const simKeep = d => { try { localStorage.setItem(SIM_KEY, JSON.stringify(d)) } catch {} }   // 작전 · 최근 결과 · 첫 안내 — save 와 따로(서명 · 계정 동기화에 안 섞인다)
 const simLog = (k, id) => SIM.log.push({ t: G.t, k, id })
@@ -4627,6 +4631,7 @@ const simHas = o => o.t === 'w' ? G.weapons.some(w => w.id === o.id) : o.t === '
 const simInList = o => (o.t === 'w' ? SIM.plan.w : SIM.plan.p).includes(o.id)
 const simDay = () => new Date().toLocaleDateString('sv')   // 기기 날짜 YYYY-MM-DD
 const simPaid = () => save.simPay?.d === simDay() ? save.simPay.n : 0   // 오늘 받은 판 수
+const SIM_TAG = { book: tr`부채꼴`, pile: tr`덫`, sasu: tr`꿰뚫기`, stick: tr`양끝 폭발`, yaha: tr`충격파`, ura: tr`둘레 피해`, weed: tr`발밑 폭발`, tears: tr`물폭탄`, guitar: tr`도는 음표`, nantoka: tr`번개`, ramen: tr`느린 장판`, curry: tr`큰 폭발`, pochette: tr`부메랑`, momo: tr`보스 한 방`, kanpai: tr`튕기기`, sword: tr`일직선 베기`, license: tr`힘↑`, armor: tr`받는 피해↓`, manju: tr`체력↑`, pudding: tr`회복↑`, clock: tr`더 자주`, mega: tr`범위↑`, slipper: tr`이동↑`, wind: tr`탄 속도↑`, bento: tr`더 오래`, double: tr`개수 +1`, pouch: tr`줍기↑`, clover: tr`행운↑`, wage: tr`경험치↑` }   // 작전 짜기 아이콘 밑 짧은 글 — 그 스킬만의 특징 · 서로 안 헷갈리게 · 아이가 읽게(사용자 · 기획 · 디자인 — ko · ja · zh 한 줄 4자 · en 8자, 두 줄까지)
 const STYLE = { move: { name: tr`이동형`, note: tr`넓게 돌며 보석과 아이템을 줍고, 적 떼를 끌고 다녀요.` }, stay: { name: tr`정착형`, note: tr`한자리를 지키며 다가오는 것만 피해요. 줍기 범위 · 자석 빌드와 잘 맞아요.` } }
 function simFree(t) { const list = t === 'w' ? SIM.plan.w : SIM.plan.p, own = t === 'w' ? G.weapons.map(w => w.id) : Object.keys(G.passives); return 6 - own.length - list.filter(id => !own.includes(id)).length > 0 }   // 목록이 예약하지 않은 빈칸
 function simChoose(opts) {
@@ -4671,46 +4676,104 @@ function simBox() {   // 상자 창 대신 — 작전대로 고르고 이어 간
   }
   breather()
 }
-/** AI 대원 — 0.1초마다 방향 24개를 앞까지 내다보고 점수(적 · 탄 · 보스 장판은 감점, 보석 · 아이템은 가점, 하던 방향에 조금 가점)
- *  이동형: 넓게(보석 520 · 아이템 900) · 하던 방향을 길게 / 정착형: 집(시작 자리 — 밀려나면 천천히 따라온다)에서 멀어지면 감점, 가까운 보석 · 아이템만(배고프면 오니기리는 멀리도) */
+/** AI 대원(사용자 「대폭 똑똑하게」 2026-11-20) — 0.1초마다 방향 24개(+ 멈춤)마다 1초 앞까지 내 길을 그려 보고 고른다
+ *  위험(맞으면 지금 체력에 비해 아플수록 · 체력이 낮을수록 더 조심, 무적 0.8초 동안은 덜): 날아오는 것은 직선 — 내 길과 가장 가까워지는 때를 바로 계산(사이로 빠져나가지 않게),
+ *  장판(폭탄 · 내려찍기 · 가위바위보 · 띠 · 돌격대 · 큰 파도)은 터지는 때 내가 어디 있을지, 적은 쫓아오는 · 돌진(멈칫 → 직선) · 뛰어오르기 · 돌격대 직선을 따라 앞날 자리, 상태이상 물결, 적 떼 사이(빈 곳 쪽)
+ *  보상: 체력이 낮으면 오니기리(멀리도 · 길이 안전하면), 보석 · 아이템, 하던 방향. 이동형은 넓게 · 정착형은 집 둘레 */
 function simAI() {
-  const stay = SIM.plan.s === 'stay', low = pl.hp < S.maxHp * 0.5, near = (o, R) => Math.abs(o.x - pl.x) < R && Math.abs(o.y - pl.y) < R
-  const foes = G.foes.filter(e => !e.dead && near(e, 420)), haz = G.haz.filter(z => !z.dead && z.t <= z.T && z.t > -0.5), shots = G.eshots.filter(b => !b.dead && near(b, 300))
-  const inHaz = (x, y) => { let p = 0
-    for (const z of haz) {
-      if (z.k === 'bomb' || z.k === 'land' || z.k === 'tide') { if (Math.hypot(x - z.x, y - z.y) < (z.R || 60) + 22) p += 40 }
-      else if (z.k === 'band') { const c = Math.cos(z.a), s = Math.sin(z.a), dx = x - z.x, dy = y - z.y, along = dx * c + dy * s, side = -dx * s + dy * c; if (z.lane ? Math.abs(side) < 50 : along > -25 && along < z.L + 25 && Math.abs(side) < z.W / 2 + 24) p += 40 }
-      else if (z.k === 'rush') { if (Math.abs((z.horiz ? y : x) - z.gap) > 34) p += 30 }
-      else if (z.k === 'duel') { const o = z.opts.find(o => o.hand === z.win); if (o && ((x - o.x) / 62) ** 2 + ((y - o.y) / 50) ** 2 > 1) p += 35 }
-    }
-    return p }
-  const val = it => it.k === 'onigiri' ? (low ? 9 : 0.2) : it.k === 'guard' || it.k === 'chest' || it.k === 'awaken' ? 5 : it.k === 'magnet' ? 4 : it.k === 'firework' || it.k === 'momonga' ? 3 : it.k === 'coinbox' ? 2 : 1.5
-  const home = SIM.home, gemR = stay ? 130 : 520, itemR = stay ? 220 : 900, keep = stay ? 0.25 : 0.9
-  if (stay) { const d = Math.hypot(pl.x - home[0], pl.y - home[1]); if (d > 160) { const k = 0.02 * (d - 160) / d; home[0] += (pl.x - home[0]) * k; home[1] += (pl.y - home[1]) * k } }   // 크게 밀려나면 집도 조금씩 따라온다
-  let best = -1e9, bx = 0, by = 0, ba = SIM.a || 0
-  for (let i = 0; i < 24; i++) {
-    const a = i / 24 * TAU, c = Math.cos(a), s = Math.sin(a); let sc = 0
-    for (const [L, k] of [[45, 1], [95, 0.6]]) {
-      const x = pl.x + c * L, y = pl.y + s * L
-      for (const e of foes) { const d = Math.hypot(x - e.x, y - e.y) - (e.r || 14) - pl.r; sc -= k * (e.boss ? 3 : 1) * (d < 6 ? 60 : 900 / (d * d + 120)) }
-      sc -= k * inHaz(x, y)
-      for (const b of shots) { const t = L / 150; if (Math.hypot(x - b.x - b.vx * t, y - b.y - b.vy * t) < (b.r || 6) + pl.r + 10) sc -= k * 25 }
-      if (stay) { const d = Math.hypot(x - home[0], y - home[1]); if (d > 70) sc -= k * ((d - 70) / 60) ** 2 }
-    }
-    const x = pl.x + c * 60, y = pl.y + s * 60
-    for (const g of G.gems) { const d = Math.hypot(x - g.x, y - g.y); if (d < gemR) sc += 0.6 / (1 + d / 70) }
-    for (const it of G.items) { const d = Math.hypot(x - it.x, y - it.y); if (d < (it.k === 'onigiri' && low ? 700 : itemR)) sc += val(it) / (1 + d / 120) }
-    sc += keep * Math.cos(a - (SIM.a || 0))   // 떨지 않게 — 하던 방향 유지(이동형은 길게 · 적 떼를 끌고 돈다)
-    if (sc > best) { best = sc; bx = c; by = s; ba = a }
+  const stay = SIM.plan.s === 'stay', hpF = pl.hp / S.maxHp, risk = 1 + (1 - hpF) * 2.5
+  const v = 150 * S.move * (sick('charm') ? 0.6 : 1) * (pl.slowT > 0 ? 0.65 : 1), TS = [0.1, 0.2, 0.35, 0.5, 0.7, 1]
+  const hurt = (d, t) => pl.inv > t ? 0 : (8 + 320 * d * G.D.dmg / Math.max(1, pl.hp)) * risk   // 그때 무적이면 0
+  const by = (a, R) => a.filter(o => !o.dead && Math.abs(o.x - pl.x) < R && Math.abs(o.y - pl.y) < R)
+  const foes = by(G.foes, 480).map(e => [e, (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2]).sort((a, b) => a[1] - b[1]).slice(0, 70).map(q => q[0])
+  const shots = by(G.eshots, 700), haz = G.haz.filter(z => !z.dead && z.k !== 'pool' && z.k !== 'fence'), waves = G.fx.filter(f => f.k === 'wave' && !f.done)
+  const items = by(G.items, 2000), gems = by(G.gems, stay ? 160 : 560).slice(0, 150), home = SIM.home
+  // 아이템 — 줍는 순간 쓰이니 「언제 줍나」가 쓰는 법(사용자 「주변 아이템도 잘 응용」): 지금 쓸모 있으면 가치, 아니면 아껴 두고 밟지 않게 돌아간다(음수)
+  const crowd = foes.filter(e => !e.rush && (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 < 300 * 300).length, bossNear = foes.some(e => e.boss && (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 < 420 * 420)
+  const ill = sick('charm') || sick('weak'), danger = hpF < 0.4 || crowd >= 25 || bossNear && hpF < 0.7, farGems = G.gems.filter(o => (o.x - pl.x) ** 2 + (o.y - pl.y) ** 2 > S.magnet * S.magnet * 4).length
+  const ITEM_W = { awaken: 12, chest: 8, guard: 8, coinbox: 3,   // 각성의 별 · 상자 · 방패는 멀리서도 늘
+    onigiri: hpF < 0.35 ? 30 : hpF < 0.6 ? 14 : hpF < 0.85 ? 2 : -1,   // 체력이 꽉 차면 아껴 둔다
+    magnet: farGems >= 40 ? 6 : -1, firework: crowd >= 25 || bossNear ? 9 : -1, momonga: danger ? 9 : -1, pajama: crowd >= 15 ? 6 : -1,
+    battery: shots.length >= 4 || bossNear ? 6 : -1, earplug: ill ? 12 : hpF < 0.85 ? 3 : -1 }
+  const fetch = items.some(it => (ITEM_W[it.k] ?? 0) >= 8)   // 정착형도 각성의 별 · 상자 · 방패 · 급한 것은 주우러 간다
+  const foeAt = (e, t, tx, ty) => {   // 적의 t 초 뒤 자리 — 멈춘 동안(얼음 · 귀여운 척)은 그대로
+    if (G.freeze > t && !e.rush) return [e.x, e.y]
+    if (e.leap) { const L = e.leap, r = L.T - L.t; return t < r ? null : [L.x1, L.y1] }   // 뛰어오른 동안은 안 닿는다
+    if (e.rush) return [e.x + e.rush[0] * t, e.y + e.rush[1] * t]
+    if (e.act) return [e.x, e.y]
+    if (e.st === 'wind' || e.st === 'dash') { const w = e.st === 'wind' ? e.stT : 0, m = Math.max(0, Math.min(t - w, e.st === 'dash' ? e.stT : 0.75)) * e.spd * 4; return [e.x + e.dx * m, e.y + e.dy * m] }
+    const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy) || 1, m = Math.min(d, e.spd * t); return [e.x + dx / d * m, e.y + dy / d * m]
   }
-  SIM.a = ba
-  if (stay && !G.winter && best > -0.4 && !foes.some(e => near(e, 90)) && Math.hypot(pl.x - home[0], pl.y - home[1]) < 60) return [0, 0]   // 정착형 — 위험이 없고 집이면 멈춰 선다(겨울은 가만히 있으면 얼어서 집 둘레를 맴돈다)
-  return [bx, by]
+  const sir = sick('charm') && alive(G.final?.siren), drag = sir ? toward(sir).map(q => q * 55) : [0, 0]
+  if (stay) { const d = Math.hypot(pl.x - home[0], pl.y - home[1]); if (d > 160) { const k = 0.02 * (d - 160) / d; home[0] += (pl.x - home[0]) * k; home[1] += (pl.y - home[1]) * k } }   // 크게 밀려나면 집도 조금씩 따라온다
+  const score = (cx, cy) => {
+    const vx = cx * v + drag[0], vy = cy * v + drag[1], P = t => [pl.x + vx * t, pl.y + vy * t]   // 매혹이면 세이렌 쪽으로 끌려가는 것까지
+    let c = 0
+    for (const b of shots) {   // 날아오는 것 — 둘 다 직선이니 1초 안에 가장 가까워지는 때를 바로
+      const w = G.freeze > 0 ? 1 : Math.min(1, b.wait || 0), life = b.life - b.t; if (life <= 0) continue
+      const x0 = b.x - pl.x - vx * w, y0 = b.y - pl.y - vy * w, rx = b.vx - vx, ry = b.vy - vy, rr = rx * rx + ry * ry, T = Math.min(1, life) - w
+      if (T <= 0) continue
+      const t = rr ? Math.max(0, Math.min(T, -(x0 * rx + y0 * ry) / rr)) : 0, dx = x0 + rx * t, dy = y0 + ry * t, R = pl.r + (b.r || 6) + 6
+      if (dx * dx + dy * dy < R * R) c += hurt(b.dmg, w + t) * (1.3 - 0.5 * (w + t))
+    }
+    for (const z of haz) {
+      const rem = z.T - z.t
+      if (z.k === 'tide') { if (z.hit) continue; for (const t of TS) { const tt = z.t + t; if (tt <= 1.2) continue; const [x, y] = P(t), p = z.from + z.dir * 240 * (tt - 1.2), q = ((z.horiz ? x : y) - p) * z.dir; if (q <= 0 && q > -95 && Math.abs((z.horiz ? y : x) - z.gap) >= 58) { c += hurt(z.dmg, t); break } } continue }
+      if (rem < -0.05) continue
+      const soon = rem <= 1, k = soon ? 1 : 0.4, [x, y] = P(Math.max(0, Math.min(rem, 1)))
+      if (z.k === 'rush') { for (const t of TS) { if (t < rem - 0.05 && soon) continue; const [x, y] = P(soon ? t : 1), off = Math.abs((z.horiz ? y : x) - z.gap); if (off > 30) { c += hurt(z.dmg, Math.max(t, rem)) * k + off / 40; break } } continue }   // 빈 줄에 들어가 있기
+      if (z.k === 'band') {
+        const cs = Math.cos(z.a), sn = Math.sin(z.a)
+        for (const t of z.lane ? TS : [Math.max(0, Math.min(rem, 1))]) {
+          if (z.lane && t < rem - 0.05 && soon) continue
+          const [x, y] = P(z.lane && !soon ? 1 : t), dx = x - z.x, dy = y - z.y, al = dx * cs + dy * sn, sd = Math.abs(-dx * sn + dy * cs)
+          if (z.lane ? al > -z.lane * 44 - 30 && sd < 11 + pl.r + 10 : al > -pl.r - 8 && al < z.L + pl.r + 8 && sd < z.W / 2 + pl.r * 0.5 + 8) { c += hurt(z.dmg, Math.max(t, rem)) * k + (z.lane ? 0 : (z.W / 2 - sd) / 20); break }
+        }
+        continue
+      }
+      const left = soon ? 0 : v * (rem - 1) + 1   // 1초 뒤 남은 시간에 더 갈 수 있는 거리
+      let deep
+      if (z.k === 'duel') { const o = z.opts.find(o => o.hand === z.win); if (!o) continue; deep = (Math.sqrt(((x - o.x) / 60) ** 2 + ((y - o.y) / 46) ** 2) - 1) * 46 }   // 이기는 손 원까지 남은 거리
+      else { const R = (z.R || 60) + 4 + 10; deep = (1 - Math.sqrt(((x - z.x) / R) ** 2 + ((y - z.y) / (R * 0.8)) ** 2)) * R * 0.8 }   // 장판 안쪽 깊이(짧은 쪽 반지름으로)
+      if (deep > 0) c += soon ? hurt(z.dmg, rem) + deep / 8 : hurt(z.dmg, rem) * Math.min(1, deep / left) * 0.8   // 터질 때 안 — 늦으면 아프게, 아직 시간이 있으면 빠져나갈 길이 짧은 쪽
+    }
+    for (const f of waves) for (const t of TS) { const [x, y] = P(t); if (Math.hypot(x - f.x, (y - f.y) / 0.8) <= f.R * Math.min(1, (f.t + t) / f.T)) { c += (f.st === 'charm' ? 30 : 12) * risk; break } }   // 상태이상 물결(매혹은 끌려가 떼에 갇힌다)
+    for (const e of foes) {   // 닿기 — 앞날 자리는 보스 · 돌격대만(보통 적은 아래 「적 떼 사이」 — 스킬에 금방 쓰러지니 겁먹지 않게)
+      if (!e.boss && !e.rush) continue
+      const R = e.r + pl.r + 4, dm = e.boss ? Math.max(e.dmg, S.maxHp * (e.mid ? 0.08 : 0.1)) * (e.rage ? 1.4 : 1) * (e.st === 'dash' ? 1.5 : 1) : e.dmg
+      for (const t of TS) { const [x, y] = P(t), q = foeAt(e, t, x, y); if (q && (x - q[0]) ** 2 + (y - q[1]) ** 2 < R * R) { c += hurt(dm, t) * (1.3 - 0.5 * t); break } }
+    }
+    const [mx, my] = P(0.4), calm = 1 + (1 - hpF)
+    for (const e of foes) {   // 적 떼 사이 — 가까운 적, 아픈 적일수록(지금 체력에 비해) 더 멀리. 약한 적에게는 용감하게(보석)
+      if (e.rush) continue
+      const dk = e.boss ? 3 : Math.min(3, 0.5 + 3 * e.dmg * G.D.dmg / Math.max(1, pl.hp))
+      for (const [t, k] of [[0.3, 1], [0.63, 0.6]]) { const [x, y] = P(t), d = Math.hypot(x - e.x, y - e.y) - (e.r || 14) - pl.r; c += k * calm * dk * (d < 6 ? 60 : 900 / (d * d + 120)) }   // 지금 자리(쫓아오는 앞날 자리로 재면 겁이 많아져 보석을 못 줍는다 — 시험)
+    }
+    if (stay && !fetch) { const [x, y] = P(1), d = Math.hypot(x - home[0], y - home[1]); if (d > 70) c += ((d - 70) / 60) ** 2 }
+    let g = 0
+    for (const o of gems) { const d = Math.hypot(mx - o.x, my - o.y); g += 0.6 / (1 + d / 70) }
+    for (const it of items) {
+      const w = ITEM_W[it.k] ?? 1.5, [x, y] = P(1), d = Math.hypot(x - it.x, y - it.y), d0 = Math.hypot(pl.x - it.x, pl.y - it.y)
+      if (w < 0) { if (d0 < 200) for (const t of TS) { const [x, y] = P(t); if (Math.hypot(x - it.x, y - it.y) < pl.r + 22) { c += 4; break } } continue }   // 아껴 두는 것 — 밟지 않게
+      if (d0 < (w >= 8 ? 2000 : stay ? 260 : 900)) g += w / (1 + d / 120)
+    }
+    return g - c
+  }
+  let ux = 0, uy = 0, local = 0   // 이동형 — 가까이 보석이 없으면 보석이 쌓인 쪽으로(떨어진 보석 수에 한도가 있어 두고 가면 더 안 생긴다)
+  if (!stay) { for (const o of G.gems) { const dx = o.x - pl.x, dy = o.y - pl.y, d = Math.hypot(dx, dy) || 1; if (d < 250) local++; ux += dx / d / (1 + d / 400); uy += dy / d / (1 + d / 400) } const n = Math.hypot(ux, uy) || 1; ux /= n; uy /= n }
+  const pull = stay || local >= 6 ? 0 : 1.4
+  let best = -1e9, bx = 0, by2 = 0, ba = SIM.a || 0
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * TAU, cx = Math.cos(a), cy = Math.sin(a), sc = score(cx, cy) + (stay ? 0.25 : 0.6) * Math.cos(a - (SIM.a || 0)) + pull * (cx * ux + cy * uy)   // 떨지 않게 — 하던 방향 유지
+    if (sc > best) { best = sc; bx = cx; by2 = cy; ba = a }
+  }
+  if (!G.winter || pl.idleT < 3) { const sc = score(0, 0) + (stay ? 0.6 : 0); if (sc > best) return [0, 0] }   // 멈춤도 한 가지 길(겨울은 3초 넘게 서 있으면 언다)
+  SIM.a = ba; return [bx, by2]
 }
 function simStep() {
   if (G.t >= SIM.aiT) { [SIM.dx, SIM.dy] = simAI(); SIM.aiT = G.t + SIM_AI }
   joy.x = SIM.dx; joy.y = SIM.dy; key.u = key.d = key.l = key.r = 0   // 그동안 누른 키가 끼어들지 않게(같은 전장 = 같은 결과)
-  if (G.t + SIM_DT >= END_T) return simEnd('time')   // 30분 — 검은 별똥별에게서 끝까지 버팀(finish 를 타지 않게 먼저)
+  if (G.t + SIM_DT >= (G.inf ? SIM_INF_T : END_T)) return simEnd('time')   // 30분 — 검은 별똥별에게서 끝까지 버팀(finish 를 타지 않게 먼저). 무한은 쓰러질 때까지(안전 상한 SIM_INF_T)
   const b0 = G.bosses, sl = { ...G.slain }, keep = rnd
   rnd = SIM.rng; try { step(SIM_DT) } finally { rnd = keep }   // 시드 무작위는 계산 안에서만 — 화면 그리기 · 다른 타이머가 끼어들지 않게(던져도 되돌린다 · QA)
   if (G.bosses > b0) simLog('boss', Object.keys(G.slain).find(k => (G.slain[k] || 0) > (sl[k] || 0)) || 'siren')
@@ -4723,7 +4786,7 @@ function simEnd(kind) {
   if (low) SIM.log.push({ t: low[0], k: 'low', v: Math.max(0, Math.round(low[1] * 100)) })
   if (kind === 'dead') SIM.log.push({ t: G.t, k: 'dead', id: G.killerT, s: G.killer })
   SIM.log.sort((a, b) => a.t - b.t)
-  SIM.end = { kind, seed: SIM.seed, s: SIM.plan.s, t: G.t, lvl: G.lvl, kills: G.kills, bosses: G.bosses, killer: G.killer, killerT: G.killerT, dmg: { ...G.dmg }, w: G.weapons.map(w => w.id), log: SIM.log, pay: null }
+  SIM.end = { kind, seed: SIM.seed, s: SIM.plan.s, lv: G.inf ? G.loop.lv : null, t: G.t, lvl: G.lvl, kills: G.kills, bosses: G.bosses, killer: G.killer, killerT: G.killerT, dmg: { ...G.dmg }, w: G.weapons.map(w => w.id), log: SIM.log, pay: null }
   simPay()
 }
 /** 보상금 — 끝까지 지켜본 판(SIM.watch 그대로)만, 정산식 기본 네 줄(금메달 · 의상 보너스 · 떠돌이 보물상자 없이) × 20%, 한 판 150 · 오늘 3판까지. save.coin 에만 더한다(업적 「번 보상금」에는 안 센다) */
@@ -4737,7 +4800,7 @@ function simPay() {
 function simNew(plan, watch) {   // 새 판 — 화질 단계는 0으로(관전 중엔 안 바꾼다 — fx · 숫자 칸 수가 시드 무작위에 닿는다)
   const ch = CHARS.find(c => c.id === plan.ch), seed = plan.seed || 1 + (Math.random() * 999 | 0)
   if (LQ) { LQ = 0; size() }
-  SIM = { plan, seed, rng: seeded(seed), log: [], aiT: 0, dx: 0, dy: 0, a: 0, home: [0, 0], hp: [], hpT: 0, end: null, watch, acc: 0, spec: h('div', { class: 'spec', hidden: true }) }
+  SIM = { plan, seed, max: !!DIFF[plan.diff].inf, rng: seeded(seed), log: [], aiT: 0, dx: 0, dy: 0, a: 0, home: [0, 0], hp: [], hpT: 0, end: null, watch, acc: 0, spec: h('div', { class: 'spec', hidden: true }) }
   const keep = rnd; rnd = SIM.rng; try { calm(); newGame(ch, { diff: plan.diff, winter: plan.winter }) } finally { rnd = keep }
 }
 function simClose() {   // 판 정리 — 띠 · ×3 단추 되돌리기
@@ -4761,7 +4824,6 @@ function simWatch(dt) {   // frame 이 부른다 — 실제 시간 × 3 만큼 1
 }
 // ---- 화면 — 캐릭터 고르기의 「모의 토벌」 단추 → (처음 한 번 안내) → 작전 짜기 → 관전(3배속) → 결과 · 비교
 function simOpen() {
-  if (DIFF[save.diff]?.inf) return
   const d = simStore(), ch = CHARS[pickCi]
   if (d.seen2) return simPlan()
   const close = modal('sim-intro stay', portrait(ch.id), h('p', { class: 'h' }, tr`모의 토벌`), h('p', {}, tr`AI 대원이 대신 싸우는 모습을 3배속으로 지켜봐요.`), h('p', {}, tr`끝까지 보면 토벌 보상금을 조금 받아요(하루 ${SIM_PAY.day}번까지).`), h('p', { class: 'pk' }, tr`직접 하면 더 잘할 수 있어요!`),
@@ -4790,7 +4852,7 @@ function simPlan(again) {
       return id ? h('button', { type: 'button', class: `on${t === 'w' && id === ch.w ? ' fixed' : ''}${t === 'w' && mated(id) ? ' mate' : ''}`, 'aria-label': t === 'w' ? WEAP[id].name : PASS[id].name, onclick: () => toggle(t, id) }, ic(id))
         : h('button', { type: 'button', disabled: true, 'aria-label': tr`빈칸` }, String(i + 1)) }))
     const pal = (t, ids) => h('div', { class: 'pal' }, ids.map(id => { const list = plan[t], used = list.includes(id)
-      return h('button', { type: 'button', class: `${used ? 'used' : ''}${t === 'w' && !used && mated(id) ? ' want' : ''}${!used && list.length >= 6 ? ' full' : ''}`, 'aria-label': t === 'w' ? WEAP[id].name : PASS[id].name, onclick: () => toggle(t, id) }, ic(id)) }))
+      return h('button', { type: 'button', class: `${used ? 'used' : ''}${t === 'w' && !used && mated(id) ? ' want' : ''}${!used && list.length >= 6 ? ' full' : ''}`, 'aria-label': t === 'w' ? WEAP[id].name : PASS[id].name, onclick: () => toggle(t, id) }, ic(id), h('small', { 'aria-hidden': 'true' }, (SIM_TAG[id] ?? '').replace(/\s?(?=[↑↓])/g, '\u2060').replace(/ (?=\+)/g, '\u00a0'))) }))   // 아이콘 밑 글 — 화살표 · +1 이 혼자 줄을 내려가지 않게(디자인)
     box.replaceChildren(
       h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`토벌 성향` }, Object.keys(STYLE).map(k => h('button', { type: 'button', role: 'radio', class: plan.s === k ? 'on' : '', 'aria-checked': String(plan.s === k), onclick: () => { plan.s = k; draw() } }, STYLE[k].name))),
       h('p', { class: 'sim-style-note' }, STYLE[plan.s].note),
@@ -4821,19 +4883,19 @@ function simAsk(go, q, yes) {   // 오늘 보상금을 아직 받을 수 있으�
 function simQuit() { const plan = SIM.plan; SND.play(null); simClose(); simPlan({ ...plan, seed: 0 }) }   // 보상 · 결과 없이 작전 짜기로(일시정지 창의 그만두기도)
 function simSkip() {   // 남은 부분은 그리지 않고 계산 — 지난번 진행 화면(막대). 보상금 0
   const plan = SIM.plan; SND.play(null); SIM.watch = false; SIM.spec.hidden = true; mode = 'sim'
-  const txt = h('p', { class: 'sim-t' }), bar = h('div', { class: 'simbar' }), ctl = { prog: t => { txt.textContent = fmt(t); bar.style.setProperty('--p', `${Math.min(100, t / FINAL_T * 100).toFixed(1)}%`) } }
+  const txt = h('p', { class: 'sim-t' }), bar = h('div', { class: 'simbar' }), ctl = { prog: t => { txt.textContent = fmt(t); bar.style.setProperty('--p', `${Math.min(G?.inf ? 95 : 100, t / (G?.inf ? 2400 : FINAL_T) * 100).toFixed(1)}%`) } }
   show(h('div', { class: 'panel wide pick sim' }, h('p', { class: 'h' }, tr`모의 토벌`), simSetRow(plan), h('div', { class: 'sim-hop' }, portrait(plan.ch)), txt, bar, h('div', { class: 'row' }, btn(tr`취소`, () => { ctl.stop = true }))))
   ctl.prog(G.t)
   simFast(ctl).then(e => { simClose(); e ? simResult(plan, e) : simPlan({ ...plan, seed: 0 }) })
 }
 function simResult(plan, r) {
   mode = 'simres'
-  const sum = { v: PATCH_ID, at: Date.now(), ch: plan.ch, diff: plan.diff, winter: plan.winter, s: plan.s, seed: r.seed, w: plan.w, t: r.t, kind: r.kind }
+  const sum = { v: PATCH_ID, at: Date.now(), ch: plan.ch, diff: plan.diff, winter: plan.winter, s: plan.s, seed: r.seed, w: plan.w, t: r.t, kind: r.kind, lv: r.lv }
   const d = simStore(), hist = [sum, ...(d.hist || []).filter(x => x.s)].slice(0, 5); simKeep({ ...d, hist })   // 예전(성향 없던 3판 평균) 기록은 버린다
   const stat = (k, v) => h('div', {}, h('small', {}, k), h('b', {}, v))
   const rows = Object.entries(r.dmg).sort((a, b) => b[1] - a[1]), all = rows.reduce((q, x) => q + x[1], 0)
   const dmgBox = h('div', { class: 'dmg' }, h('p', { class: 'dt' }, tr`스킬별 준 피해`), h('ul', {}, rows.map(([id, v]) => h('li', {}, ic(id), h('span', {}, WEAP[id]?.name ?? DMG_NAME[id] ?? id), h('i', { style: `--w:${(v / rows[0][1] * 100).toFixed(1)}%` }), h('b', {}, `${Math.round(v).toLocaleString()} · ${Math.round(v / all * 100)}%`)))))
-  const why = r.kind === 'win' ? tr`세이렌 격파!` : r.kind === 'time' ? tr`30분 버팀!` : tr`쓰러짐 — ${r.killer || '?'}`
+  const why = r.kind === 'win' ? tr`세이렌 격파!` : r.kind === 'time' ? tr`${Math.round(r.t / 60)}분 버팀!` : tr`쓰러짐 — ${r.killer || '?'}`
   const nameOf = id => WEAP[id]?.name ?? PASS[id]?.name ?? BOSS[id]?.name ?? id
   const main = [], ups = []
   for (const e of r.log) {
@@ -4848,11 +4910,11 @@ function simResult(plan, r) {
     else if (e.k === 'up') ups.push(row(icSafe(e.id), '', tr`레벨업 — ${nameOf(e.id)}`))
   }
   const p = r.pay, paySub = p.coin ? tr`오늘 ${p.n}/${SIM_PAY.day}${DIFF[plan.diff].coin !== 1 ? ` · ${DIFF[plan.diff].name} ×${DIFF[plan.diff].coin}` : ''}` : p.why === 'skip' ? tr`끝까지 보면 받을 수 있어요` : tr`오늘 보상은 다 받았어요 — 내일 또 만나요!`
-  const cmp = h('ul', { class: 'cmp' }, hist.map((x, i) => h('li', { class: `${i ? '' : 'now'}${x.v !== PATCH_ID ? ' old' : ''}`, 'data-old': tr`예전 밸런스` }, portrait(x.ch), h('span', { class: 'ws' }, x.w.map(id => icSafe(id))), h('span', { class: 'sc' }, fmt(x.t), h('small', {}, `${STYLE[x.s]?.name ?? ''} · ${tr`전장 ${x.seed}`}`)))))
+  const cmp = h('ul', { class: 'cmp' }, hist.map((x, i) => h('li', { class: `${i ? '' : 'now'}${x.v !== PATCH_ID ? ' old' : ''}`, 'data-old': tr`예전 밸런스` }, portrait(x.ch), h('span', { class: 'ws' }, x.w.map(id => icSafe(id))), h('span', { class: 'sc' }, fmt(x.t), h('small', {}, `${x.lv != null ? `∞ ${x.lv} · ` : ''}${STYLE[x.s]?.name ?? ''} · ${tr`전장 ${x.seed}`}`)))))
   show(h('div', { class: 'panel wide pick sim' },
-    h('p', { class: 'fine top' }, tr`AI 대원 · 강화 없이 · 전장 ${r.seed}`), h('p', { class: 'h' }, tr`모의 토벌 결과`), simSetRow({ ...plan, seed: 0 }),
+    h('p', { class: 'fine top' }, r.lv != null ? tr`AI 대원 · 강화 최대 기준 · 전장 ${r.seed}` : tr`AI 대원 · 강화 없이 · 전장 ${r.seed}`), h('p', { class: 'h' }, tr`모의 토벌 결과`), simSetRow({ ...plan, seed: 0 }),
     h('div', { class: 'scroll' },
-      h('div', { class: 'stats' }, stat(tr`버틴 시간`, fmt(r.t)), stat(tr`레벨`, r.lvl), stat(tr`처치`, r.kills.toLocaleString()), stat(tr`보스`, r.bosses)),
+      h('div', { class: 'stats' }, r.lv != null ? stat(tr`도달 단계`, `∞ ${r.lv}`) : stat(tr`레벨`, r.lvl), stat(tr`버틴 시간`, fmt(r.t)), stat(tr`처치`, r.kills.toLocaleString()), stat(tr`보스`, r.bosses)),   // 무한은 진짜 판 결과처럼 도달 단계부터
       h('div', { class: 'coin pay' }, h('p', {}, ic('coin'), h('span', {}, tr`모의 토벌 보상금`, h('small', {}, paySub)), h('b', {}, `+${p.coin}`))),
       h('p', { class: `sim-why ${r.kind === 'dead' ? '' : 'win'}` }, (r.kind === 'dead' ? icSafe(r.killerT) : icSafe('siren')) || '', why),
       dmgBox, h('p', { class: 'dt' }, tr`주요 로그`), h('ul', { class: 'log' }, main), ups.length ? h('details', {}, h('summary', {}, tr`레벨업 전부 보기`), h('ul', { class: 'log' }, ups)) : null,
@@ -5166,4 +5228,4 @@ if (auth) {   // 로그인해 둔 기기 — 계정 저장과 맞춘다(방금 �
   link().finally(() => { clearTimeout(t); done?.() })
 }
 // 점검용 — 브라우저 콘솔 · 자동 테스트에서 판을 빨리 돌려 본다
-if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, portrait, ranking, owns, ownsW, get S() { return S }, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, ouch, guardCut, simRun, simOpen, simPlan, simGo, simSkip, simQuit, simStep, get SIM() { return SIM }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }
+if (!SECURE) window.__mjg = { adv: dt => { tnow += dt }, busy, item, ITEM_CAP, portrait, ranking, owns, ownsW, get S() { return S }, ctrlTick: dt => CTRL && ctrlTick(dt), get CTRL() { return CTRL }, OUTFIT, WSKIN, SKIN, wornId, outfitOf, shop, stormHurts, charSprites, render, autoQ, addWeapon, WEAP, PLAN, wstat, spawn, LOOT, WANDER, SND, get LQ() { return LQ }, set LQ(v) { LQ = v; size(true) }, get SPR() { return SPR }, get K() { return K }, FINAL_T, DARK_T, END_T, sasu: sasuShape, ICO, ico: icoSpr, statRow, STATS, step, startGame, resume, summon, art: artSprite, WALK, CHARS, get G() { return G }, INF, finish, kill, ouch, guardCut, simRun, simNew, simClose, simOpen, simPlan, simGo, simSkip, simQuit, simStep, get SIM() { return SIM }, get pl() { return pl }, get mode() { return mode }, pick0() { if (BOX) { take(BOX.opts[0]); next() } } }

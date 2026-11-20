@@ -326,9 +326,13 @@ ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; li
 .slots button.fixed { border-color: var(--gold, #e0a800) } .slots button.fixed::after { content: none }
 .sim-info { min-height: 2.9em; margin: 0; font-size: 14px; line-height: 1.45; color: var(--soft); text-align: center; text-wrap: balance }
 .simplan .legend { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 8px; margin: 4px 0; font-size: 13px; color: var(--soft) }
-.pal { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 4px 0 12px }
-.pal button { aspect-ratio: 1; display: grid; place-items: center; padding: 0; background: #fff; border: 2px solid #e8ddd2; border-radius: 12px; cursor: pointer }
-.pal .ico { width: 30px; height: 30px } .pal button.used { opacity: .35 } .pal button.want { border-color: #3fae5a; background: #e8f7ea } .pal button.full { opacity: .55 }
+.pal { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; margin: 4px 0 12px }   /* 360 세로 6칸 · 가로 · PC 는 칸이 늘어 줄이 준다 */
+.pal button { min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 5px 2px 4px; background: #fff; border: 2px solid #e8ddd2; border-radius: 12px; cursor: pointer; font: inherit; color: inherit }
+.pal .ico { flex: none; width: 28px; height: 28px }
+.pal small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%; font-size: 11px; line-height: 1.1; color: var(--soft); text-align: center; text-wrap: balance; overflow-wrap: anywhere; hyphens: auto }   /* 아이콘 밑 짧은 글 — 두 줄까지(넘치면 기획이 줄인다 · 말줄임은 안전망) */
+:lang(ja) .pal small { word-break: auto-phrase }
+.pal button.used .ico { opacity: .35 } .pal button.full .ico { opacity: .55 } .pal button.used small, .pal button.full small { color: #a8998d }   /* 흐림은 아이콘에만 — 글은 읽히게(디자인) */
+.pal button.want { border-color: #3fae5a; background: #e8f7ea } .pal button.want small { color: #2e7d43 }
 .sim-hop canvas.pt { height: 72px; animation: hop .9s ease-in-out infinite }
 .sim-t { margin: 0; font-size: 16px; font-variant-numeric: tabular-nums }
 .simbar { height: 14px; margin: 6px 0 14px; border: 2px solid var(--ink); border-radius: 999px; background: linear-gradient(var(--pink), var(--pink)) left / var(--p, 0%) 100% no-repeat, #f1e6d6 }
@@ -637,6 +641,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611201719"></script>
+<script type="module" src="game.js?v=202611201859"></script>
 </body>
 </html>

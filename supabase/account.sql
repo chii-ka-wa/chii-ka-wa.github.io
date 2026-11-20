@@ -279,7 +279,11 @@ begin
     return json_build_object('r', 'ban');
   end if;
   if submit_rank.hit0 < 0 and submit_rank.t >= 1500 then perform report_cheat('nohit', json_build_object('ch', submit_rank.ch, 'lv', submit_rank.lv, 't', submit_rank.t)::jsonb); end if;
-  if now() - st < make_interval(secs => submit_rank.t / 3.0 - 5) then return json_build_object('r', 'fast'); end if;
+  -- 흐른 시간보다 조금 긴 기록 — 거절만(신고 · 정지 없음). 무한 진짜 판이 2배속까지가 된 판(2026-11-20#7)부터는 t/2, 그 전 game.js 는 t/3(캐시에 남은 예전 판 · 기획)
+  --   v 는 '날짜#항목 수' — 문자열로 견주면 '#10' < '#7' 이 되니 나눠서(QA). 모양이 다르면 예전 규칙. 위 정지 줄(t/3 − 30)은 그대로
+  if now() - st < make_interval(secs => submit_rank.t / (case when submit_rank.v !~ '^\d{4}-\d{2}-\d{2}#\d{1,6}$' then 3.0
+      when split_part(submit_rank.v, '#', 1) > '2026-11-20' then 2.0 when split_part(submit_rank.v, '#', 1) = '2026-11-20' and split_part(submit_rank.v, '#', 2)::int >= 7 then 2.0 else 3.0 end) - 5) then
+    return json_build_object('r', 'fast'); end if;
   if now() - st > interval '6 hours' then return json_build_object('r', 'old'); end if;   -- 시작해 두고 오래 묵힌 것
   select * into old from ranks r where r.uid = auth.uid() and r.ch = submit_rank.ch and r.winter = submit_rank.winter;
   if found and (old.lv, old.bosses, old.t, -old.bt) >= (submit_rank.lv, submit_rank.bosses, submit_rank.t, -submit_rank.bt) then res := 'kept';   -- 단계 · 보스 수가 같으면 더 오래 버틴 판, 그다음 마지막 보스를 일찍 잡은 판(기획 2026-11-20 — 화면 숫자와 같은 순서)
