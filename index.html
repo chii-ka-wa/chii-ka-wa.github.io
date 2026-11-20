@@ -307,6 +307,8 @@ ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; li
 .panel.wide { width: min(900px, 100%) }
 .panel.pick { display: flex; flex-direction: column; max-height: 100% }   /* 캐릭터 고르기 · 도감 — 제목과 아래 단추는 고정, 가운데만 스크롤 */
 .panel.pick > .scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 8px; margin: 0 -4px }
+.panel.rank .rmap { flex-shrink: 0 }   /* 랭킹 겨울/풀밭 탭은 줄어들지 않게 — 목록이 길면 눌려 아래가 잘리던 것(2026-11-20). 다른 칸까지 막으면 가로 휴대폰(640×360)에서 창 밖으로 넘친다(QA) */
+@media (max-height: 480px) { .panel.pick.rank { overflow-y: auto; overscroll-behavior: contain } .panel.pick.rank > .scroll { flex: none; overflow: visible } }   /* 낮은 화면(가로 휴대폰) — 안 줄어드는 칸만으로도 화면을 넘으니 목록 대신 창 전체가 스크롤(처음으로 단추까지 닿게 · QA) */
 .chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px }
 .char { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border: 3px solid var(--ink); border-radius: 18px; background: #fff; color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 4px 0 var(--ink) }
 .char.on { background: #fff0f4; border-color: var(--pink); box-shadow: 0 4px 0 var(--pink) }
@@ -587,6 +589,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611191735"></script>
+<script type="module" src="game.js?v=202611201431"></script>
 </body>
 </html>

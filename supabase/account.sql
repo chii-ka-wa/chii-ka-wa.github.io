@@ -171,7 +171,7 @@ update public.ck_key set old = 'mjg|r7Q' where old is null;   -- 처음 소금(�
 alter table public.ck_key enable row level security;
 revoke all on public.ck_key from anon, authenticated;
 
--- 4) 랭킹 — 계정 · 캐릭터마다 가장 좋은 무한 모드 기록 하나. 순서: 단계 ↓ → 잡은 보스 ↓ → 마지막 보스를 잡은 때 ↑ → 버틴 시간 ↓ → 먼저 세운 기록
+-- 4) 랭킹 — 계정 · 캐릭터마다 가장 좋은 무한 모드 기록 하나. 순서: 단계 ↓ → 잡은 보스 ↓ → 버틴 시간 ↓ → 마지막 보스를 잡은 때 ↑ → 먼저 세운 기록(2026-11-20 기획 — 화면에 보이는 숫자 순서와 같게)
 create table if not exists public.ranks (
   uid      uuid not null references auth.users on delete cascade,
   ch       text not null check (ch ~ '^[a-z]{2,12}$'),
@@ -195,7 +195,7 @@ do $$ begin   -- 예전 표(계정 · 캐릭터마다 하나)를 맵마다로 �
   end if;
 end $$;
 alter table public.ranks drop constraint if exists ranks_check;   -- 예전 판의 「그럴듯한 기록만」(단계마다 60초 — 고수의 진짜 기록도 걸릴 수 있었다)
-create index if not exists ranks_order on public.ranks (lv desc, bosses desc, bt, at);
+drop index if exists public.ranks_order; create index if not exists ranks_order2 on public.ranks (lv desc, bosses desc, t desc, bt, at);   -- 순서: 단계 ↓ → 보스 ↓ → 버틴 시간 ↓ → 마지막 보스 잡은 때 ↑ → 먼저(2026-11-20)
 alter table public.ranks add column if not exists real int;   -- 판 시작(start_run) → 올리기까지 실제 흐른 초(살펴보기용 — 기록 ÷ 3 에 가까우면 3배속으로 내내 · 빠르게 만든 기록일 수도)
 alter table public.ranks add column if not exists outfit text check (outfit is null or outfit ~ '^[a-z0-9_]{1,24}$');   -- 그 판에 입은 의상 · 무기 스킨(랭킹 그림 — 보이기만, 체크섬에 넣지 않는다)
 alter table public.ranks add column if not exists wskin text check (wskin is null or wskin ~ '^[a-z0-9_]{1,24}$');
@@ -282,7 +282,7 @@ begin
   if now() - st < make_interval(secs => submit_rank.t / 3.0 - 5) then return json_build_object('r', 'fast'); end if;
   if now() - st > interval '6 hours' then return json_build_object('r', 'old'); end if;   -- 시작해 두고 오래 묵힌 것
   select * into old from ranks r where r.uid = auth.uid() and r.ch = submit_rank.ch and r.winter = submit_rank.winter;
-  if found and (old.lv, old.bosses, -old.bt, old.t) >= (submit_rank.lv, submit_rank.bosses, -submit_rank.bt, submit_rank.t) then res := 'kept';   -- 보스 수 · 잡은 때가 같으면 더 오래 버틴 판(기획 2026-11-18)
+  if found and (old.lv, old.bosses, old.t, -old.bt) >= (submit_rank.lv, submit_rank.bosses, submit_rank.t, -submit_rank.bt) then res := 'kept';   -- 단계 · 보스 수가 같으면 더 오래 버틴 판, 그다음 마지막 보스를 일찍 잡은 판(기획 2026-11-20 — 화면 숫자와 같은 순서)
   else
     insert into ranks (uid, ch, lv, bosses, bt, t, kills, lvl, weapons, passives, slain, winter, v, real, outfit, wskin, lang)
       values (auth.uid(), ch, lv, bosses, bt, t, kills, lvl, weapons, nullif(passives, ''), nullif(slain, ''), winter, v, round(extract(epoch from now() - st)),
@@ -302,11 +302,11 @@ returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t in
 language sql stable security definer set search_path = public as $$
   with best as (
     select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and r.winter = on_winter and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
-    order by r.uid, r.lv desc, r.bosses desc, r.bt, r.t desc, r.at
+    order by r.uid, r.lv desc, r.bosses desc, r.t desc, r.bt, r.at
   )
-  select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.t desc, b.at), p.nick, b.ch, b.lv, b.bosses, b.bt, b.t, b.kills, b.lvl, b.weapons, b.passives, b.slain, b.winter, b.at, b.uid = auth.uid(), b.outfit, b.wskin, b.lang
+  select row_number() over (order by b.lv desc, b.bosses desc, b.t desc, b.bt, b.at), p.nick, b.ch, b.lv, b.bosses, b.bt, b.t, b.kills, b.lvl, b.weapons, b.passives, b.slain, b.winter, b.at, b.uid = auth.uid(), b.outfit, b.wskin, b.lang
   from best b join players p on p.uid = b.uid
-  order by b.lv desc, b.bosses desc, b.bt, b.t desc, b.at
+  order by b.lv desc, b.bosses desc, b.t desc, b.bt, b.at
   limit case when only_ch is null then 100 else 10 end
 $$;
 
@@ -316,9 +316,9 @@ returns table (rank bigint, nick text, ch text, lv int, bosses int, bt int, t in
 language sql stable security definer set search_path = public as $$
   with best as (
     select distinct on (r.uid) r.* from ranks r where (only_ch is null or r.ch = only_ch) and r.winter = on_winter and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
-    order by r.uid, r.lv desc, r.bosses desc, r.bt, r.t desc, r.at
+    order by r.uid, r.lv desc, r.bosses desc, r.t desc, r.bt, r.at
   ), ranked as (
-    select row_number() over (order by b.lv desc, b.bosses desc, b.bt, b.t desc, b.at) as rank, b.* from best b join players p on p.uid = b.uid
+    select row_number() over (order by b.lv desc, b.bosses desc, b.t desc, b.bt, b.at) as rank, b.* from best b join players p on p.uid = b.uid
   )
   select x.rank, p.nick, x.ch, x.lv, x.bosses, x.bt, x.t, x.kills, x.lvl, x.weapons, x.passives, x.slain, x.winter, x.at, true, x.outfit, x.wskin, x.lang
   from ranked x join players p on p.uid = x.uid where x.uid = auth.uid()

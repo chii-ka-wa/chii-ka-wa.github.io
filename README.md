@@ -76,7 +76,7 @@
 
 카카오 · 구글 로그인(`supabase/account.sql`). 로그인하면 저장(save 통째)을 `saves` 표에도 두고(기기마다 `mjg.sync` — 둘 다 바뀌었으면 「이 기기 / 내 계정」을 고르는 창), 무한 모드 기록을 `ranks` 에 올립니다(닉네임은 게임 안에서 — `players`, 처음은 바로 · 그다음은 하루에 한 번 변경 · 금지어 · 대소문자 무시 중복 검사는 서버).
 
-- 랭킹 순서: 단계 ↓ → 잡은 보스 ↓ → 마지막 보스를 잡은 때 ↑ → 버틴 시간 ↓ → 먼저 세운 기록(새 판이 이 순서로 더 좋을 때만 기록을 바꾼다). 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10(`top_ranks`), 내 순위(`my_rank`). 겨울 · 풀밭 따로(`ranks` 기본 키 (uid, ch, winter) · `top_ranks(only_ch, on_winter)` — 랭킹 화면 제목 밑 맵 고르기, 기본 겨울 · 맵마다 사람마다 최고 하나). 줄마다 그 판에 입은 의상 · 무기 스킨(`ranks.outfit · wskin`)과 플레이한 언어 국기(`ranks.lang` — 다섯 말만, 그 밖은 비워서 받는다 · 예전 기록은 없음)
+- 랭킹 순서: 단계 ↓ → 잡은 보스 ↓ → 버틴 시간 ↓ → 마지막 보스를 잡은 때 ↑ → 먼저 세운 기록(2026-11-20 — 예전엔 잡은 때가 버틴 시간보다 앞이었다)(새 판이 이 순서로 더 좋을 때만 기록을 바꾼다). 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10(`top_ranks`), 내 순위(`my_rank`). 겨울 · 풀밭 따로(`ranks` 기본 키 (uid, ch, winter) · `top_ranks(only_ch, on_winter)` — 랭킹 화면 제목 밑 맵 고르기, 기본 겨울 · 맵마다 사람마다 최고 하나). 줄마다 그 판에 입은 의상 · 무기 스킨(`ranks.outfit · wskin`)과 플레이한 언어 국기(`ranks.lang` — 다섯 말만, 그 밖은 비워서 받는다 · 예전 기록은 없음)
 - 서버 검증(`submit_rank`): 무한 판을 시작할 때 `start_run` 으로 시각을 남기고(로그인한 판만), 올릴 때 「실제 흐른 시간 ≥ 기록 ÷ 3(배속)」 · 시작한 지 6시간 안 · 단계와 시간이 맞는지 · 같은 판은 한 번. 브라우저 게임이라 손쉬운 위조만 막는다 — 이상한 기록은 대시보드에서 `delete from ranks where …`
 - 처음 한 번(대시보드):
   1. SQL Editor 에 `supabase/schema.sql` → `supabase/account.sql` 순서로 통째로 Run(여러 번 돌려도 된다). account.sql 맨 아래 확인 표가 다섯 줄 모두 true 여야 한다(pg_cron 이 false 면 Database › Extensions 에서 pg_cron 을 켜고 다시 Run)
