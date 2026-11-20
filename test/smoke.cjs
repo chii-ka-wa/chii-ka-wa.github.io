@@ -407,6 +407,35 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     }
   })
 
+  await run('sim', { width: 360, height: 740 }, async page => {   // 모의 토벌 — 같은 전장 = 같은 결과 · 보상금(끝까지 본 판만 · 한 판 150 · 하루 3판) · 서버 안 부름 · 관전 3배속 · 그만두기 · 무한이면 단추 흐림
+    const net = []; page.on('request', r => { if (/supabase|google-analytics|googletagmanager/.test(r.url())) net.push(r.url()) })
+    await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter', coin: 77, up: { manju: 5 } }))); await page.reload(); await page.waitForTimeout(500); net.length = 0
+    const r = await page.evaluate(async () => { const M = window.__mjg, save = () => JSON.parse(localStorage.getItem('mjg.v1')), before = localStorage.getItem('mjg.v1')
+      const plan = { ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 11, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }
+      const key = e => [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|')
+      const a = await M.simRun(plan), b = await M.simRun(plan), same = localStorage.getItem('mjg.v1') === before, c = await M.simRun({ ...plan, s: 'move' })
+      const pays = []; for (let i = 0; i < 4; i++) { const c0 = save().coin, e = await M.simRun({ ...plan, seed: 0 }, true); pays.push([e.pay.coin, save().coin - c0, e.pay.n, e.pay.why || '']) }
+      return { a: key(a), b: key(b), c: key(c), same, pays, day: save().simPay, up: save().up.manju, ach: save().ach?.coin || 0, sim: M.SIM, G: !!M.G, okW: plan.w.every(id => a.w.includes(id)) } })
+    console.log('sim', JSON.stringify(r))
+    if (r.a !== r.b || r.a === r.c || !r.same || r.sim || r.G || !r.okW) errors.push('[sim] 같은 전장 · 성향 · save · 정리 ' + JSON.stringify(r))
+    if (!r.pays.slice(0, 3).every((x, i) => x[0] > 0 && x[0] <= 150 && x[1] === x[0] && x[2] === i + 1) || r.pays[3][0] !== 0 || r.pays[3][1] !== 0 || r.pays[3][3] !== 'full' || r.day?.n !== 3 || r.up !== 5 || r.ach) errors.push('[sim] 보상금 ' + JSON.stringify(r.pays))
+    // 관전 — 화면 흐름 · 3배속 · ×3 단추 · 띠 · 그만두기(오늘 다 받았으니 묻지 않는다) → 작전 짜기, 단추 되돌림
+    const w = await page.evaluate(async () => { const M = window.__mjg, q = s => document.querySelector(s), wait = ms => new Promise(r => setTimeout(r, ms))
+      q('#ui .btn.main').click(); await wait(300); q('#ui .btn.sim').click(); await wait(300); q('.modal .btn.main')?.click(); await wait(300)
+      const style = q('.sim-style button:not(.on)'); style.click(); await wait(100)
+      q('#ui .row .btn.main').click(); await wait(400)
+      const t0 = M.G.t, at = performance.now(); await wait(1500); const rate = (M.G.t - t0) / ((performance.now() - at) / 1000)
+      const spd = q('#spd'), o = { mode: M.mode, watch: M.SIM?.watch, s: M.SIM?.plan.s, spd: [spd.textContent, spd.disabled, spd.getAttribute('aria-pressed')], spec: !q('.spec').hidden, rate: +rate.toFixed(2) }
+      q('.spec-btns .btn').click(); await wait(300)
+      return { ...o, after: { mode: M.mode, sim: M.SIM, spd: [spd.textContent, spd.disabled], spec: !!q('.spec') } } })
+    const btn = await page.evaluate(() => new Promise(res => { document.querySelector('#ui .row .btn').click(); setTimeout(() => { const b0 = document.querySelector('#ui .btn.sim').disabled; document.querySelector('#ui .diff button[data-k="inf"]').click(); res({ b0, b1: document.querySelector('#ui .btn.sim').disabled }) }, 300) }))
+    console.log('sim watch', JSON.stringify(w), JSON.stringify(btn), 'net', net.length)
+    if (w.mode !== 'play' || !w.watch || w.s !== 'stay' || w.spd.join() !== '×3,true,true' || !w.spec || w.rate < 1.5 || w.rate > 3.3) errors.push('[sim] 관전 ' + JSON.stringify(w))
+    if (w.after.mode !== 'simplan' || w.after.sim || w.after.spd[1] || w.after.spec) errors.push('[sim] 그만두기 ' + JSON.stringify(w.after))
+    if (net.length) errors.push('[sim] 서버 요청 ' + net.slice(0, 2).join(' '))
+    if (btn.b0 || !btn.b1) errors.push('[sim] 무한이면 단추 흐림 ' + JSON.stringify(btn))
+  })
+
   // 언어 — 처음 화면 오른쪽 위에서 고르면 기억하고 다시 불러온다. 다른 말에서는 처음 화면 · 도감 · 패치노트 · 캐릭터 고르기 · 레벨 업 상자 · 일시정지에 한국어가 남지 않는다(언어 이름 「한국어」 빼고)
   await run('inf', { width: 1280, height: 800 }, async page => {   // 무한 — 세이렌을 쓰러뜨려도 판이 이어지고, 보스 둘씩 → 세이렌 둘 → 4분 넘으면 검은 별똥별
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, diff: 'inf', seen: 1 }))); await page.reload(); await page.waitForTimeout(400)
