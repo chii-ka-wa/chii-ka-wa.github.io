@@ -407,6 +407,20 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     }
   })
 
+  await run('autopick', { width: 1280, height: 720 }, async page => {   // 작전대로 자동 선택 — 끄면 평소 창 · 켜면 창 없이 작전 순서대로(리롤 · 제외 · 스킵을 쓰고) · 다 쓰면 노란 멈춤 알림 창 · 봉인 신고 없음(?guard)
+    await page.goto(URL + (URL.includes('?') ? '&' : '?') + 'guard'); await page.waitForTimeout(400)
+    const prep = auto => page.evaluate(a => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'easy', theme: 'winter', ach: { hard: 1 } })); localStorage.setItem('mjg.sim', JSON.stringify({ seen2: 1, auto: a, plans: { chiikawa: { w: [], p: ['manju'], s: 'move' } } })) }, auto)
+    const play = () => page.evaluate(async () => { const M = window.__mjg, b = document.getElementById('spd'), wait = ms => new Promise(r => setTimeout(r, ms)); M.startGame(0); await wait(100); b.click(); b.click()
+      const t0 = performance.now(); let lv = 1, picks = 0
+      while (performance.now() - t0 < 60000 && M.mode !== 'box' && M.mode !== 'over' && M.mode !== 'revive') { await wait(100); const k = (M.G.t | 0) % 6 < 3; dispatchEvent(new KeyboardEvent('keydown', { code: k ? 'ArrowRight' : 'ArrowLeft' })); dispatchEvent(new KeyboardEvent('keyup', { code: k ? 'ArrowLeft' : 'ArrowRight' })); if (M.G.lvl > lv) { picks += M.G.lvl - lv; lv = M.G.lvl } }
+      return { mode: M.mode, t: Math.round(M.G.t), lvl: M.G.lvl, note: !!document.querySelector('#ui .lvl-note'), used: [M.G.rr, M.G.skips, M.G.bans].join(','), w: M.G.weapons.map(w => w.id + w.lv).join(' '), bad: M.G.bad || null } })
+    await prep(0); await page.reload(); await page.waitForTimeout(400); const off = await play()
+    await prep(1); await page.reload(); await page.waitForTimeout(400); const on = await play()
+    console.log('autopick off', JSON.stringify(off), 'on', JSON.stringify(on))
+    if (off.mode !== 'box' || off.note || off.lvl !== 2) errors.push('[autopick] 끄면 평소 창 ' + JSON.stringify(off))
+    if (on.mode !== 'box' || !on.note || on.used !== '0,0,0' || on.lvl < 3 || on.bad) errors.push('[autopick] 켜면 자동 → 멈춤 알림 ' + JSON.stringify(on))
+  })
+
   await run('spdinf', { width: 1280, height: 720 }, async page => {   // 무한 진짜 판은 2배속까지(사용자) — 어려움을 깬 사람이 3배속으로 두었어도 무한을 시작하면 2로 · 무한 판 중 단추는 1 → 2 → 1, 다른 난이도는 3까지
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter', ach: { hard: 1 } }))); await page.reload(); await page.waitForTimeout(400)
     const r = await page.evaluate(async () => { const M = window.__mjg, b = document.getElementById('spd'), wait = ms => new Promise(r => setTimeout(r, ms)), out = {}
@@ -446,9 +460,9 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const style = q('.sim-style button:not(.on)'); style.click(); await wait(100)
       q('#ui .row .btn.main').click(); await wait(400)
       const t0 = M.G.t, at = performance.now(); await wait(1500); const rate = (M.G.t - t0) / ((performance.now() - at) / 1000)
-      const spd = q('#spd'), o = { mode: M.mode, watch: M.SIM?.watch, s: M.SIM?.plan.s, spd: [spd.textContent, spd.disabled, spd.getAttribute('aria-pressed')], spec: !q('.spec').hidden, rate: +rate.toFixed(2) }
+      const spd = q('#spd'), o = { mode: M.mode, watch: M.SIM?.watch, s: M.SIM?.plan.s, spd: [spd.textContent, spd.disabled, spd.getAttribute('aria-pressed')], spec: !q('.spec:not(.auto-band)').hidden, rate: +rate.toFixed(2) }
       q('.spec-btns .btn').click(); await wait(300)
-      return { ...o, after: { mode: M.mode, sim: M.SIM, spd: [spd.textContent, spd.disabled], spec: !!q('.spec') } } })
+      return { ...o, after: { mode: M.mode, sim: M.SIM, spd: [spd.textContent, spd.disabled], spec: !!q('.spec:not(.auto-band)') } } })
     const btn = await page.evaluate(() => new Promise(res => { document.querySelector('#ui .row .btn').click(); setTimeout(() => { const b0 = document.querySelector('#ui .btn.sim').disabled; document.querySelector('#ui .diff button[data-k="inf"]').click(); res({ b0, b1: document.querySelector('#ui .btn.sim').disabled }) }, 300) }))
     console.log('sim watch', JSON.stringify(w), JSON.stringify(btn), 'net', net.length)
     if (w.mode !== 'play' || !w.watch || w.s !== 'stay' || w.spd.join() !== '×3,true,true' || !w.spec || w.rate < 1.5 || w.rate > 3.3) errors.push('[sim] 관전 ' + JSON.stringify(w))

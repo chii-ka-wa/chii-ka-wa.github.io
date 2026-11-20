@@ -1168,4 +1168,11 @@ export default {
   "모의 토벌을 무한 모드에서도 볼 수 있어요(강화 최대 기준)": "You can now watch Mock Hunts in Endless mode too (max-upgrade standard)",
   "작전 짜기 아이콘 밑에 어떤 스킬인지 짧게 적어 두었어요": "Plan icons now show a short note about what each skill does",
   "무한 모드는 배속이 2배까지예요(모의 토벌 관전은 그대로 3배속)": "Endless mode now goes up to 2× speed (Mock Hunt watching stays at 3×)",
+  "작전대로 자동 선택": "Auto-pick by plan",
+  "작전 짜기에서 순서를 먼저 정해 주세요": "Set an order in Plan Your Build first",
+  "자동": "Auto",
+  "잭팟 — 다 받기": "Jackpot — take all",
+  "작전에 있는 스킬이 나오지 않았어요": "No skills from your plan showed up",
+  "새로 나온 것 중에서 직접 골라 주세요": "Pick one of the new cards yourself",
+  "레벨업을 작전대로 자동으로 고를 수 있어요! 캐릭터 고르기에서 「작전대로 자동 선택」을 켜면 작전 짜기에서 정한 순서대로 골라 줘요. 작전에 있는 게 안 나오면 리롤 · 제외 · 스킵을 쓰고, 그래도 없으면 직접 고르게 물어봐요.": "Level-ups can now be picked automatically by your plan! Turn on “Auto-pick by plan” in character select to pick in the order set in Plan Your Build. If nothing from the plan shows up, it uses Reroll · Banish · Skip, and if there's still nothing, it asks you to pick.",
 }

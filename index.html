@@ -310,8 +310,24 @@ ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; li
 .panel.rank .rmap { flex-shrink: 0 }   /* 랭킹 겨울/풀밭 탭은 줄어들지 않게 — 목록이 길면 눌려 아래가 잘리던 것(2026-11-20). 다른 칸까지 막으면 가로 휴대폰(640×360)에서 창 밖으로 넘친다(QA) */
 @media (max-height: 480px) { .panel.pick.rank { overflow-y: auto; overscroll-behavior: contain } .panel.pick.rank > .scroll { flex: none; overflow: visible } }   /* 낮은 화면(가로 휴대폰) — 안 줄어드는 칸만으로도 화면을 넘으니 목록 대신 창 전체가 스크롤(처음으로 단추까지 닿게 · QA) */
 /* 모의 토벌(디자인 2026-11-20) — 캐릭터 고르기 단추 · 처음 안내 · 작전 짜기 · 진행 · 결과 */
-.btn.sim { display: block; margin: 2px auto 10px; font-size: 15px; padding: 6px 16px; box-shadow: 0 3px 0 var(--ink) } .btn.sim:disabled { opacity: .4; cursor: default }
-@media (orientation: landscape) and (max-height: 500px) { .panel.pick:has(> .btn.sim) { position: relative } .panel.pick > .btn.sim { position: absolute; top: 14px; left: 14px; margin: 0; font-size: 13px; padding: 4px 10px; box-shadow: 0 2px 0 var(--ink) } }   /* 가로 휴대폰 — 제목 옆 왼쪽 위로(아래 줄에 두면 캐릭터 목록이 거의 안 보였다 · QA 640×360) */
+.btn.sim { display: block; margin: 0 auto; font-size: 15px; padding: 6px 16px; box-shadow: 0 3px 0 var(--ink) } .btn.sim:disabled { opacity: .4; cursor: default }
+/* 캐릭터 고르기 — [모의 토벌] (스위치) 작전대로 자동 선택 한 줄(디자인). 낮은 화면은 창 전체 스크롤 · 아래 단추 줄은 붙여 두기(랭킹과 같은 규칙 — 640×360 에서 캐릭터 목록이 12px 만 보이던 것) */
+.pick-sub { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 12px; margin: 2px 0 10px } .pick-sub .btn.sim { margin: 0 }
+@media (max-height: 480px) { .panel.pick.charpick { overflow-y: auto; overscroll-behavior: contain } .panel.pick.charpick > .scroll { flex: none; overflow: visible } .panel.pick.charpick > :last-child { position: sticky; bottom: 0; background: var(--card); padding-top: 6px } }
+.diff-note span.warn { color: var(--pink) }
+/* 스위치 — 켜짐 · 꺼짐이 오래 가는 설정(켜짐은 ×2 · ×3 눌림과 같은 분홍) */
+.sw { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); cursor: pointer }
+.sw input { appearance: none; flex: none; position: relative; width: 34px; height: 20px; margin: 0; border: 2px solid var(--ink); border-radius: 999px; background: #efe6dc; cursor: pointer; transition: background .15s }
+.sw input::before { content: ''; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px var(--ink); transition: transform .15s }
+.sw input:checked { background: var(--pink) } .sw input:checked::before { transform: translateX(14px) }
+.sw input:disabled, .sw input:disabled + span { opacity: .45; cursor: default }
+.sw input:focus-visible { outline: 3px solid #7fd3ff; outline-offset: 2px }
+.sw-row { margin: 4px 0 8px; text-align: center } .sw-hint { margin: 2px 0 0; font-size: 13px; color: var(--soft) }
+@media (prefers-reduced-motion: reduce) { .sw input, .sw input::before { transition: none } }
+/* 자동 알림 띠(모의 토벌 관전 띠와 같은 자리 · 모양) — 1.5초 뒤 .3초 동안 사라진다 */
+.spec.auto-band .spec-pick { transition: opacity .3s } .spec.auto-band.out .spec-pick { opacity: 0 }
+/* 자동이 멈춘 레벨업 창 — 노란 「알림」 칸(빨강은 위험 · 쓰러짐용) */
+.lvl-note { margin: -2px 0 10px; padding: 6px 12px; background: #fff4d6; border: 2px solid #ffd23f; border-radius: 12px; font-size: 14px; line-height: 1.4; color: var(--ink); text-align: center; text-wrap: balance } .lvl-note b { display: block }
 @media (max-height: 500px) { .panel.sim-intro canvas.pt { height: 44px } .panel.sim-intro p { margin: 6px 0 } }   /* 낮은 화면 — 첫 안내가 한눈에 */
 .panel.sim-intro { text-align: center } .panel.sim-intro canvas.pt { height: 72px } .panel.sim-intro .pk { font-family: inherit; color: var(--pink) }
 .sim-set { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 2px 0 8px }
@@ -641,6 +657,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611201859"></script>
+<script type="module" src="game.js?v=202611210222"></script>
 </body>
 </html>

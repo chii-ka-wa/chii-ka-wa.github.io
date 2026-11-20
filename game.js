@@ -111,6 +111,7 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
   ['2026-11-20', [
+    ['new', 'book', tr`레벨업을 작전대로 자동으로 고를 수 있어요! 캐릭터 고르기에서 「작전대로 자동 선택」을 켜면 작전 짜기에서 정한 순서대로 골라 줘요. 작전에 있는 게 안 나오면 리롤 · 제외 · 스킵을 쓰고, 그래도 없으면 직접 고르게 물어봐요.`],   // 진짜 판 작전대로 자동 선택(사용자 결정 · 기획)
     ['up', 'onigiri', tr`AI 대원이 똑똑해졌어요 — 보스 기술과 날아오는 것을 더 잘 피하고, 체력이 낮으면 오니기리를 먹으러 가요. 각성의 별은 꼭 줍고, 폭죽 · 자석 같은 아이템은 쓸모 있을 때 주워요`],   // 모의 토벌 AI · 무한 · 아이콘 밑 글(사용자 · 기획)
     ['new', 'inf', tr`모의 토벌을 무한 모드에서도 볼 수 있어요(강화 최대 기준)`],
     ['fix', 'wind', tr`무한 모드는 배속이 2배까지예요(모의 토벌 관전은 그대로 3배속)`],   // 무한 진짜 판 배속 — 사용자   // 모의 토벌 AI · 무한 · 아이콘 밑 글(사용자 · 기획)
@@ -3947,6 +3948,54 @@ function awOffers() { const c = awCan(), out = []; while (out.length < 3 && c.le
 const owned = o => o.t === 'w' && G.weapons.some(w => w.id === o.id)   // 가진 스킬 — 제외 못 한다
 let BOX = null
 const ACTS = [['rr', tr`리롤`], ['skips', tr`스킵`], ['bans', tr`제외`]]
+/** 작전대로 자동 선택(진짜 판 · 사용자 결정 · 기획 2026-11-20) — 캐릭터 고르기 · 일시정지의 토글(기기에 기억 — mjg.sim auto). 그 캐릭터의 작전(모의 토벌 작전 짜기)이 있어야 켜진다
+ *  목록 = 작전 무기 · 보조 순서 + 이미 가진 것(작전 밖은 목록 끝 — 직접 골랐거나 상자에서 받은 것). 목록에 있는 것을 순서대로 → 없으면 리롤 → 제외(목록 밖 새 카드 하나) → 스킵
+ *  셋 다 없으면 멈추고 평소 창(위에 한 줄 — 직접 고른 것은 가진 것이 되어 다음부터 목록 끝). 목록 밖 새 스킬은 자동으로 받지 않는다(작전 밖은 늘 사람이)
+ *  각성 상자는 목록 순서, 보물상자 · 잭팟은 다 받기, 다 키운 뒤 채움(오니기리 · 응원)은 체력으로. 창 없이 이어 가고 짧게 알린다(autoSay). 랭킹 · 업적 · 보상금은 평소와 같다 */
+const autoPlan = id => { const p = simStore().plans?.[id]; return p && (p.w?.length || p.p?.length) ? p : null }
+const autoOn = () => !!(G && !SIM && simStore().auto && autoPlan(G.ch.id))
+function autoList() {   // 'w' / 'p' + id — 작전 순서, 그 뒤에 가진 것(작전 밖)
+  const p = autoPlan(G.ch.id), L = [G.ch.w, ...(p.w || [])].filter(id => WEAP[id]).map(id => 'w' + id).concat((p.p || []).filter(id => PASS[id]).map(id => 'p' + id))
+  for (const w of G.weapons) if (!L.includes('w' + w.id)) L.push('w' + w.id)
+  for (const id in G.passives) if (!L.includes('p' + id)) L.push('p' + id)
+  return [...new Set(L)]
+}
+function autoBox(box, aw, jack) {   // true — 골랐다(창 없이). false — 못 골라 평소 창(box.why)
+  guardOut()   // step 안 — 지금을 봉인해 두고 take 가 재 보고 바꾼다(봉인 어긋남 신고가 나지 않게)
+  const nm = o => o.t === 'w' ? `${WEAP[o.id].name} Lv ${(G.weapons.find(w => w.id === o.id)?.lv || 0) + 1}` : o.t === 'p' ? `${PASS[o.id].name} Lv ${(G.passives[o.id] || 0) + 1}` : o.t === 'a' ? AW[o.id].name : FILL[o.id].name, say1 = o => autoSay(nm(o), o.t === 'a' ? 'awaken' : o.id)
+  if (jack) { box.opts.forEach(take); autoSay(tr`잭팟 — 다 받기`, 'chest'); return true }
+  const L = autoList(), at = o => L.indexOf(o.t + o.id)
+  for (;;) {
+    const inList = box.opts.filter(o => at(o) >= 0).sort((a, b) => at(a) - at(b))
+    if (inList.length) { const o = inList[0]; say1(o); take(o); return true }
+    if (aw) { say1(box.opts[0]); take(box.opts[0]); return true }   // 각성은 가진 스킬뿐이라 늘 목록 안 — 안전망
+    const left = L.some(k => { const t = k[0], id = k.slice(1); return t === 'w' ? (G.weapons.find(w => w.id === id)?.lv ?? 0) < 8 && (G.weapons.some(w => w.id === id) || G.weapons.length < 6) && !G.banned.has(k) : (G.passives[id] ?? 0) < PASS[id].max && (id in G.passives || Object.keys(G.passives).length < 6) && !G.banned.has(k) })
+    const fill = box.opts.filter(o => o.t === 'f')
+    if (!left && fill.length) { const o = fill.find(o => o.id === 'onigiri' && pl.hp < S.maxHp * 0.6) || fill.find(o => o.id !== 'onigiri') || fill[0]; say1(o); take(o); return true }   // 다 키웠다 — 채움
+    if (G.rr > 0) { G.rr--; box.opts = offers(); autoSay(tr`리롤`); continue }
+    const off = box.opts.findIndex(o => o.t !== 'f' && !owned(o))
+    if (G.bans > 0 && off >= 0) { const o = box.opts[off]; G.bans--; G.banned.add(o.t + o.id); box.opts = offers(box.opts.filter(x => x !== o)); box.opts.splice(off, 0, box.opts.pop()); autoSay(tr`제외`); continue }
+    if (G.skips > 0) { G.skips--; autoSay(tr`스킵`); return true }
+    box.why = true; return false
+  }
+}
+/** 자동 알림 — 배너 말고 아래 작은 띠(모의 토벌 관전 띠와 같은 모양 · 꼬리표 「자동」). 몰리면 마지막 것으로 바꿔 끼우고, 1.5초(실제 시간) 뒤 사라진다. 판이 아닐 때는 숨김(frame) */
+const AUTOB = h('div', { class: 'spec auto-band', hidden: true }, h('div', { class: 'spec-pick', 'aria-live': 'polite' }))
+document.body.append(AUTOB)
+function autoSay(s, id) {
+  const el = AUTOB.firstChild; el.replaceChildren(h('span', { class: 'ai' }, tr`자동`), (id && icSafe(id)) || '', h('span', { class: 'what' }, s))
+  el.classList.remove('new'); void el.offsetWidth; el.classList.add('new'); AUTOB.at = performance.now()
+}
+/** 스위치 — 캐릭터 고르기(chars: 지금 고른 캐릭터) · 일시정지(그 판 캐릭터). 작전이 없으면 흐리게: 고르기에서는 눌렀을 때 난이도 설명 줄을 3초 바꾸고, 일시정지는 밑에 늘 작은 글 */
+function autoSwitch(chars) {
+  const inp = h('input', { type: 'checkbox', role: 'switch', onchange: () => simKeep({ ...simStore(), auto: inp.checked ? 1 : 0 }) })
+  const lab = h('label', { class: 'sw', onclick: () => { if (!inp.disabled || !chars) return; const n = ui.querySelector('.diff-note span.on'); if (!n || n.dataset.was) return; n.dataset.was = n.textContent; n.textContent = tr`작전 짜기에서 순서를 먼저 정해 주세요`; n.classList.add('warn'); setTimeout(() => { n.textContent = n.dataset.was; delete n.dataset.was; n.classList.remove('warn') }, 3000) } }, inp, h('span', {}, tr`작전대로 자동 선택`))
+  const sync = () => { const ok = !!autoPlan(chars ? CHARS[pickCi].id : G.ch.id); inp.disabled = !ok; inp.checked = ok && !!simStore().auto }
+  sync(); if (chars) AUTOSYNC = sync
+  return chars ? lab : h('div', { class: 'sw-row' }, lab, !autoPlan(G.ch.id) && h('p', { class: 'sw-hint' }, tr`작전 짜기에서 순서를 먼저 정해 주세요`))
+}
+let AUTOSYNC = null
+const autoSync = () => AUTOSYNC?.()
 function openBox() {
   if (SIM) return simBox()
   const kind = G.queue.shift(), chest = kind === 'chest', aw = kind === 'awaken'   // aw — 각성 상자: 잭팟 · 스킵 · 제외 없이 리롤만(G.arr, 레벨 업 상자와 따로)
@@ -3956,13 +4005,14 @@ function openBox() {
   const jack = !aw && rnd() < (chest ? 0.5 : 0.01 * S.luck * (G.ch.mod.jackpot ? 2 : 1))   // 잭팟 — 셋 다 받는다. 레벨 업 1%(행운 배수 · 하치와레 2배), 보물상자 50%
   const box = BOX = { opts: aw ? awOffers() : offers(), jack, ready: false, ban: false }, acts = aw ? ACTS.slice(0, 1) : ACTS, cnt = k => aw ? 'arr' : k
   if (jack) G.jackpots++
+  if (autoOn() && autoBox(box, aw, jack)) return next()   // 작전대로 자동 — 창 없이 이어 간다
   mode = 'box'; calm(); pauseBtn.hidden = true; still = 2
   const cards = h('div', { class: 'cards' }), hint = h('p', { class: 'hint' })
   const btns = acts.map(([k, s], j) => h('button', { type: 'button', class: 'btn act', onclick: () => act(k) }, s, h('em'), h('kbd', {}, j + 4)))
   const takeBtn = jack && h('button', { type: 'button', class: 'btn main', onclick: () => act('take') }, h('span'), h('kbd', {}, 'Enter'))
   const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}${aw ? ' awaken' : ''}` },
     h('p', { class: 'box-title' }, aw ? [ic('awaken'), tr` 각성!`] : chest ? [ic('chest'), tr` 보물상자!`] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
-    jack && h('p', { class: 'jack' }, 'JACKPOT!!'), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
+    jack && h('p', { class: 'jack' }, 'JACKPOT!!'), box.why && h('p', { class: 'lvl-note' }, h('b', {}, tr`작전에 있는 스킬이 나오지 않았어요`), tr`새로 나온 것 중에서 직접 골라 주세요`), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
   const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}${box.ban && owned(o) ? ' keep' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
   const sync = () => {
     cards.replaceChildren(...box.opts.map(card)); root.classList.toggle('banning', box.ban)
@@ -4593,7 +4643,7 @@ function pickChar(i) {
   const cards = ui.querySelectorAll('.char'), old = cards[pickCi], c = old?.querySelector('canvas')
   if (old) old.classList.remove('on')
   if (c?._idle) { const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(c._idle, 0, 0) }
-  pickCi = i; cards[i]?.classList.add('on')
+  pickCi = i; cards[i]?.classList.add('on'); autoSync()
 }
 const bestText = id => { const b = save.best[bestKey(id, save.diff)]; return b ? tr`최고 ${fmt(b.t)} · 레벨 ${b.lvl}${b.clears ? tr` · 클리어 ${b.clears}번` : ''}` : tr`아직 기록 없음` }
 function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 글자만 바꾼다(깜빡임 없이)
@@ -4604,7 +4654,7 @@ function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 �
 }
 function chars() {
   mode = 'chars'; G = null
-  show(h('div', { class: 'panel wide pick' },
+  show(h('div', { class: 'panel wide pick charpick' },
     h('p', { class: 'h' }, tr`누구랑 토벌할까?`),
     h('div', { class: 'chars scroll' }, CHARS.map((ch, i) => {
       const W = WEAP[ch.w]
@@ -4614,7 +4664,7 @@ function chars() {
     })),
     h('div', { class: 'diff', role: 'radiogroup', 'aria-label': tr`난이도` }, Object.entries(DIFF).map(([k, d]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === save.diff), class: k === save.diff ? 'on' : '', 'data-k': k, onclick: () => pickDiff(k) }, [ic(k), ` ${d.name}`]))),
     h('p', { class: 'diff-note' }, Object.entries(DIFF).map(([k, d]) => h('span', { class: k === save.diff ? 'on' : '', 'data-k': k }, d.note, d.inf && save.noStats && !auth && tr` · 통계를 켜야 해요`))),   // 설명을 겹쳐 두고 고른 것만 — 높이가 그대로라 아래 단추가 출렁이지 않는다
-    h('button', { type: 'button', class: 'btn sim', onclick: simOpen }, tr`모의 토벌`),   // AI 대원이 대신(무한도 — 사용자 2026-11-20)
+    h('div', { class: 'pick-sub' }, h('button', { type: 'button', class: 'btn sim', onclick: simOpen }, tr`모의 토벌`), autoSwitch(true)),   // AI 대원이 대신(무한도) · 작전대로 자동 선택(사용자 2026-11-20)
     h('div', { class: 'row' }, btn(tr`← 처음으로`, title), btn(tr`토벌 시작!`, () => startGame(pickCi), 'main'))))
 }
 // ---------------------------------------------------------------- 모의 토벌(사용자 · 기획 · 디자인 2026-11-20)
@@ -4842,10 +4892,11 @@ function simPlan(again) {
   const toggle = (t, id) => {
     const list = plan[t], at = list.indexOf(id)
     if (t === 'w' && id === ch.w) return say2(tr`기본 무기는 빼지 못해요`)
-    if (at >= 0) { list.splice(at, 1); return say2(t === 'w' ? `${WEAP[id].name} — ${tr`뺐어요`}` : `${PASS[id].name} — ${tr`뺐어요`}`) }
+    if (at >= 0) { list.splice(at, 1); keepPlan(); return say2(t === 'w' ? `${WEAP[id].name} — ${tr`뺐어요`}` : `${PASS[id].name} — ${tr`뺐어요`}`) }
     if (list.length >= 6) return say2(t === 'w' ? tr`무기 칸이 가득 찼어요 — 칸을 눌러 빼요` : tr`보조 칸이 가득 찼어요 — 칸을 눌러 빼요`)
-    list.push(id); say2(t === 'w' ? tr`${WEAP[id].name} — 짝꿍: ${WEAP[mateOf(id)].name}` : `${PASS[id].name} — ${PASS[id].note}`)
+    list.push(id); keepPlan(); say2(t === 'w' ? tr`${WEAP[id].name} — 짝꿍: ${WEAP[mateOf(id)].name}` : `${PASS[id].name} — ${PASS[id].note}`)
   }
+  const keepPlan = () => { const s = simStore(); simKeep({ ...s, plans: { ...s.plans, [ch.id]: { w: plan.w.slice(1), p: plan.p, s: plan.s } } }) }   // 바꿀 때마다 — 진짜 판 「작전대로 자동 선택」이 바로 쓴다
   const draw = () => {
     const mated = id => plan.w.includes(mateOf(id))
     const slots = (t, list) => h('div', { class: 'slots' }, Array.from({ length: 6 }, (_, i) => { const id = list[i]
@@ -4854,7 +4905,7 @@ function simPlan(again) {
     const pal = (t, ids) => h('div', { class: 'pal' }, ids.map(id => { const list = plan[t], used = list.includes(id)
       return h('button', { type: 'button', class: `${used ? 'used' : ''}${t === 'w' && !used && mated(id) ? ' want' : ''}${!used && list.length >= 6 ? ' full' : ''}`, 'aria-label': t === 'w' ? WEAP[id].name : PASS[id].name, onclick: () => toggle(t, id) }, ic(id), h('small', { 'aria-hidden': 'true' }, (SIM_TAG[id] ?? '').replace(/\s?(?=[↑↓])/g, '\u2060').replace(/ (?=\+)/g, '\u00a0'))) }))   // 아이콘 밑 글 — 화살표 · +1 이 혼자 줄을 내려가지 않게(디자인)
     box.replaceChildren(
-      h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`토벌 성향` }, Object.keys(STYLE).map(k => h('button', { type: 'button', role: 'radio', class: plan.s === k ? 'on' : '', 'aria-checked': String(plan.s === k), onclick: () => { plan.s = k; draw() } }, STYLE[k].name))),
+      h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`토벌 성향` }, Object.keys(STYLE).map(k => h('button', { type: 'button', role: 'radio', class: plan.s === k ? 'on' : '', 'aria-checked': String(plan.s === k), onclick: () => { plan.s = k; keepPlan(); draw() } }, STYLE[k].name))),
       h('p', { class: 'sim-style-note' }, STYLE[plan.s].note),
       h('p', { class: 'sim-lab' }, tr`무기 순서 ${plan.w.length}/6`), slots('w', plan.w),
       h('p', { class: 'sim-lab' }, tr`보조 순서 ${plan.p.length}/6`), slots('p', plan.p),
@@ -5101,7 +5152,7 @@ function pause() {
   mode = 'pause'; calm(); pauseBtn.hidden = true; SND.duck(true)
   const det = h('div', { class: 'skill-detail' }, h('p', { class: 'hint' }, tr`스킬 · 아이템을 누르면 자세히 볼 수 있어요`))
   const pick = (kind, id, el) => { for (const c of ui.querySelectorAll('.build .chip')) c.classList.toggle('on', c === el); det.replaceChildren(...skillInfo(kind, id)) }
-  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, tr`일시정지`, h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), zoomRow(), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn(tr`그만두기`, () => SIM ? simQuit() : finish(false, true)), btn(tr`계속하기`, resume, 'main', 'Enter'))))
+  show(h('div', { class: 'panel' }, h('p', { class: 'h' }, tr`일시정지`, h('span', { class: 'pill' }, ic(G.diff), ` ${DIFF[G.diff].name}`)), zoomRow(), autoSwitch(false), chips(pick), det, dmgTable(), h('div', { class: 'row' }, btn(tr`그만두기`, () => SIM ? simQuit() : finish(false, true)), btn(tr`계속하기`, resume, 'main', 'Enter'))))
 }
 /** 화면 배율 — 움직이면 바로 바뀐다(뒤 화면에서 보며). 그림은 size() 에서 배율에 맞게 다시 그려 깨지지 않는다 */
 function zoomRow() {
@@ -5208,6 +5259,7 @@ function autoQ(raw) {
 function frame(ts) {
   if (SIM && !SIM.watch) { last = ts; return requestAnimationFrame(frame) }   // 모의 토벌 건너뛰기 — 그리지 않는다(뒤는 멈춘 화면 그대로)
   if (SIM) SIM.spec.hidden = mode !== 'play' || !!MODAL
+  if (AUTOB.at) { const age = performance.now() - AUTOB.at; AUTOB.hidden = mode !== 'play' || !!MODAL || age > 1800; AUTOB.classList.toggle('out', age > 1500) }   // 자동 알림 띠
   if (last && !SIM) autoQ(ts - last)   // 관전 중엔 화질 단계를 바꾸지 않는다(fx · 숫자 칸 수가 시드 무작위에 닿는다)
   let dt = Math.min(0.05, last ? (ts - last) / 1000 : 0.016)
   if (CTRL) ctrlTick(Math.min(0.25, last ? (ts - last) / 1000 : 0))   // 조작법 시계 — 실제 시간(배속 · 느린 기기의 0.05 묶음과 상관없이)
