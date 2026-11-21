@@ -313,7 +313,8 @@ ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; li
 .btn.sim { display: block; margin: 0 auto; font-size: 15px; padding: 6px 16px; box-shadow: 0 3px 0 var(--ink) } .btn.sim:disabled { opacity: .4; cursor: default }
 /* 캐릭터 고르기 — [모의 토벌] (스위치) 작전대로 자동 선택 한 줄(디자인). 낮은 화면은 창 전체 스크롤 · 아래 단추 줄은 붙여 두기(랭킹과 같은 규칙 — 640×360 에서 캐릭터 목록이 12px 만 보이던 것) */
 .pick-sub { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 12px; margin: 2px 0 10px } .pick-sub .btn.sim { margin: 0 }
-@media (max-height: 480px) { .panel.pick.charpick { overflow-y: auto; overscroll-behavior: contain } .panel.pick.charpick > .scroll { flex: none; overflow: visible } .panel.pick.charpick > :last-child { position: sticky; bottom: 0; background: var(--card); padding-top: 6px } }
+@media (max-height: 480px) { .panel.pick.charpick { overflow-y: auto; overscroll-behavior: contain } .panel.pick.charpick > .scroll { flex: none; overflow: visible } .panel.pick.charpick > :last-child { position: sticky; bottom: -20px; margin-bottom: -20px; padding: 6px 0 20px; background: var(--card); box-shadow: 0 -10px 10px -10px rgba(61,48,43,.3) } }   /* -20px = 창 아래 padding — 그 구역까지 덮고 위 경계 그림자로 「아래로 더 있다」(디자인) */
+@media (max-width: 440px) { :lang(ja) .diff { grid-template-columns: 1fr 1fr } :lang(ja) .diff button { flex-direction: row; justify-content: center; gap: 6px; padding: 6px 0 } }   /* ja 난이도 — 5글자 가나가 네 칸에 안 들어가 낱말 가운데서 꺾이던 것 → 2×2 · 아이콘 왼쪽(디자인) */
 .diff-note span.warn { color: var(--pink) }
 /* 스위치 — 켜짐 · 꺼짐이 오래 가는 설정(켜짐은 ×2 · ×3 눌림과 같은 분홍) */
 .sw { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); cursor: pointer }
@@ -657,6 +658,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611210222"></script>
+<script type="module" src="game.js?v=202611211850"></script>
 </body>
 </html>

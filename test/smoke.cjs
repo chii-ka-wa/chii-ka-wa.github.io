@@ -421,6 +421,19 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (on.mode !== 'box' || !on.note || on.used !== '0,0,0' || on.lvl < 3 || on.bad) errors.push('[autopick] 켜면 자동 → 멈춤 알림 ' + JSON.stringify(on))
   })
 
+  await run('autobox', { width: 1280, height: 720 }, async page => {   // 작전대로 자동 선택 — 각성 상자(목록 순서) · 보물상자 · 잭팟(다 받기)도 창 없이(QC)
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'easy', theme: 'winter' })); localStorage.setItem('mjg.sim', JSON.stringify({ seen2: 1, auto: 1, plans: { chiikawa: { w: ['guitar', 'pochette', 'ramen'], p: ['manju', 'armor'], s: 'move' } } })) }); await page.reload(); await page.waitForTimeout(400)
+    const r = await page.evaluate(async () => { const M = window.__mjg, wait = ms => new Promise(r => setTimeout(r, ms)), until = async f => { for (let i = 0; i < 60 && !f(); i++) await wait(50) }
+      M.startGame(0); await wait(200); const G = M.G
+      G.weapons[0].lv = 8; G.queue.push('awaken'); await until(() => !G.queue.length && M.mode === 'play'); await wait(100)
+      const aw = { has: G.aw.has('sasu'), mode: M.mode }
+      let n = 0; while (G.jackpots < 1 && n < 20) { G.queue.push('chest'); n++; await until(() => !G.queue.length); await wait(80); if (M.mode === 'box') break }
+      return { aw, chests: n, jackpots: G.jackpots, mode: M.mode, note: !!document.querySelector('#ui .lvl-note'), w: G.weapons.map(w => w.id + w.lv).join(' '), p: Object.keys(G.passives).join(' '), band: document.querySelector('.auto-band .what')?.textContent } })
+    console.log('autobox', JSON.stringify(r))
+    if (!r.aw.has || r.aw.mode !== 'play') errors.push('[autobox] 각성 자동 ' + JSON.stringify(r.aw))
+    if (r.jackpots < 1 || !(r.mode === 'play' || r.note) || r.w.split(' ').length + r.p.split(' ').filter(Boolean).length < 3) errors.push('[autobox] 보물상자 · 잭팟 자동 ' + JSON.stringify(r))
+  })
+
   await run('spdinf', { width: 1280, height: 720 }, async page => {   // 무한 진짜 판은 2배속까지(사용자) — 어려움을 깬 사람이 3배속으로 두었어도 무한을 시작하면 2로 · 무한 판 중 단추는 1 → 2 → 1, 다른 난이도는 3까지
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter', ach: { hard: 1 } }))); await page.reload(); await page.waitForTimeout(400)
     const r = await page.evaluate(async () => { const M = window.__mjg, b = document.getElementById('spd'), wait = ms => new Promise(r => setTimeout(r, ms)), out = {}
