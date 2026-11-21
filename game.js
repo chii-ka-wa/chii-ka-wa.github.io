@@ -110,6 +110,10 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 유치원 · 초등학생도 읽기 쉽게: 한 줄에 그림 하나(ic) · 꼬리표 하나 · 짧은 문장 하나. 새 항목을 맨 위에.
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
+  ['2026-11-21', [
+    ['new', 'inf', tr`「모의 토벌 랭킹」이 생겼어요! 매주 같은 전장에서 누구의 작전이 가장 오래 버티는지 겨뤄요(겨울 · 풀밭 따로). 1등의 작전을 그대로 불러와 써 볼 수도 있어요.`],   // 사용자 · 기획 · 디자인
+    ['up', 'parry', tr`무한 모드에서도 각성 스킬이 날아오는 것을 원래 확률대로 막아요(1단계부터 절반이던 것을 되돌렸어요)`],   // 무한 각성 막기 원복(사용자)
+  ]],
   ['2026-11-20', [
     ['new', 'book', tr`레벨업을 작전대로 자동으로 고를 수 있어요! 캐릭터 고르기에서 「작전대로 자동 선택」을 켜면 작전 짜기에서 정한 순서대로 골라 줘요. 작전에 있는 게 안 나오면 리롤 · 제외 · 스킵을 쓰고, 그래도 없으면 직접 고르게 물어봐요.`],   // 진짜 판 작전대로 자동 선택(사용자 결정 · 기획)
     ['up', 'onigiri', tr`AI 대원이 똑똑해졌어요 — 보스 기술과 날아오는 것을 더 잘 피하고, 체력이 낮으면 오니기리를 먹으러 가요. 각성의 별은 꼭 줍고, 폭죽 · 자석 같은 아이템은 쓸모 있을 때 주워요`],   // 모의 토벌 AI · 무한 · 아이콘 밑 글(사용자 · 기획)
@@ -323,7 +327,7 @@ const HARD_HP = { anoko: 6, siren: 10 }   // 어려움 · 무한 0단계(25분�
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 // 무한 — 세이렌을 쓰러뜨리면 단계(lv)가 오른다. 단계마다 강해진 보스가 lv+1 마리씩 INF.gap 초마다(종류는 섞어서 BOSS 여섯이 다 나올 때까지), 다 쓰러뜨리면 세이렌 lv+1 명(인어 셋씩). INF.dark 초 안에 못 쓰러뜨리면 검은 별똥별
-const INF = { gap: 60, rest: 12, dark: 180, foe: 0.2, kinds: ['dekatsuyo', 'goblinKing', 'bigChimera', 'rps', 'chef', 'anoko'], hp: 0.6, dmg: 0.25, spd: 0.04, anoko: 2, parry: 0.5 }   // dark — 진행 시계(세이렌이 나오거나 페이즈를 넘긴 뒤 이만큼 못 넘기면 검은 별똥별). anoko — 무한 아노코 체력 배수, parry — 각성 스킬로 막는 확률 배수(무한 1단계부터). hp · dmg · spd — 단계마다 보스가 그만큼씩 세진다(1 + 값 × 단계, 선형). foe — 일반 적 체력도 단계마다(보스의 1/3)
+const INF = { gap: 60, rest: 12, dark: 180, foe: 0.2, kinds: ['dekatsuyo', 'goblinKing', 'bigChimera', 'rps', 'chef', 'anoko'], hp: 0.6, dmg: 0.25, spd: 0.04, anoko: 2 }   // dark — 진행 시계(세이렌이 나오거나 페이즈를 넘긴 뒤 이만큼 못 넘기면 검은 별똥별). anoko — 무한 아노코 체력 배수, parry — 각성 스킬로 막는 확률 배수(무한 1단계부터). hp · dmg · spd — 단계마다 보스가 그만큼씩 세진다(1 + 값 × 단계, 선형). foe — 일반 적 체력도 단계마다(보스의 1/3)
 // 무한 세이렌(1단계부터) — 한 명 한 명이 3페이즈. hp · dmg 는 단계 보정한 체력 · 기술 피해에 곱한다. col — 페이즈 색(HUD 점 · 링 · 외침)
 const SIREN_PH = [{ hp: 1.5, dmg: 1, col: '#ff8fb1' }, { hp: 1.5, dmg: 1.2, col: '#a94fd0', line: tr`…용서 못 해!`, name: tr`화난 세이렌!` }, { hp: 2, dmg: 1.4, col: '#3f68b3', line: tr`바다여, 나에게 힘을!`, name: tr`폭풍의 세이렌!` }]
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'rps'], [1080, 'chef', 1], [1200, 'anoko'],
@@ -693,15 +697,19 @@ const RK_COL = ['', 't3', 't2', 't1']   // 1 · 2 · 3등 — 금 · 은 · 동
 const icSafe = id => { try { return ic(id) } catch { return null } }   // 랭킹 기록은 서버 것 — 예전 판의 없어진 id 여도 화면이 멈추지 않게
 /** 랭킹 화면 — 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10. 줄을 누르면 자세히 */
 let rankW = true   // 랭킹 맵 — 겨울(기본) · 풀밭. 맵마다 따로(사람마다 맵마다 최고 하나)
-async function ranking(only = null, w = rankW) {
-  mode = 'rank'; G = null; rankW = w
+let rankTab = 'inf', rankDiff = 'normal'   // 랭킹 탭(토벌 · 모의 토벌) · 모의 토벌 난이도
+async function ranking(only = null, w = rankW, tab = rankTab, diff = rankDiff) {
+  mode = 'rank'; G = null; rankW = w; rankTab = tab; rankDiff = diff
+  const tabs = h('div', { class: 'wr-mode rk-tabs', role: 'tablist' }, [['inf', [ic('inf'), tr` 토벌 랭킹`]], ['sim', tr`모의 토벌 랭킹`]].map(([k, s]) =>
+    h('button', { type: 'button', role: 'tab', 'aria-selected': String(tab === k), class: tab === k ? 'on' : '', onclick: () => tab !== k && ranking(only, w, k, diff) }, s)))   // 탭이 제목을 겸한다(디자인 — 상점 탭 모양)
   const mapPick = h('div', { class: 'theme rmap', role: 'radiogroup', 'aria-label': tr`맵` }, [[true, 'snow', tr`겨울`], [false, 'clover', tr`풀밭`]].map(([v, pic, name]) =>
-    h('button', { type: 'button', role: 'radio', 'aria-checked': String(w === v), class: w === v ? 'on' : '', onclick: () => w !== v && ranking(only, v) }, ic(pic), ` ${name}`)))   // 처음 화면 테마 단추와 같은 모양
+    h('button', { type: 'button', role: 'radio', 'aria-checked': String(w === v), class: w === v ? 'on' : '', onclick: () => w !== v && ranking(only, v, tab, diff) }, ic(pic), ` ${name}`)))   // 처음 화면 테마 단추와 같은 모양 · 두 탭이 같이 쓴다
+  if (tab === 'sim') return simRanking(w, diff, tabs, mapPick)
   const list = h('ol', { class: 'list rank scroll' }, h('li', { class: 'wait' }, tr`불러오는 중…`)), mine = h('div', { class: 'mine' })
   const head = h('li', { class: 'head', 'aria-hidden': 'true' }, h('span', {}), h('span', {}), h('span', {}, tr`닉네임`), h('span', {}, tr`단계`), h('span', {}, tr`버틴 시간`), h('span', {}, tr`보스`))   // 넓은 화면만 — 표 머리줄
   const ghost = (txt, b) => h('li', { class: 'ghost' }, h('span', {}, txt), b || h('span', {}))   // 내 기록 자리 · 빈 목록 — 목록 줄과 같은 모양의 점선 줄
   show(h('div', { class: 'panel wide pick rank' },
-    h('p', { class: 'h' }, ic('inf'), tr` 무한 랭킹`), mapPick, h('p', { class: 'sub' }, `${w ? tr`겨울` : tr`풀밭`} · `, only ? tr`${CHARS.find(c => c.id === only)?.name ?? only} TOP 10` : tr`전체 TOP 100 · 한 사람당 최고 기록 하나`),   // 맵이 캐릭터보다 큰 갈래 — 제목 바로 밑(디자인)
+    tabs, mapPick, h('p', { class: 'sub' }, `${w ? tr`겨울` : tr`풀밭`} · `, only ? tr`${CHARS.find(c => c.id === only)?.name ?? only} TOP 10` : tr`전체 TOP 100 · 한 사람당 최고 기록 하나`),   // 맵이 캐릭터보다 큰 갈래 — 제목 바로 밑(디자인)
     h('div', { class: 'dex-nav' }, h('button', { type: 'button', class: only ? '' : 'on', onclick: () => ranking(null, w) }, tr`전체`),
       CHARS.map(c => h('button', { type: 'button', class: only === c.id ? 'on' : '', onclick: () => ranking(c.id, w) }, ic(c.w), ` ${c.name}`))),
     mine, list,
@@ -713,6 +721,42 @@ async function ranking(only = null, w = rankW) {
   if (!auth) mine.replaceChildren(ghost(tr`로그인하면 내 기록도 여기에 올라가요`, btn(tr`로그인`, loginBox)))
   else if (me?.[0]) { mine.dataset.t = tr`내 기록`; mine.replaceChildren(rankRow(me[0])) }   // 위 꼬리표 「내 기록」(목록 순서와 헷갈리지 않게)
   else mine.replaceChildren(NICK ? ghost(tr`무한 모드를 해 보면 여기에 내 기록이 나와요`) : ghost(tr`닉네임을 정하면 랭킹에 올라가요`, btn(tr`닉네임 정하기`, () => nickBox())))
+}
+/** 모의 토벌 랭킹 — 이번 주 전장 · 판(보통 · 어려움 · 무한 × 맵)마다 TOP 100. 줄을 누르면 자세히(작전 · [이 작전 써 보기]) */
+async function simRanking(w, diff, tabs, mapPick) {
+  const W = simWeek(), list = h('ol', { class: 'list rank rk-sim scroll' }, h('li', { class: 'wait' }, tr`불러오는 중…`)), mine = h('div', { class: 'mine rk-sim' })
+  const ghost = (txt, b) => h('li', { class: 'ghost' }, h('span', {}, txt), b || h('span', {}))
+  const dp = h('div', { class: 'rk-diff', role: 'radiogroup', 'aria-label': tr`난이도` }, SIM_RK.map(k => h('button', { type: 'button', role: 'radio', 'aria-checked': String(diff === k), class: `${k}${diff === k ? ' on' : ''}`, onclick: () => diff !== k && ranking(null, w, 'sim', k) }, ic(k), DIFF[k].name)))
+  show(h('div', { class: 'panel wide pick rank' }, tabs, mapPick, dp, h('p', { class: 'sub rk-week' }, tr`이번 주 전장 #${W.field} · 새 전장까지 ${simLeft()}`), mine, list, h('div', { class: 'row' }, btn(tr`← 처음으로`, title))))
+  const [rows, me] = await Promise.all([rpc('top_sims', { on_diff: diff, on_winter: w }), auth ? rpc('my_sim', { on_diff: diff, on_winter: w }) : null])
+  if (mode !== 'rank' || rankTab !== 'sim') return
+  if (!rows) return list.replaceChildren(h('li', { class: 'wait' }, tr`랭킹을 불러오지 못했어요 — 인터넷 연결을 확인해 주세요`))
+  const one = r => ({ ...r, diff, winter: w })
+  list.replaceChildren(...(rows.length ? rows.map(r => simRow(one(r))) : [ghost(tr`아직 기록이 없어요 — 이번 주 첫 번째가 되어 보세요!`)]))
+  if (!auth) mine.replaceChildren(ghost(tr`로그인하면 이번 주 랭킹에 올라가요`, btn(tr`로그인`, loginBox)))
+  else if (me?.[0]?.hidden) mine.replaceChildren(ghost(tr`이번 주 내 기록은 확인 중이에요`))   // 내린 기록 — 나에게만(정직하게 따라 한 사람이 이유 없이 사라진 것처럼 느끼지 않게 · 기획)
+  else if (me?.[0]) { mine.dataset.t = tr`내 기록`; mine.replaceChildren(simRow(one(me[0]))) }
+  else mine.replaceChildren(ghost(tr`이번 주 전장에서 끝까지 보면 여기에 내 기록이 나와요`))
+}
+function simScore(r) {   // 오른쪽 결과 — 무한: 단계 · 보스 / 격파: 노란 알약 「격파 18:42」 / 못 깸: 시간 · 처치
+  if (r.diff === 'inf') return [h('span', { class: 'lvpill' + (r.lv ? '' : ' zero') }, r.lv ? `∞ ${tr`${r.lv}단계`}` : tr`세이렌 전`), h('small', {}, tr`보스 ${r.bosses}`)]
+  if (r.kind === 'win') return [h('span', { class: 'win' }, tr`격파 ${fmt(r.t)}`)]
+  return [h('b', {}, fmt(r.t)), h('small', {}, tr`처치 ${r.kills.toLocaleString()}`)]
+}
+function simRow(r) {
+  return h('li', { class: r.me ? 'me' : '', onclick: () => simInfo(r) },
+    h('span', { class: `rk n ${RK_COL[r.rank] || ''}` }, r.rank ?? '–'), h('span', { class: 'pt' }, portrait(r.ch)),
+    h('div', { class: 'nm' }, h('b', {}, r.nick), h('small', {}, STYLE[r.s]?.name ?? '')), h('div', { class: 'sc' }, ...simScore(r)),
+    h('div', { class: 'bd' }, h('span', { class: 'w' }, r.w.split(' ').map(id => icSafe(id))), h('i', { class: 'sep' }), h('span', { class: 'p' }, (r.p || '').split(' ').filter(Boolean).map(id => icSafe(id)))))
+}
+function simInfo(r) {   // 자세히 — 작전을 크게(작전 짜기 칸 모양 · 눌러지지 않게) · [이 작전 써 보기]
+  const tag = id => (SIM_TAG[id] ?? '').replace(/\s?(?=[↑↓])/g, '\u2060').replace(/ (?=\+)/g, '\u00a0')
+  const pal = ids => h('div', { class: 'pal ro' }, ids.filter(id => WEAP[id] || PASS[id]).map(id => h('button', { type: 'button', tabindex: '-1', 'aria-label': WEAP[id]?.name ?? PASS[id]?.name }, ic(id), h('small', { 'aria-hidden': 'true' }, tag(id)))))
+  const w = r.w.split(' '), pp = (r.p || '').split(' ').filter(Boolean)
+  const close = modal('rinfo simi', portrait(r.ch), h('p', { class: 'h' }, `#${r.rank ?? '–'} ${r.nick}`), h('div', { class: 'sc' }, ...simScore(r)),
+    simSetRow({ ch: r.ch, diff: r.diff, winter: r.winter, s: r.s }),
+    h('p', { class: 'sim-lab' }, tr`무기 순서 ${w.length}/6`), pal(w), h('p', { class: 'sim-lab' }, tr`보조 순서 ${pp.length}/6`), pal(pp),
+    h('div', { class: 'row' }, btn(tr`닫기`, () => close()), btn(tr`이 작전 써 보기`, () => { close(); simPlan({ ch: r.ch, diff: r.diff, winter: r.winter, s: r.s, w, p: pp, seed: 0, week: true, pop: true }) }, 'main')))
 }
 /** 랭킹 그림 — 그 판에 입은 의상 · 무기 스킨으로(서버 값 — 없거나 그 캐릭터 것이 아니면 기본 모습) */
 const langFlag = (code, cls = 'flag') => { const L = LANGS.find(x => x[0] === code); if (!L) return null; const f = ic(L[2]); f.classList.add(...cls.split(' ')); f.alt = f.title = L[1]; return f }   // 플레이한 언어 — 언어 단추와 같은 국기, 이름은 그 나라말(번역 안 함). 예전 기록(없음)은 안 그린다
@@ -3004,7 +3048,7 @@ function statsAsk(i) {   // 무한 모드는 통계를 켜야 한다(랭킹 기�
 function startGame(i) { if (DIFF[save.diff]?.inf && save.noStats && !auth) return statsAsk(i)   // 로그인 중이면 익명 통계를 늘 보내니 묻지 않는다
   if (LQ) { LQ = 0; size() } if (SPR) SPR[CHARS[i].id] = charSprites(CHARS[i].id)   // 입은 의상으로 다시 그린다
   if (spd > spdMax(!!DIFF[save.diff]?.inf)) { spd = spdMax(!!DIFF[save.diff]?.inf); const b = document.getElementById('spd'); b.textContent = `×${spd}`; b.setAttribute('aria-label', `×${spd}`) }   // 보험 — 지금은 저장이 바뀌면 늘 다시 연다(reload). 나중에 안 그러는 길이 생겨도 정직한 사람이 spd 로 걸리지 않게(기획)
-  Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); const pc = matchMedia('(hover: hover) and (pointer: fine)').matches, seen = pc ? 'ctrlSeen' : 'touchSeen'; if (!save[seen]) { save[seen] = 1; persist(); ctrlShow(pc) } if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
+  dmOff(); Object.assign(AQ, { ema: 0, base: 1e9, at: 0 }); pickCi = i; newGame(CHARS[i]); const pc = matchMedia('(hover: hover) and (pointer: fine)').matches, seen = pc ? 'ctrlSeen' : 'touchSeen'; if (!save[seen]) { save[seen] = 1; persist(); ctrlShow(pc) } if (G.inf && auth) { const g = G; rpc('start_run').then(t => { if (typeof t === 'string') g.tok = t }) } mode = 'play'; ui.hidden = true; pauseBtn.hidden = false; still = 2; SND.play(fieldSong(), false, CHARS[i].id); SND.voice(CHARS[i].id, 'happy') }
 
 function stats() {
   const m = G.ch.mod, L = id => G.passives[id] || 0, old = S?.maxHp
@@ -3082,7 +3126,7 @@ const tip = (s, col = '#fff', T = 2.8) => { G.tip = { s, t: 0, T, col } }   // �
 /** 각성 스킬(SRC)이 날아오는 것 b 를 AW.p 확률로 막는다 — 탄 하나에 스킬마다 한 번만 굴린다. 막으면 true */
 function parry(b) {
   if (b.dead || !G.aw.has(SRC) || (b.tried ||= new Set()).has(SRC)) return false
-  b.tried.add(SRC); if (rnd() >= AW[SRC].p * (G.inf && G.loop.lv ? INF.parry : 1)) return false   // 무한 1단계부터 절반
+  b.tried.add(SRC); if (rnd() >= AW[SRC].p) return false   // 무한도 같은 확률(1단계부터 절반이던 것을 되돌림 — 사용자 2026-11-21)
   b.dead = true; G.parried++; fx({ k: 'ring', x: b.x, y: b.y, R: 18, T: 0.3, col: '#ffd23f' })
   if (G.fx.length < 150 && rnd() < 0.35) fx({ k: 'text', x: b.x, y: b.y - 22, s: tr`막았다!`, col: '#ffd23f', T: 0.6 })
   return true
@@ -4620,6 +4664,7 @@ function themePick() {   // 테마 — 처음 화면 왼쪽 위. 겨울(기본) 
 }
 function title() {
   if (mode === 'blocked') return
+  if (SIM) simClose()   // 모의 토벌 중 다른 화면으로 — Math · 띠를 되돌린다
   SND.play(fieldSong())
   const again = !ui.hidden && !!ui.querySelector(':scope > .panel.home')   // 이미 처음 화면 — 계정을 불러온 뒤 · 로그인 · 닉네임 뒤 다시 그릴 때는 나타나는 연출(pop)을 빼서 두 번 번쩍이지 않게
   mode = 'title'; G = null; BOX = null; pauseBtn.hidden = true
@@ -4653,6 +4698,7 @@ function pickDiff(k) {   // 다시 그리지 않고 단추 · 설명 · 기록 �
   ui.querySelectorAll('.char .best').forEach((el, i) => { el.textContent = bestText(CHARS[i].id) })
 }
 function chars() {
+  if (SIM) simClose()
   mode = 'chars'; G = null
   show(h('div', { class: 'panel wide pick charpick' },
     h('p', { class: 'h' }, tr`누구랑 토벌할까?`),
@@ -4674,6 +4720,34 @@ function chars() {
 //   그 밖은 없음: 업적 · 클리어 의상 · 랭킹 · 통계 · 서버 요청 — finish 를 타지 않는다(보상금은 보통 저장으로만). 부정 신호(foul · guard)는 끈다(보상은 한 판 · 하루 상한으로 막는다)
 //   고르기: 목록에서 가장 앞 → 가진 것 레벨업 → 목록 밖 새 것은 예약하지 않은 빈칸이 있을 때만 → 리롤 → 스킵 → 그래도 없으면 받기(「목록 밖」). 각성 · 상자는 늘 받는다
 const SIM_DT = 1 / 20, SIM_AI = 0.1, SIM_X = 3, SIM_INF_T = 60 * 60, SIM_PAY = { cut: 0.2, max: 150, day: 3 }, SIM_KEY = 'mjg.sim'
+/** 엔진마다 같은 값 — 모의 토벌 계산 동안만 Math 의 sin · cos · atan2 · hypot · exp 를 + − × ÷ · sqrt 로만 짠 것(fdlibm 계수)으로 바꿔 끼운다.
+ *  크롬(V8) · 사파리(JSC) · 파이어폭스는 이 함수들의 마지막 자리가 달라 몇만 걸음 뒤 결과가 갈렸다(모의 토벌 랭킹 「같은 작전 · 전장 = 같은 결과」 · 기획) */
+const DM = (() => {
+  const P1 = 1.57079632673412561417, P1T = 6.07710050650619224932e-11, I2P = 6.36619772367581382433e-01, sq = Math.sqrt, rd = Math.round
+  const ks = x => { const z = x * x; return x + x * z * (-1.66666666666666324348e-01 + z * (8.33333333332248946124e-03 + z * (-1.98412698298579493134e-04 + z * (2.75573137070700676789e-06 + z * (-2.50507602534068634195e-08 + z * 1.58969099521155010221e-10))))) }
+  const kc = x => { const z = x * x; return 1 - 0.5 * z + z * z * (4.16666666666666019037e-02 + z * (-1.38888888888741095749e-03 + z * (2.48015872894767294178e-05 + z * (-2.75573143513906633035e-07 + z * (2.08757232129817482790e-09 + z * -1.13596475577881948265e-11))))) }
+  const sin = x => { const n = rd(x * I2P), y = x - n * P1 - n * P1T, q = n & 3; return q === 0 ? ks(y) : q === 1 ? kc(y) : q === 2 ? -ks(y) : -kc(y) }
+  const cos = x => { const n = rd(x * I2P), y = x - n * P1 - n * P1T, q = n & 3; return q === 0 ? kc(y) : q === 1 ? -ks(y) : q === 2 ? -kc(y) : ks(y) }
+  const AH = [4.63647609000806093515e-01, 7.85398163397448278999e-01, 9.82793723247329054082e-01, 1.57079632679489655800e+00], AL = [2.26987774529616870924e-17, 3.06161699786838301793e-17, 1.39033110312309984516e-17, 6.12323399573676603587e-17]
+  const T = [3.33333333333329318027e-01, -1.99999999998764832476e-01, 1.42857142725034663711e-01, -1.11111104054623557880e-01, 9.09088713343650656196e-02, -7.69187620504482999495e-02, 6.66107313738753120669e-02, -5.83357013379057348645e-02, 4.97687799461593236017e-02, -3.65315727442169155270e-02, 1.62858201153657823623e-02]
+  const atan = x => { const neg = x < 0; let a = neg ? -x : x, id = -1
+    if (a >= 0.4375) { if (a < 1.1875) { if (a < 0.6875) { id = 0; a = (2 * a - 1) / (2 + a) } else { id = 1; a = (a - 1) / (a + 1) } } else if (a < 2.4375) { id = 2; a = (a - 1.5) / (1 + 1.5 * a) } else { id = 3; a = -1 / a } }
+    const z = a * a, w = z * z, s1 = z * (T[0] + w * (T[2] + w * (T[4] + w * (T[6] + w * (T[8] + w * T[10]))))), s2 = w * (T[1] + w * (T[3] + w * (T[5] + w * (T[7] + w * T[9]))))
+    const r = id < 0 ? a - a * (s1 + s2) : AH[id] - ((a * (s1 + s2) - AL[id]) - a); return neg ? -r : r }
+  const atan2 = (y, x) => x > 0 ? atan(y / x) : x < 0 ? (y >= 0 ? atan(y / x) + Math.PI : atan(y / x) - Math.PI) : y > 0 ? Math.PI / 2 : y < 0 ? -Math.PI / 2 : 0
+  const hypot = (a, b, c) => c === undefined ? sq(a * a + b * b) : sq(a * a + b * b + c * c)
+  const exp = x => { let k = 0; while (x > 0.5 || x < -0.5) { x /= 2; k++ } let t = 1, s = 1; for (let i = 1; i < 18; i++) { t *= x / i; s += t } while (k--) s *= s; return s }
+  return { sin, cos, atan2, hypot, exp }
+})()
+const MATH0 = { sin: Math.sin, cos: Math.cos, atan2: Math.atan2, hypot: Math.hypot, exp: Math.exp }
+const dmOn = () => Object.assign(Math, DM), dmOff = () => Object.assign(Math, MATH0)
+/** 계산용 화면 크기 — 스폰 반지름 · 화면 안(onScreen) · 돌격대 줄 · 멀리 간 적 지우기 등이 VW · VH 를 쓴다. 모의 토벌 계산 동안만 고정(1280×800 · 배율 1 기준)해 휴대폰 · PC · 확대가 달라도 같은 결과(QA). 관전 그리기는 진짜 화면 그대로 */
+const SIM_VIEW = [728, 455]
+function simCalc(f) { const vw = VW, vh = VH, keep = rnd; VW = SIM_VIEW[0]; VH = SIM_VIEW[1]; rnd = SIM.rng; try { return f() } finally { VW = vw; VH = vh; rnd = keep } }   // 모의 토벌 판 동안만(simNew → simClose). 진짜 판은 늘 원래 Math(startGame 에서 한 번 더 되돌림)
+/** 이번 주 전장(모의 토벌 랭킹) — 2026-11-16(월) 0시 KST 부터 몇째 주 · 전장 = 1 + (주 × 617 + 211) % 999(서버 sim_wk · sim_field 와 같은 식). 월요일 0시 KST 에 바뀐다 */
+const SIM_W0 = Date.UTC(2026, 10, 16) - 9 * 3600e3, SIM_RK = ['normal', 'hard', 'inf']
+const simWeek = (now = Date.now()) => { const wk = Math.floor((now - SIM_W0) / (7 * 864e5)); return { wk, field: 1 + ((wk * 617 + 211) % 999 + 999) % 999, ends: SIM_W0 + (wk + 1) * 7 * 864e5 } }
+const simLeft = () => { const m = Math.max(0, (simWeek().ends - Date.now()) / 6e4 | 0), d = m / 1440 | 0, hh = (m % 1440) / 60 | 0; return d ? tr`${d}일 ${hh}시간` : tr`${hh}시간 ${m % 60}분` }   // 새 전장까지 — 시간대와 상관없이 남은 시간으로(디자인)
 const simStore = () => { try { return JSON.parse(localStorage.getItem(SIM_KEY)) || {} } catch { return {} } }
 const simKeep = d => { try { localStorage.setItem(SIM_KEY, JSON.stringify(d)) } catch {} }   // 작전 · 최근 결과 · 첫 안내 — save 와 따로(서명 · 계정 동기화에 안 섞인다)
 const simLog = (k, id) => SIM.log.push({ t: G.t, k, id })
@@ -4821,11 +4895,11 @@ function simAI() {
   SIM.a = ba; return [bx, by2]
 }
 function simStep() {
-  if (G.t >= SIM.aiT) { [SIM.dx, SIM.dy] = simAI(); SIM.aiT = G.t + SIM_AI }
+  if (G.t >= SIM.aiT) { [SIM.dx, SIM.dy] = simCalc(simAI); SIM.aiT = G.t + SIM_AI }
   joy.x = SIM.dx; joy.y = SIM.dy; key.u = key.d = key.l = key.r = 0   // 그동안 누른 키가 끼어들지 않게(같은 전장 = 같은 결과)
   if (G.t + SIM_DT >= (G.inf ? SIM_INF_T : END_T)) return simEnd('time')   // 30분 — 검은 별똥별에게서 끝까지 버팀(finish 를 타지 않게 먼저). 무한은 쓰러질 때까지(안전 상한 SIM_INF_T)
-  const b0 = G.bosses, sl = { ...G.slain }, keep = rnd
-  rnd = SIM.rng; try { step(SIM_DT) } finally { rnd = keep }   // 시드 무작위는 계산 안에서만 — 화면 그리기 · 다른 타이머가 끼어들지 않게(던져도 되돌린다 · QA)
+  const b0 = G.bosses, sl = { ...G.slain }
+  simCalc(() => step(SIM_DT))   // 시드 무작위 · 계산용 화면 크기는 계산 안에서만 — 화면 그리기 · 다른 타이머가 끼어들지 않게(던져도 되돌린다 · QA)
   if (G.bosses > b0) simLog('boss', Object.keys(G.slain).find(k => (G.slain[k] || 0) > (sl[k] || 0)) || 'siren')
   if (G.dying > 0) return simEnd('dead')
   if (G.t >= SIM.hpT) { SIM.hp.push([G.t, pl.hp / S.maxHp]); SIM.hpT = G.t + 0.5 }   // 체력 — 0.5초마다(가장 낮은 때를 고르려고)
@@ -4850,18 +4924,21 @@ function simPay() {
 function simNew(plan, watch) {   // 새 판 — 화질 단계는 0으로(관전 중엔 안 바꾼다 — fx · 숫자 칸 수가 시드 무작위에 닿는다)
   const ch = CHARS.find(c => c.id === plan.ch), seed = plan.seed || 1 + (Math.random() * 999 | 0)
   if (LQ) { LQ = 0; size() }
+  dmOn()
   SIM = { plan, seed, max: !!DIFF[plan.diff].inf, rng: seeded(seed), log: [], aiT: 0, dx: 0, dy: 0, a: 0, home: [0, 0], hp: [], hpT: 0, end: null, watch, acc: 0, spec: h('div', { class: 'spec', hidden: true }) }
-  const keep = rnd; rnd = SIM.rng; try { calm(); newGame(ch, { diff: plan.diff, winter: plan.winter }) } finally { rnd = keep }
+  simCalc(() => { calm(); newGame(ch, { diff: plan.diff, winter: plan.winter }) })
 }
+function simFail(e) { console.error(e); simClose(); chars() }   // 모의 토벌이 오류로 끊김 — Math · 띠 · 단추를 되돌리고 캐릭터 고르기로(진짜 판은 원래 Math)
+addEventListener('pagehide', () => { if (SIM) dmOff() })   // 탭을 닫거나 다른 데로 갈 때도
 function simClose() {   // 판 정리 — 띠 · ×3 단추 되돌리기
-  SIM?.spec.remove(); SIM = null; G = null; calm(); pauseBtn.hidden = true
+  SIM?.spec.remove(); SIM = null; G = null; calm(); pauseBtn.hidden = true; dmOff()
   const b = document.getElementById('spd'); b.disabled = false; b.textContent = `×${Math.max(2, spd)}`; b.setAttribute('aria-pressed', spd > 1)
 }
 /** 그리지 않고 끝까지(건너뛰기 · 시험) — 조각(28ms)씩 돌려 화면이 멈추지 않게. ctl.stop 이면 null */
 const simFast = (ctl = {}) => new Promise(done => {
   const tick = () => {
     if (ctl.stop) return done(null)
-    const t0 = performance.now(); while (!SIM.end && performance.now() - t0 < 28) simStep()
+    try { const t0 = performance.now(); while (!SIM.end && performance.now() - t0 < 28) simStep() } catch (e) { simFail(e); return done(null) }   // 끊기면 Math 를 되돌리고 나간다
     ctl.prog?.(G.t); SIM.end ? done(SIM.end) : setTimeout(tick, 0)
   }
   tick()
@@ -4869,7 +4946,7 @@ const simFast = (ctl = {}) => new Promise(done => {
 /** 시험용 — 그리지 않고 한 판(seed). watch 면 끝까지 본 것으로(보상금까지) → 결과 */
 function simRun(plan, watch = false) { simNew(plan, watch); return simFast().then(e => { simClose(); return e }) }
 function simWatch(dt) {   // frame 이 부른다 — 실제 시간 × 3 만큼 1/20초 걸음(한 프레임 최대 3걸음 — 못 따라가면 느리게만)
-  if (!SIM.end) { SIM.acc += dt * SIM_X; while (SIM.acc >= SIM_DT && !SIM.end && mode === 'play') { SIM.acc -= SIM_DT; simStep() } }
+  if (!SIM.end) { SIM.acc += dt * SIM_X; try { while (SIM.acc >= SIM_DT && !SIM.end && mode === 'play') { SIM.acc -= SIM_DT; simStep() } } catch (e) { return simFail(e) } }
   if (SIM.end && !SIM.shown) { SIM.shown = 1; const plan = SIM.plan, e = SIM.end; SIM.spec.remove(); setTimeout(() => { if (SIM?.end === e) { simClose(); simResult(plan, e) } }, 1000) }   // 1초 멈춘 화면을 보여 주고 결과로
 }
 // ---- 화면 — 캐릭터 고르기의 「모의 토벌」 단추 → (처음 한 번 안내) → 작전 짜기 → 관전(3배속) → 결과 · 비교
@@ -4905,8 +4982,9 @@ function simPlan(again) {
     const pal = (t, ids) => h('div', { class: 'pal' }, ids.map(id => { const list = plan[t], used = list.includes(id)
       return h('button', { type: 'button', class: `${used ? 'used' : ''}${t === 'w' && !used && mated(id) ? ' want' : ''}${!used && list.length >= 6 ? ' full' : ''}`, 'aria-label': t === 'w' ? WEAP[id].name : PASS[id].name, onclick: () => toggle(t, id) }, ic(id), h('small', { 'aria-hidden': 'true' }, (SIM_TAG[id] ?? '').replace(/\s?(?=[↑↓])/g, '\u2060').replace(/ (?=\+)/g, '\u00a0'))) }))   // 아이콘 밑 글 — 화살표 · +1 이 혼자 줄을 내려가지 않게(디자인)
     box.replaceChildren(
-      h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`토벌 성향` }, Object.keys(STYLE).map(k => h('button', { type: 'button', role: 'radio', class: plan.s === k ? 'on' : '', 'aria-checked': String(plan.s === k), onclick: () => { plan.s = k; keepPlan(); draw() } }, STYLE[k].name))),
-      h('p', { class: 'sim-style-note' }, STYLE[plan.s].note),
+      h('div', { class: 'sim-opt' }, h('span', {}, tr`성향`), h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`토벌 성향` }, Object.keys(STYLE).map(k => h('button', { type: 'button', role: 'radio', class: plan.s === k ? 'on' : '', 'aria-checked': String(plan.s === k), onclick: () => { plan.s = k; keepPlan(); draw() } }, STYLE[k].name))),
+        h('span', {}, tr`전장`), h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`전장` }, [[false, plan.seed && !plan.week ? tr`전장 ${plan.seed}` : tr`새 전장`], [true, tr`이번 주 #${simWeek().field}`]].map(([v, name]) => h('button', { type: 'button', role: 'radio', class: `${!!plan.week === v ? 'on' : ''}${v && plan.pop ? ' new' : ''}`, 'aria-checked': String(!!plan.week === v), onclick: () => { plan.week = v; plan.pop = false; draw() } }, name)))),
+      h('p', { class: 'sim-style-note' }, STYLE[plan.s].note, h('br'), h('span', { class: 'fld' }, plan.diff === 'easy' ? tr`쉬움은 랭킹이 없어요` : plan.week ? tr`끝까지 보면 이번 주 랭킹에 올라가요` : tr`랭킹은 이번 주 전장에서만 올라가요`)),
       h('p', { class: 'sim-lab' }, tr`무기 순서 ${plan.w.length}/6`), slots('w', plan.w),
       h('p', { class: 'sim-lab' }, tr`보조 순서 ${plan.p.length}/6`), slots('p', plan.p),
       h('p', { class: 'sim-info', 'aria-live': 'polite' }, info),
@@ -4914,10 +4992,14 @@ function simPlan(again) {
       h('p', { class: 'sim-lab' }, tr`무기`), pal('w', Object.keys(WEAP)), h('p', { class: 'sim-lab' }, tr`보조`), pal('p', Object.keys(PASS)))
   }
   draw()
-  show(h('div', { class: 'panel wide pick simplan' }, h('p', { class: 'h' }, tr`작전 짜기`), simSetRow({ ...plan, s: null }), box,
+  show(h('div', { class: 'panel wide pick simplan' }, h('p', { class: 'h' }, tr`작전 짜기`), simSetRow({ ...plan, s: null, seed: 0 }), box,
     h('div', { class: 'row' }, btn(tr`← 뒤로`, chars), btn(tr`시작!`, () => { const s = simStore(); simKeep({ ...s, plans: { ...s.plans, [ch.id]: { w: plan.w.slice(1), p: plan.p, s: plan.s } } }); simGo(plan) }, 'main'))))
 }
-function simGo(plan) {   // 관전 — 진짜 판 화면 그대로(HUD · 일시정지 단추), ×3 단추는 눌린 채 흐리게, 아래 띠(방금 고른 것 · 그만두기 · 결과로 건너뛰기)
+async function simGo(plan) {   // 관전 — 진짜 판 화면 그대로(HUD · 일시정지 단추), ×3 단추는 눌린 채 흐리게, 아래 띠(방금 고른 것 · 그만두기 · 결과로 건너뛰기)
+  if (plan.week) {   // 이번 주 전장 — 로그인 · 랭킹 판이면 서버 시작 표(그 주 · 전장을 서버 시계로). 못 받으면 이 기기 시계로(올리기는 안 됨)
+    const loc = simWeek(); plan = { ...plan, seed: loc.field, wk: loc.wk, ticket: false }
+    if (auth && SIM_RK.includes(plan.diff)) { const r = await rpc('sim_start'); if (r?.field) plan = { ...plan, seed: r.field, wk: r.wk, ticket: true } }
+  }
   simNew(plan, true)
   const b = document.getElementById('spd'); b.textContent = '×3'; b.setAttribute('aria-pressed', 'true'); b.disabled = true
   SIM.spec.append(h('div', { class: 'spec-pick', 'aria-live': 'polite' }, h('span', { class: 'ai' }, tr`AI 대원`), h('span', { class: 'what' }, tr`싸우는 중…`)),
@@ -4938,6 +5020,24 @@ function simSkip() {   // 남은 부분은 그리지 않고 계산 — 지난번
   show(h('div', { class: 'panel wide pick sim' }, h('p', { class: 'h' }, tr`모의 토벌`), simSetRow(plan), h('div', { class: 'sim-hop' }, portrait(plan.ch)), txt, bar, h('div', { class: 'row' }, btn(tr`취소`, () => { ctl.stop = true }))))
   ctl.prog(G.t)
   simFast(ctl).then(e => { simClose(); e ? simResult(plan, e) : simPlan({ ...plan, seed: 0 }) })
+}
+/** 결과 화면 랭킹 줄 — 끝까지 본 이번 주 전장 판만 올린다(서버 submit_sim). 올랐으면 연보라 칸, 아니면 작은 글 한 줄(디자인) */
+function simRankLine(plan, r) {
+  const soft = s => h('p', { class: 'rk-soft' }, s)
+  if (!SIM_RK.includes(plan.diff)) return null
+  if (!plan.week) return soft(tr`랭킹은 이번 주 전장에서만 올라가요`)
+  if (r.pay.why === 'skip') return soft(tr`끝까지 본 판만 랭킹에 올라가요`)
+  if (!auth) return h('div', { class: 'rk-login' }, h('span', {}, tr`로그인하면 다음 판부터 이번 주 랭킹에 올라가요`), btn(tr`로그인`, loginBox))
+  if (!NICK) return h('div', { class: 'rk-login' }, h('span', {}, tr`닉네임을 정하면 랭킹에 올라가요`), btn(tr`닉네임 정하기`, () => nickBox()))
+  const box = h('div', {}, soft(tr`랭킹에 올리는 중…`))
+  if (!plan.ticket) { box.replaceChildren(soft(tr`랭킹에 올리지 못했어요 — 인터넷 연결을 확인해 주세요`)); return box }
+  rpc('submit_sim', { diff: plan.diff, winter: plan.winter, ch: plan.ch, s: plan.s, w: plan.w.join(' '), p: plan.p.join(' '), kind: r.kind, t: Math.floor(r.t), kills: r.kills, bosses: r.bosses, lv: r.lv || 0, lvl: r.lvl, v: PATCH_ID }).then(x => {
+    if (x?.r === 'ok' && x.rank) box.replaceChildren(h('div', { class: 'rk-up' }, h('span', { class: `rk n ${RK_COL[x.rank] || ''}` }, x.rank), h('span', {}, h('b', {}, tr`이번 주 ${x.rank}위`), h('small', {}, tr`랭킹에 올렸어요`)), btn(tr`랭킹 보기`, () => ranking(null, plan.winter, 'sim', plan.diff))))
+    else if (x?.r === 'kept') box.replaceChildren(soft(x.rank ? tr`이번 주 내 최고는 ${x.rank}위예요` : tr`이번 주 내 기록이 더 좋아요`))
+    else if (x?.r === 'odd') box.replaceChildren(soft(tr`랭킹 기록을 확인 중이에요`))   // 같은 작전 다른 결과 — 다수 · 먼저와 달라 내려감(서버 sim_vote)
+    else box.replaceChildren(soft(tr`랭킹에 올리지 못했어요 — 인터넷 연결을 확인해 주세요`))
+  })
+  return box
 }
 function simResult(plan, r) {
   mode = 'simres'
@@ -4967,10 +5067,11 @@ function simResult(plan, r) {
     h('div', { class: 'scroll' },
       h('div', { class: 'stats' }, r.lv != null ? stat(tr`도달 단계`, `∞ ${r.lv}`) : stat(tr`레벨`, r.lvl), stat(tr`버틴 시간`, fmt(r.t)), stat(tr`처치`, r.kills.toLocaleString()), stat(tr`보스`, r.bosses)),   // 무한은 진짜 판 결과처럼 도달 단계부터
       h('div', { class: 'coin pay' }, h('p', {}, ic('coin'), h('span', {}, tr`모의 토벌 보상금`, h('small', {}, paySub)), h('b', {}, `+${p.coin}`))),
+      simRankLine(plan, r),
       h('p', { class: `sim-why ${r.kind === 'dead' ? '' : 'win'}` }, (r.kind === 'dead' ? icSafe(r.killerT) : icSafe('siren')) || '', why),
       dmgBox, h('p', { class: 'dt' }, tr`주요 로그`), h('ul', { class: 'log' }, main), ups.length ? h('details', {}, h('summary', {}, tr`레벨업 전부 보기`), h('ul', { class: 'log' }, ups)) : null,
       h('p', { class: 'dt' }, tr`이 기기 최근 5번`), cmp),
-    h('div', { class: 'row two' }, btn(tr`닫기`, chars), btn(tr`한 번 더!`, () => simPlan({ ...plan, seed: r.seed }), 'main'))))
+    h('div', { class: 'row two' }, btn(tr`닫기`, chars), btn(tr`한 번 더!`, () => simPlan({ ...plan, seed: r.seed, ticket: false }), 'main'))))
 }
 setInterval(() => {   // 캐릭터 고르기 — 고른 캐릭터가 제자리걸음
   if (mode !== 'chars') return
@@ -5022,7 +5123,7 @@ function terms(back = title) {
 }
 /** 개인정보 처리방침 — 처음 화면 맨 아래 링크 · 주소 ?privacy 로 바로(카카오 · 구글 로그인 설정에 넣는 주소: https://chii-ka-wa.github.io/?privacy)
  *  고치면 PRIVACY_DAY(시행일)도. 실제와 같아야 한다 — 보관 기간은 supabase/account.sql 의 gc() · 비우기(scrub) · delete_me 와 맞춘다 */
-const PRIVACY_DAY = '2026-11-19'
+const PRIVACY_DAY = '2026-11-21'
 function privacy(back = title) {
   mode = 'privacy'
   const sec = (t, ...li) => [h('h3', { class: 'day' }, t), h('ul', { class: 'pv' }, li.map(s => h('li', {}, s)))]
@@ -5033,6 +5134,7 @@ function privacy(back = title) {
         tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
       sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록(플레이한 언어 포함), 이용약관 동의 기록(약관 시행일 · 동의한 시각)`,
         tr`쿠폰 사용 기록(계정 번호 · 쿠폰 · 받은 때): 쿠폰을 한 계정에 한 번만 드리려고 보관하며, 쿠폰 기간이 끝나고 7일 뒤 또는 계정을 지우면 지웁니다.`,
+        tr`모의 토벌 랭킹 기록(계정 번호 · 닉네임 · 작전 · 결과 · 판 번호): 랭킹을 보여 주려고 보관하며, 그 주가 끝나고 2주 뒤 또는 계정을 지우면 지웁니다.`,
         tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`,
         tr`로그인 중에는 랭킹 기록 확인을 위해 익명 플레이 통계를 항상 보냅니다(끌 수 없습니다).`),
       sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남기며 90일 뒤 지웁니다.`,

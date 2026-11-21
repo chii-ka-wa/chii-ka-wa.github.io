@@ -328,6 +328,33 @@ ul.pv { margin: 0; padding: 0 4px 0 1.3em; text-align: left; font-size: 15px; li
 /* 자동 알림 띠(모의 토벌 관전 띠와 같은 자리 · 모양) — 1.5초 뒤 .3초 동안 사라진다 */
 .spec.auto-band .spec-pick { transition: opacity .3s } .spec.auto-band.out .spec-pick { opacity: 0 }
 /* 자동이 멈춘 레벨업 창 — 노란 「알림」 칸(빨강은 위험 · 쓰러짐용) */
+/* 모의 토벌 랭킹(디자인 2026-11-21) — 탭이 제목을 겸한다 · 난이도 알약 · 두 줄 카드(누르면 자세히) */
+.rk-tabs { margin: 0 0 8px }
+.rk-diff { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 6px 0 2px } .rk-diff button { flex: none; white-space: nowrap }
+.rk-week { white-space: pre-line } :lang(ja) .rk-week { word-break: auto-phrase; text-wrap: balance }   /* ja 는 「・」 뒤에서 줄을 나눈다(번역 글의 줄바꿈) */
+.rk-diff button { display: inline-flex; align-items: center; gap: 4px; padding: 3px 12px 3px 8px; font: inherit; font-size: 14px; background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 999px; cursor: pointer } .rk-diff .ico { width: 18px; height: 18px }
+.rk-diff button.on { color: #fff } .rk-diff button.normal.on { background: #f2b53a } .rk-diff button.hard.on { background: #ef5a5a } .rk-diff button.inf.on { background: #9b6bff }
+.panel.rank .rk-sim > li:not(.ghost):not(.wait) { display: grid; grid-template-columns: 30px 40px minmax(0, 1fr) auto; grid-template-rows: auto auto; grid-template-areas: "n pt nm sc" "bd bd bd bd"; align-items: center; gap: 4px 8px; padding: 8px 10px; cursor: pointer }   /* 무한 랭킹 줄 규칙(≤400 격자 등)보다 세게 */
+.panel.rank .rk-sim > li > .n { grid-area: n } .panel.rank .rk-sim > li > .pt { grid-area: pt; line-height: 0; justify-self: center } .panel.rank .rk-sim > li > .pt canvas.pt { height: 36px; max-width: 40px; object-fit: contain }
+.panel.rank .rk-sim > li > .nm { grid-area: nm; min-width: 0 } .panel.rank .rk-sim > li > .sc { grid-area: sc; display: block; text-align: right; line-height: 1.2 }
+.panel.rank .rk-sim .nm b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis } .panel.rank .rk-sim .nm small, .panel.rank .rk-sim .sc small { display: block; font-size: 12px; color: var(--soft) }
+.panel.rank .rk-sim > li > .bd { grid-area: bd; display: flex; align-items: center; gap: 2px; min-width: 0 } .rk-sim .bd .w, .rk-sim .bd .p { display: inline-flex; gap: 2px }
+.rk-sim .bd .w .ico { width: 18px; height: 18px } .rk-sim .bd .p .ico { width: 16px; height: 16px }
+.rk-sim .bd i.sep { width: 2px; height: 14px; margin: 0 6px; background: #e3d8cc; border-radius: 1px }
+.rk-sim .bd::after { content: '›'; margin-left: auto; padding-left: 6px; font-size: 18px; color: var(--soft) }
+.panel.rank .rk-sim .sc, .rk-sim .win, .simi .win { font-family: inherit } .rk-sim .win, .simi .win { font-weight: bold } .rk-sim .win, .simi .win { display: inline-block; padding: 0 8px; background: #ffd23f; border: 2px solid var(--ink); border-radius: 999px; font-size: 13px; white-space: nowrap }
+.panel.simi { text-align: center } .panel.simi > canvas.pt { height: 72px } .panel.simi > .sc { margin: 0 0 6px } .panel.simi .sim-set canvas.pt, .panel.simi .sim-set span > :first-child { width: auto; height: 24px }   /* 알약 안 그림 — 자세히 창(.rinfo)의 72px 규칙보다 세게(디자인) */ .panel.simi .sc small { display: block; font-size: 12px; color: var(--soft) } .panel.simi .sim-lab { text-align: left }
+.pal.ro button { cursor: default; pointer-events: none }
+/* 작전 짜기 — 이름 붙은 설정 줄(성향 · 전장) */
+.sim-opt { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 10px; margin: 2px 0 4px }
+.sim-opt > span { font-size: 13px; color: var(--soft) } .sim-opt > .theme.sim-style { justify-self: start; margin: 0 } .sim-opt .theme button.new { animation: pop .3s ease-out }
+.sim-style-note .fld { color: var(--soft) }
+/* 결과 — 랭킹에 올랐을 때만 연보라 칸, 그 밖은 작은 글 */
+.rk-up { display: flex; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 12px; background: #f3edff; border: 2px solid #c9b3ff; border-radius: 14px; font-size: 15px; color: var(--ink); text-align: left }
+.rk-up .n { flex: none } .rk-up b { display: block; font-size: 16px } .rk-up small { display: block; font-size: 13px; color: var(--soft) }
+.rk-login { display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 10px 12px; background: #fff7fa; border: 2px dashed var(--pink); border-radius: 16px; font-size: 14px; text-align: left } .rk-login .btn { margin: 0 0 0 auto; flex: none; font-size: 15px; padding: 5px 14px; box-shadow: 0 3px 0 var(--ink) } .rk-up .btn { margin: 0 0 0 auto; flex: none; font-size: 14px; padding: 4px 12px; box-shadow: 0 3px 0 var(--ink) }
+.rk-soft { margin: 6px 0; font-size: 13px; color: var(--soft); text-align: center }
+@media (prefers-reduced-motion: reduce) { .sim-opt .theme button.new { animation: none } }
 .lvl-note { margin: -2px 0 10px; padding: 6px 12px; background: #fff4d6; border: 2px solid #ffd23f; border-radius: 12px; font-size: 14px; line-height: 1.4; color: var(--ink); text-align: center; text-wrap: balance } .lvl-note b { display: block }
 @media (max-height: 500px) { .panel.sim-intro canvas.pt { height: 44px } .panel.sim-intro p { margin: 6px 0 } }   /* 낮은 화면 — 첫 안내가 한눈에 */
 .panel.sim-intro { text-align: center } .panel.sim-intro canvas.pt { height: 72px } .panel.sim-intro .pk { font-family: inherit; color: var(--pink) }
@@ -658,6 +685,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611211850"></script>
+<script type="module" src="game.js?v=202611220218"></script>
 </body>
 </html>

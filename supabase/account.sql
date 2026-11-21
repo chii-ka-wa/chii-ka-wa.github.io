@@ -362,6 +362,7 @@ declare me uuid := auth.uid();
 begin
   if me is null then return 'nologin'; end if;
   delete from cheat_log where uid = me;
+  begin delete from sim_ranks where uid = me; delete from sim_starts where uid = me; exception when undefined_table then null; end;   -- 모의 토벌 랭킹(9번 — 계정을 지우면 cascade 로도 지워진다)
   delete from bans where uid = me;   -- 정지 · 그 계정 때문에 걸린 IP 차단까지(사용자 결정 — 탈퇴하면 보관하던 것도 지운다)
   begin delete from auth.audit_log_entries where payload->>'actor_id' = me::text; exception when others then null; end;   -- 로그인 기록(계정 번호만 남아 있다)
   delete from auth.users where id = me;
@@ -408,7 +409,8 @@ create or replace function public.gc() returns void language plpgsql security de
   delete from cheat_log l where l.at < now() - interval '90 days' and not exists (select 1 from bans b where (b.uid = l.uid or b.ip_h = l.ip_h) and (b.until is null or b.until > now()));
   delete from bans where until <= now();
   delete from run_gate where at < now() - interval '1 hour';
-  delete from coupon_uses u where not exists (select 1 from coupons c where c.id = u.id and c.ends > now() - interval '7 days');   -- 끝난 쿠폰의 사용 기록 — 7일 뒤(8번 · 끝나기 직전에 받고 며칠 뒤 올라오는 저장도 봐주게)
+  delete from coupon_uses u where not exists (select 1 from coupons c where c.id = u.id and c.ends > now() - interval '7 days');
+  begin perform sim_gc(); exception when undefined_function or undefined_table then null; end;   -- 모의 토벌 랭킹 — 그 주가 끝나고 2주 뒤(9번)   -- 끝난 쿠폰의 사용 기록 — 7일 뒤(8번 · 끝나기 직전에 받고 며칠 뒤 올라오는 저장도 봐주게)
 end $$;
 revoke all on function public.gc from public, anon, authenticated;
 do $$ begin
@@ -470,3 +472,124 @@ select c.t as "확인", c.ok as "켜짐" from (
   select 'auth.' || t || ' 개인정보 비우기', exists (select 1 from pg_trigger g where g.tgname = 'mjg_scrub' and g.tgrelid = to_regclass('auth.' || t)) from unnest(array['users', 'identities', 'audit_log_entries', 'sessions']) t
   union all select 'pg_cron 오래된 기록 지우기', exists (select 1 from pg_extension where extname = 'pg_cron')
 ) c(t, ok);
+
+-- 9) 모의 토벌 랭킹(사용자 · 기획 2026-11-21) — 「이번 주 전장」 하나로 작전(캐릭터 · 무기 · 보조 순서 · 성향)을 겨룬다. 보통 · 어려움 · 무한 × 겨울 · 풀밭, 한 사람당 주 · 판마다 최고 하나
+--    주 = 2026-11-16(월) 0시 KST 부터 몇째 주(월요일 0시에 바뀐다) · 전장 = 1 + (주 × 617 + 211) % 999 — game.js 의 simWeek 와 같은 식
+--    끝까지 관전한 판만(게임) · 관전 시작에 sim_start · 실제 흐른 시간 ≥ 기록 ÷ 3 − 30초(모자라면 거절만) · 같은 작전 · 주 · 판 번호인데 결과가 다르면 둘 다 내리고 'sim' 으로 남긴다(정지 · 자동 차단 셈에는 안 넣는다 — 기획)
+create or replace function public.sim_wk(at timestamptz default now()) returns int language sql immutable as $$
+  select floor(((at at time zone 'Asia/Seoul')::date - date '2026-11-16') / 7.0)::int
+$$;
+create or replace function public.sim_field(wk int) returns int language sql immutable as $$ select 1 + ((wk * 617 + 211) % 999 + 999) % 999 $$;
+create table if not exists public.sim_starts (uid uuid primary key references auth.users on delete cascade, at timestamptz not null default now(), wk int not null);
+alter table public.sim_starts enable row level security;
+revoke all on public.sim_starts from anon, authenticated;
+create table if not exists public.sim_ranks (
+  uid    uuid not null references auth.users on delete cascade,
+  wk     int  not null,                                                    -- 주(sim_wk) — 전장은 sim_field(wk)
+  diff   text not null check (diff in ('normal', 'hard', 'inf')),
+  winter boolean not null,
+  ch     text not null check (ch ~ '^[a-z]{2,12}$'),
+  s      text not null check (s in ('move', 'stay')),                      -- 성향
+  w      text not null check (w ~ '^[a-z]{2,12}( [a-z]{2,12}){0,5}$'),     -- 작전 무기 순서(기본 무기부터)
+  p      text not null default '' check (p ~ '^([a-z]{2,12}( [a-z]{2,12}){0,5})?$'),   -- 작전 보조 순서
+  kind   text not null check (kind in ('dead', 'win', 'time')),            -- 쓰러짐 · 세이렌 격파(보통 · 어려움) · 끝까지(30분 · 무한 60분 상한)
+  t      int  not null check (t between 0 and 3601),                       -- 버틴 시간(초) — 격파면 격파 시각
+  kills  int  not null check (kills between 0 and 10000000),
+  bosses int  not null check (bosses between 0 and 1000),
+  lv     int  not null default 0 check (lv between 0 and 100),             -- 무한 단계
+  lvl    int  not null check (lvl between 1 and 5000),
+  v      text not null check (v ~ '^\d{4}-\d{2}-\d{2}#\d{1,3}$'),          -- 판 번호(PATCH_ID) — 판이 바뀌면 같은 작전도 결과가 다를 수 있다
+  real   int,                                                              -- 관전 시작 → 올리기까지 실제 초
+  hidden boolean not null default false,                                   -- 같은 답 맞추기 · 재현 확인에서 어긋나 내린 기록
+  at     timestamptz not null default now(),
+  primary key (uid, wk, diff, winter)
+);
+alter table public.sim_ranks enable row level security;
+revoke all on public.sim_ranks from anon, authenticated;
+create index if not exists sim_ranks_board on public.sim_ranks (wk, diff, winter);
+create index if not exists sim_ranks_same on public.sim_ranks (wk, diff, winter, ch, s, w, p, v);
+-- 순서 열쇠(클수록 위) — 보통 · 어려움: 격파 → 격파 시각 ↑(빠를수록) / 버틴 시간 ↓ → 처치 ↓, 무한: 단계 ↓ → 보스 ↓ → 버틴 시간 ↓. 같으면 먼저 세운 기록(at ↑)
+create or replace function public.sim_key(r sim_ranks) returns numeric[] language sql immutable as $$
+  select case when r.diff = 'inf' then array[r.lv, r.bosses, r.t, 0]::numeric[] else array[(r.kind = 'win')::int, case when r.kind = 'win' then -r.t else r.t end, r.kills, 0]::numeric[] end
+$$;
+-- 이번 주 → { wk, field, ends } — 누구나(로그인 없이 랭킹 위 글)
+create or replace function public.sim_week() returns json language sql stable as $$
+  select json_build_object('wk', sim_wk(), 'field', sim_field(sim_wk()), 'ends', ((date '2026-11-16' + (sim_wk() + 1) * 7)::timestamp at time zone 'Asia/Seoul'))
+$$;
+-- 관전 시작 — 그 주(넘어가는 판은 시작한 주로 받는다) → { wk, field }
+create or replace function public.sim_start() returns json language sql security definer set search_path = public as $$
+  insert into sim_starts (uid, wk) select auth.uid(), sim_wk() where auth.uid() is not null on conflict (uid) do update set at = now(), wk = sim_wk()
+  returning json_build_object('wk', wk, 'field', sim_field(wk))
+$$;
+-- 올리기 → { r: 'ok' | 'kept'(내 이번 주 기록이 더 좋음) | 'nonick' | 'nostart' | 'bad' | 'fast' | 'old' | 'hold'(차단) | 'odd'(같은 작전 다수 · 먼저 올라온 결과와 달라 확인 중 — 내려감), rank }
+create or replace function public.submit_sim(diff text, winter boolean, ch text, s text, w text, p text, kind text, t int, kills int, bosses int, lv int, lvl int, v text)
+returns json language plpgsql security definer set search_path = public as $$
+declare st timestamptz; wk0 int; nw sim_ranks; old sim_ranks; had boolean;
+begin
+  if auth.uid() is null or not exists (select 1 from players where uid = auth.uid()) then return json_build_object('r', 'nonick'); end if;
+  if banned() then return json_build_object('r', 'hold'); end if;
+  delete from sim_starts x where x.uid = auth.uid() returning x.at, x.wk into st, wk0;   -- 한 판에 한 번
+  if st is null then return json_build_object('r', 'nostart'); end if;
+  if split_part(submit_sim.w, ' ', 1) is distinct from (json_build_object('chiikawa', 'sasu', 'hachiware', 'guitar', 'usagi', 'stick', 'momonga', 'momo', 'kurimanju', 'kanpai', 'rakko', 'sword', 'kani', 'book', 'shisa', 'ramen') ->> submit_sim.ch)   -- 첫 무기는 그 캐릭터 기본 무기
+    or submit_sim.diff = 'inf' and submit_sim.kind = 'win'
+    or submit_sim.kills > 100 * submit_sim.t + 100 or submit_sim.lvl > submit_sim.t / 4 + 20 or submit_sim.lv > 0 and submit_sim.diff <> 'inf' then return json_build_object('r', 'bad'); end if;
+  if now() - st < make_interval(secs => submit_sim.t / 3.0 - 30) then return json_build_object('r', 'fast'); end if;   -- 3배속 관전(건너뛰면 몇 초) — 거절만
+  if now() - st > interval '3 hours' then return json_build_object('r', 'old'); end if;
+  begin
+    nw := row(auth.uid(), wk0, submit_sim.diff, submit_sim.winter, submit_sim.ch, submit_sim.s, submit_sim.w, coalesce(submit_sim.p, ''), submit_sim.kind, submit_sim.t, submit_sim.kills, submit_sim.bosses,
+      coalesce(submit_sim.lv, 0), submit_sim.lvl, submit_sim.v, round(extract(epoch from now() - st)), false, now())::sim_ranks;
+  exception when others then return json_build_object('r', 'bad'); end;
+  select * into old from sim_ranks r where r.uid = nw.uid and r.wk = nw.wk and r.diff = nw.diff and r.winter = nw.winter; had := found;
+  if had and not old.hidden and sim_key(old) >= sim_key(nw) then
+    return json_build_object('r', 'kept', 'rank', (select k.rank from my_sim(nw.diff, nw.winter) k));
+  end if;
+  insert into sim_ranks values (nw.*) on conflict on constraint sim_ranks_pkey do update set ch = excluded.ch, s = excluded.s, w = excluded.w, p = excluded.p, kind = excluded.kind, t = excluded.t, kills = excluded.kills,
+    bosses = excluded.bosses, lv = excluded.lv, lvl = excluded.lvl, v = excluded.v, real = excluded.real, hidden = excluded.hidden, at = excluded.at;
+  if had then perform sim_vote(old); end if;   -- 예전 작전 묶음에서 빠졌으니 그쪽도 다시 센다
+  perform sim_vote(nw);
+  if (select r.hidden from sim_ranks r where r.uid = nw.uid and r.wk = nw.wk and r.diff = nw.diff and r.winter = nw.winter) then return json_build_object('r', 'odd'); end if;
+  return json_build_object('r', 'ok', 'rank', (select k.rank from my_sim(nw.diff, nw.winter) k));
+end $$;
+-- 같은 답 맞추기(다수결 + 먼저 — 기획 · QA · QC): 같은 주(= 같은 전장) · 판 · 작전 · 판 번호 기록을 결과별로 묶어 계정이 많은 묶음 → 같으면 먼저 올라온 묶음이 이긴다.
+--   진 묶음은 내리고(hidden) 'sim', 다시 이긴 쪽은 보이게 하고 'sim'(restore) — 정지 · 자동 차단 셈에는 안 들어간다(살펴보기용). 한 계정 장난(나중에 다른 결과 하나)은 늘 진다. 여러 계정 장난은 2단계 재현 확인(Actions)이 가린다
+create or replace function public.sim_vote(k sim_ranks) returns void language plpgsql security definer set search_path = public as $$
+declare w record; r record;
+begin
+  select x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl into w from sim_ranks x
+  where x.wk = k.wk and x.diff = k.diff and x.winter = k.winter and x.ch = k.ch and x.s = k.s and x.w = k.w and x.p = k.p and x.v = k.v
+  group by x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl order by count(*) desc, min(x.at) limit 1;
+  if not found then return; end if;
+  for r in select * from sim_ranks x where x.wk = k.wk and x.diff = k.diff and x.winter = k.winter and x.ch = k.ch and x.s = k.s and x.w = k.w and x.p = k.p and x.v = k.v
+    and x.hidden = ((x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl) = (w.kind, w.t, w.kills, w.bosses, w.lv, w.lvl)) loop   -- 표시가 틀린 줄만(이긴 쪽인데 숨김 · 진 쪽인데 보임)
+    update sim_ranks x set hidden = not r.hidden where x.uid = r.uid and x.wk = r.wk and x.diff = r.diff and x.winter = r.winter;
+    insert into cheat_log (uid, ip_h, reason, detail) values (r.uid, null, 'sim', json_build_object('diff', r.diff, 'w', r.w, 'v', r.v, 't', r.t, 'kills', r.kills, 'act', case when r.hidden then 'restore' else 'hide' end)::jsonb);
+  end loop;
+end $$;
+-- 이번 주 TOP 100(판마다) · 내 순위 — 내린 기록 · 차단된 계정 빼고
+create or replace function public.top_sims(on_diff text, on_winter boolean)
+returns table (rank bigint, nick text, ch text, s text, w text, p text, kind text, t int, kills int, bosses int, lv int, lvl int, v text, at timestamptz, me boolean)
+language sql stable security definer set search_path = public as $$
+  select row_number() over (order by sim_key(r) desc, r.at), pl.nick, r.ch, r.s, r.w, r.p, r.kind, r.t, r.kills, r.bosses, r.lv, r.lvl, r.v, r.at, r.uid = auth.uid()
+  from sim_ranks r join players pl on pl.uid = r.uid
+  where r.wk = sim_wk() and r.diff = on_diff and r.winter = on_winter and not r.hidden and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
+  order by sim_key(r) desc, r.at limit 100
+$$;
+create or replace function public.my_sim(on_diff text, on_winter boolean)
+returns table (rank bigint, nick text, ch text, s text, w text, p text, kind text, t int, kills int, bosses int, lv int, lvl int, v text, at timestamptz, me boolean, hidden boolean)
+language sql stable security definer set search_path = public as $$
+  with board as (
+    select row_number() over (order by sim_key(r) desc, r.at) as rank, r.* from sim_ranks r
+    where r.wk = sim_wk() and r.diff = on_diff and r.winter = on_winter and not r.hidden and not exists (select 1 from bans x where x.uid = r.uid and (x.until is null or x.until > now()))
+  )
+  select b.rank, pl.nick, m.ch, m.s, m.w, m.p, m.kind, m.t, m.kills, m.bosses, m.lv, m.lvl, m.v, m.at, true, m.hidden
+  from sim_ranks m join players pl on pl.uid = m.uid left join board b on b.uid = m.uid
+  where m.uid = auth.uid() and m.wk = sim_wk() and m.diff = on_diff and m.winter = on_winter
+$$;
+revoke all on function public.sim_vote, public.sim_wk, public.sim_field, public.sim_key, public.sim_week, public.sim_start, public.submit_sim, public.top_sims, public.my_sim from public, anon, authenticated;
+grant execute on function public.sim_week, public.top_sims to anon, authenticated;
+grant execute on function public.sim_start, public.submit_sim, public.my_sim to authenticated;
+-- 지난 기록 — 그 주가 끝나고 2주 뒤 지운다(처리방침). gc 가 부른다
+create or replace function public.sim_gc() returns void language sql security definer set search_path = public as $$
+  delete from sim_ranks where wk < sim_wk() - 2; delete from sim_starts where at < now() - interval '1 day'
+$$;
+revoke all on function public.sim_gc from public, anon, authenticated;

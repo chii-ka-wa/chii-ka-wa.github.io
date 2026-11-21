@@ -12,7 +12,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2, locale: 'ko-KR' })   // 고른 말이 없으면 브라우저 언어 — 점검은 한국어 브라우저로
     page.on('pageerror', e => errors.push(`[${name}] ${e.message}`))
-    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis', 'terms', 'coupon'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
+    page.on('request', q => { if (q.url().includes('.supabase.co') && !['acct', 'sync', 'susp', 'login', 'gis', 'terms', 'coupon', 'simrank'].includes(name) && !q.url().includes('rpc/blocked')) errors.push(`[${name}] 점검 중에 진짜 통계 서버로 보냄 ${q.url()}`) })   // 로컬에서는 안 보내야 한다(acct 는 page.route 로 흉내 낸 서버에만)
     await page.route('**/rpc/blocked', r => r.fulfill({ status: 200, contentType: 'application/json', body: 'null' }))   // IP 차단 확인(?secure · ?guard 면 묻는다) — 진짜 서버 대신 「안 막힘」. ban 은 따로
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${name}] console: ${m.text()}`) })
     await page.goto(URL); await page.waitForTimeout(600)
@@ -415,10 +415,33 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       while (performance.now() - t0 < 60000 && M.mode !== 'box' && M.mode !== 'over' && M.mode !== 'revive') { await wait(100); const k = (M.G.t | 0) % 6 < 3; dispatchEvent(new KeyboardEvent('keydown', { code: k ? 'ArrowRight' : 'ArrowLeft' })); dispatchEvent(new KeyboardEvent('keyup', { code: k ? 'ArrowLeft' : 'ArrowRight' })); if (M.G.lvl > lv) { picks += M.G.lvl - lv; lv = M.G.lvl } }
       return { mode: M.mode, t: Math.round(M.G.t), lvl: M.G.lvl, note: !!document.querySelector('#ui .lvl-note'), used: [M.G.rr, M.G.skips, M.G.bans].join(','), w: M.G.weapons.map(w => w.id + w.lv).join(' '), bad: M.G.bad || null } })
     await prep(0); await page.reload(); await page.waitForTimeout(400); const off = await play()
-    await prep(1); await page.reload(); await page.waitForTimeout(400); const on = await play()
+    let on; for (let i = 0; i < 3; i++) { await prep(1); await page.reload(); await page.waitForTimeout(400); on = await play(); if (on.mode === 'box') break }   // 진짜 판이라 무작위 — 멈춤 알림 전에 쓰러지면 다시(시험 흔들림)
     console.log('autopick off', JSON.stringify(off), 'on', JSON.stringify(on))
     if (off.mode !== 'box' || off.note || off.lvl !== 2) errors.push('[autopick] 끄면 평소 창 ' + JSON.stringify(off))
     if (on.mode !== 'box' || !on.note || on.used !== '0,0,0' || on.lvl < 3 || on.bad) errors.push('[autopick] 켜면 자동 → 멈춤 알림 ' + JSON.stringify(on))
+  })
+
+  await run('simrank', { width: 360, height: 740 }, async page => {   // 모의 토벌 랭킹 — 탭 · 난이도 · 두 줄 카드 · 자세히 → 이 작전 써 보기(이번 주 전장) · 끝까지 본 판 올리기 · Math 되돌림
+    const sent = []
+    await page.route(/supabase\.co/, r => { const u = r.request().url(), body = r.request().postDataJSON?.() || {}, j = x => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(x) })
+      if (u.includes('rpc/')) sent.push(u.split('rpc/')[1].split('?')[0] + (body.on_diff ? ':' + body.on_diff : ''))
+      if (u.includes('agreed')) return j({ day: '2026-11-18' }); if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' })
+      if (u.includes('top_sims')) return j([{ rank: 1, nick: '하치팬', ch: 'hachiware', s: 'stay', w: 'guitar pochette', p: 'manju', kind: 'win', t: 1500, kills: 40000, bosses: 7, lv: 0, lvl: 80, v: 'x', me: false }])
+      if (u.includes('my_sim')) return j([]); if (u.includes('sim_start')) return j({ wk: 0, field: 212 }); if (u.includes('submit_sim')) { sent.push('submit:' + JSON.stringify(body)); return j({ r: 'ok', rank: 1 }) }
+      if (u.includes('saves?select')) return j([]); if (u.includes('top_ranks') || u.includes('my_rank')) return j([]); return r.fulfill({ status: 204 }) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter' })); localStorage.setItem('mjg.sim', JSON.stringify({ seen2: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
+    await page.reload(); await page.waitForTimeout(900)
+    await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400); await page.locator('.rk-tabs button').nth(1).click(); await page.waitForTimeout(500)
+    const v = await page.evaluate(() => { const li = document.querySelector('.list.rk-sim li'), r = n => li.querySelector(n)?.getBoundingClientRect(); return { rows: document.querySelectorAll('.list.rk-sim li').length, on: document.querySelector('.rk-diff button.on')?.textContent, sub: document.querySelector('.panel.rank .sub').textContent, two: r('.bd').top > r('.nm').bottom - 2, win: li.querySelector('.win')?.textContent } })
+    await page.locator('.list.rk-sim li').first().click(); await page.waitForTimeout(300); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(400)
+    const plan = await page.evaluate(() => ({ mode: window.__mjg.mode, on: [...document.querySelectorAll('.sim-opt .theme button.on')].map(b => b.textContent).join('|'), w: document.querySelectorAll('.slots')[0].querySelectorAll('button.on').length }))
+    await page.locator('#ui .row .btn.main').click(); await page.waitForTimeout(600)
+    const run = await page.evaluate(async () => { const M = window.__mjg, sin0 = Math.sin; const during = String(Math.sin).includes('native'); let n = 0; while (M.SIM && !M.SIM.end && n++ < 80000) M.simStep(); await new Promise(r => setTimeout(r, 1800)); return { during, after: String(Math.sin).includes('native'), seed: M.SIM?.seed, rk: document.querySelector('.rk-up')?.textContent || null } })
+    console.log('simrank', JSON.stringify(v), JSON.stringify(plan), JSON.stringify(run), sent.filter(x => !x.startsWith('submit')).join(' '))
+    const sub = sent.find(x => x.startsWith('submit:')), body = sub && JSON.parse(sub.slice(7))
+    if (v.rows !== 1 || !/보통/.test(v.on) || !v.sub.includes('#212') && !/#\d+/.test(v.sub) || !v.two || !/격파 25:00/.test(v.win)) errors.push('[simrank] 랭킹 줄 ' + JSON.stringify(v))
+    if (plan.mode !== 'simplan' || !plan.on.includes('이번 주') || plan.on.split('|')[0] !== '정착형' || plan.w !== 2) errors.push('[simrank] 이 작전 써 보기 ' + JSON.stringify(plan))
+    if (run.during || !run.after || !/1위/.test(run.rk || '') || !body || body.ch !== 'hachiware' || body.w !== 'guitar pochette' || body.s !== 'stay' || !sent.includes('sim_start')) errors.push('[simrank] 올리기 · Math ' + JSON.stringify(run) + ' ' + sub)
   })
 
   await run('autobox', { width: 1280, height: 720 }, async page => {   // 작전대로 자동 선택 — 각성 상자(목록 순서) · 보물상자 · 잭팟(다 받기)도 창 없이(QC)
@@ -463,6 +486,10 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
       const pays = []; for (let i = 0; i < 4; i++) { const c0 = save().coin, e = await M.simRun({ ...plan, seed: 0 }, true); pays.push([e.pay.coin, save().coin - c0, e.pay.n, e.pay.why || '']) }
       const inf = await M.simRun({ ...plan, diff: 'inf', seed: 22 })   // 무한 — 쓰러질 때까지(30분에 끊지 않는다) · 도달 단계 · 상점 강화 최대 기준
       return { inf: [inf.kind, Math.round(inf.t), inf.lv], a: key(a), b: key(b), c: key(c), same, pays, day: save().simPay, up: save().up.manju, ach: save().ach?.coin || 0, sim: M.SIM, G: !!M.G, okW: plan.w.every(id => a.w.includes(id)) } })
+    await page.setViewportSize({ width: 1280, height: 800 }); await page.waitForTimeout(300)   // 창 크기가 달라도 같은 결과(계산용 화면 크기 고정 — QA)
+    r.wide = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 11, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }); return [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|') })
+    await page.setViewportSize({ width: 360, height: 740 }); await page.waitForTimeout(300)
+    if (r.wide !== r.a) errors.push('[sim] 창 크기에 따라 결과가 다름 ' + r.a + ' / ' + r.wide)
     console.log('sim', JSON.stringify(r))
     if (r.inf[0] !== 'dead' && r.inf[1] < 1800 || typeof r.inf[2] !== 'number') errors.push('[sim] 무한 ' + JSON.stringify(r.inf))
     if (r.a !== r.b || r.a === r.c || !r.same || r.sim || r.G || !r.okW) errors.push('[sim] 같은 전장 · 성향 · save · 정리 ' + JSON.stringify(r))
