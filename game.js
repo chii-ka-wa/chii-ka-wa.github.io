@@ -32,6 +32,8 @@ if (CJK) document.head.append(Object.assign(document.createElement('link'), { re
 
 const TAU = Math.PI * 2
 let SIM = null   // 모의 토벌을 돌리는 중(아래 「모의 토벌」)
+/** 섞기(Fisher–Yates · rnd) — 비교 함수에 rnd 를 쓰는 정렬은 엔진마다 비교 횟수가 달라 모의 토벌 결과가 브라우저마다 갈렸다(QA 2026-11-22) */
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]] } return a }
 let rnd = Math.random   // 모의 토벌은 고정 시드로 바꿔 끼운다(simRun) — 게임 결과에 닿는 무작위는 모두 rnd 를 거친다(Math.random 은 소리뿐)
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v
 const fmt = s => `${String(s / 60 | 0).padStart(2, '0')}:${String(s % 60 | 0).padStart(2, '0')}`
@@ -50,7 +52,7 @@ const CHARS = [
   { id: 'usagi', name: tr`우사기`, w: 'stick', hp: 100, trait: tr`야하!`, note: tr`이동 속도 +20% · 공격력 +10%`, mod: { move: 0.2, might: 0.1 } },
   { id: 'momonga', name: tr`모몽가`, w: 'momo', hp: 90, trait: tr`내 거야!`, note: tr`보스 · 정예에게 주는 피해 +30% · 이동 속도 +15%`, mod: { bossX: 0.3, move: 0.15 } },
   { id: 'kurimanju', name: tr`쿠리만쥬`, w: 'kanpai', hp: 130, trait: tr`캬아~`, note: tr`받는 피해 -2 · 초당 체력 0.5 회복 · 경험치 줍는 거리 +30%`, mod: { armor: 2, regen: 0.5, magnet: 0.3 } },
-  { id: 'rakko', name: tr`랏코`, w: 'sword', hp: 120, trait: tr`토벌 랭킹 1위`, note: tr`치명타 확률 +15% · 치명타 피해 2.5배`, mod: { crit: 0.15, critX: 0.5 } },
+  { id: 'rakko', name: tr`랏코`, w: 'sword', hp: 120, trait: tr`토벌 랭킹 1위`, note: tr`치명타 확률 +10% · 치명타 피해 2.2배`, mod: { crit: 0.1, critX: 0.2 } },   // 밸런스 2026-11-22 — +15% · 2.5배는 평균 피해 ×1.56(다른 캐릭터 ×1.19)이었다
   { id: 'kani', name: tr`카니`, w: 'book', hp: 110, trait: tr`헌책방 주인`, note: tr`범위 +20% · 투사체 속도 +20%`, mod: { area: 0.2, speed: 0.2 } },
   { id: 'shisa', name: tr`시사`, w: 'ramen', hp: 110, trait: tr`라멘집 수행 중`, note: tr`경험치 +15% · 쿨타임 -5% · 지속 시간 +15%`, mod: { growth: 0.15, cdr: 0.05, dur: 0.15 } },
 ]
@@ -74,6 +76,8 @@ const WEAP = {
   kanpai: { name: tr`건배!`, note: tr`잔이 맞은 적에서 옆 적으로 튕겨 가며 부딪친다`, how: tr`적 사이를 튕겨 다니기`, cd: 1.4, dmg: 15, pierce: 1, bounce: 2, ups: [{ bounce: 1 }, { dmg: 6 }, { n: 1 }, { bounce: 2 }, { dmg: 8 }, { cd: -0.2 }, { n: 1, bounce: 3, dmg: 8 }] },   // 11-17 너프 — 섞어 들면 피해의 30~45% 를 가져갔다
   sword: { name: tr`랏코 선생의 일섬`, note: tr`화면을 가로지르는 칼바람 — 줄 위의 적을 모두 벤다`, how: tr`화면을 가로지르는 베기`, cd: 2.4, dmg: 20, ups: [{ dmg: 6 }, { area: 0.25 }, { n: 1 }, { cd: -0.3 }, { dmg: 7 }, { area: 0.25 }, { n: 1, dmg: 8 }] },   // 11-17 너프 — 후반(Lv 8)이 가장 셌다
 }
+/** 투사체 스킬 — 「둘이서 같이」가 개수 +1 하는 것(장판 · 범위 · 둘레는 빼고 · 사용자 · 기획 2026-11-22). 도감 · 레벨업 카드에 「투사체」 꼬리표 */
+const PROJ = new Set(['sasu', 'book', 'pochette', 'kanpai', 'tears', 'nantoka', 'momo', 'sword', 'guitar'])
 const UP = { n: v => tr`개수 +${v}`, dmg: v => tr`피해 +${v}`, cd: v => tr`쿨타임 ${v}초`, area: v => tr`범위 +${Math.round(v * 100)}%`, spd: v => tr`속도 +${Math.round(v * 100)}%`, dur: v => tr`지속 +${v}초`, pierce: v => tr`관통 +${v}`, bounce: v => tr`튕김 +${v}` }
 // 시너지 — 짝인 두 스킬을 다 가지면 둘 다 세진다(wstat). 스킬마다 짝은 하나
 const SYN = [
@@ -110,8 +114,13 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 유치원 · 초등학생도 읽기 쉽게: 한 줄에 그림 하나(ic) · 꼬리표 하나 · 짧은 문장 하나. 새 항목을 맨 위에.
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
+  ['2026-11-22', [
+    ['fix', 'inf', tr`밸런스 패치! 랏코 치명타 조금 약하게(+10% · 2.2배) · 어려움 · 무한 보스 체력 1.5배 · 오니기리 회복 20%(쉬움은 그대로) · 「둘이서 같이」는 투사체 스킬만 +1 · 무한 보스가 처음부터 새 패턴(1단계부터 기술 하나 더)`],   // 사용자 · 기획 2026-11-22
+    ['fix', 'magnet', tr`고침: 바닥에 보석이 많으면 새 보석이 멀리 쌓여 안 보이던 문제(경험치는 사라지지 않았어요)`],
+    ['fix', 'chest', tr`모의 토벌 랭킹은 무한 모드만 — 무한 작전 짜기의 전장 기본이 「이번 주」예요`],
+  ]],
   ['2026-11-21', [
-    ['new', 'inf', tr`「모의 토벌 랭킹」이 생겼어요! 매주 같은 전장에서 누구의 작전이 가장 오래 버티는지 겨뤄요(겨울 · 풀밭 따로). 1등의 작전을 그대로 불러와 써 볼 수도 있어요.`],   // 사용자 · 기획 · 디자인
+    ['new', 'inf', tr`「모의 토벌 랭킹」이 생겼어요! 매주 같은 전장에서 누구의 작전이 무한 모드를 가장 오래 버티는지 겨뤄요(겨울 · 풀밭 따로). 1등의 작전을 그대로 불러와 써 볼 수도 있어요.`],   // 사용자 · 기획 · 디자인
     ['up', 'parry', tr`무한 모드에서도 각성 스킬이 날아오는 것을 원래 확률대로 막아요(1단계부터 절반이던 것을 되돌렸어요)`],   // 무한 각성 막기 원복(사용자)
   ]],
   ['2026-11-20', [
@@ -261,15 +270,16 @@ const PASS = {
   slipper: { name: tr`잠옷 슬리퍼`, note: tr`이동 속도 +10%`, max: 5 },
   wind: { name: tr`모몽가의 날갯짓`, note: tr`투사체 속도 +10%`, max: 5 },
   bento: { name: tr`도시락`, note: tr`지속 시간 +10%`, max: 5 },
-  double: { name: tr`둘이서 같이`, note: tr`모든 스킬 투사체 +1`, max: 2 },
+  double: { name: tr`둘이서 같이`, note: tr`투사체 스킬 +1`, max: 2 },
   pouch: { name: tr`큰 주머니`, note: tr`경험치 줍는 거리 +30%`, max: 5 },
   clover: { name: tr`네잎클로버`, note: tr`행운 +10% (잭팟 · 치명타 · 떨어지는 것)`, max: 5 },
   wage: { name: tr`토벌 보수`, note: tr`경험치 +8%`, max: 5 },
 }
-const FILL = { onigiri: { name: tr`오니기리`, note: tr`체력 40% 회복` }, cheer: { name: tr`응원`, note: tr`이번 판 공격력 +2% (최대 +50%, 무한 모드는 끝없이)` } }   // 더 올릴 게 없을 때
+const ONI = () => G?.diff === 'easy' ? [0.4, 0.3] : [0.2, 0.2]   // 오니기리 회복 [레벨업 채움, 맵 줍기] — 쉬움은 그대로(아이 · 처음 하는 사람), 그 밖 20%(사용자 · 기획 2026-11-22)
+const FILL = { onigiri: { name: tr`오니기리`, note: tr`체력 20% 회복(쉬움 40%)` }, cheer: { name: tr`응원`, note: tr`이번 판 공격력 +2% (최대 +50%, 무한 모드는 끝없이)` } }   // 더 올릴 게 없을 때
 // 줍는 것 — 적이 떨어뜨린다(USE)
 const ITEMS = {
-  onigiri: { name: tr`오니기리`, note: tr`체력 30% 회복` },
+  onigiri: { name: tr`오니기리`, note: tr`체력 20% 회복(쉬움 30%)` },
   magnet: { name: tr`자석`, note: tr`흩어진 경험치를 모두 끌어온다` },
   momonga: { name: tr`모몽가의 귀여운 척`, note: tr`모두가 넋을 잃어 6초 동안 적이 멈춘다` },
   firework: { name: tr`폭죽`, note: tr`화면 안의 적을 모두 쓰러뜨린다(보스는 큰 피해)` },
@@ -322,8 +332,8 @@ const BOSS = {
   mermaid: { name: tr`인어`, line: tr`라~♪`, note: tr`세이렌의 코러스 — 곁을 돌다가 날카로운 이빨로 달려들어 문다. 살아 있는 동안 세이렌은 받는 피해 -50%` },
   siren: { name: tr`세이렌`, line: tr`내 노래를 들어 봐…`, note: tr`노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다`, st: 'charm', stCd: 14 },
 }
-const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인어는 그대로)
-const HARD_HP = { anoko: 6, siren: 10 }   // 어려움 · 무한 0단계(25분까지 어려움과 같은 진행)의 후반 보스 체력 배수 — 센 판 기준 아노코 약 50초(60초 「화남」 전) · 세이렌 약 90초(기획 2026-11-18). 무한 1단계부터는 단계 보정이 따로 있어 곱하지 않는다
+const BOSS_HP = 1.5   // 보스 · 중간보스 체력 배수(세이렌 · 인어는 그대로) — 어려움 · 무한은 ×1.5 더(2.25 · 사용자 · 기획 2026-11-22)
+const HARD_HP = { anoko: 4, siren: 10 }   // 아노코 6 → 4: 보스 ×1.5(어려움 · 무한)와 곱해 예전과 같은 9배(기획 2026-11-22 — 이틀 전 따로 올렸으니 더 얹지 않는다) · 어려움 · 무한 0단계(25분까지 어려움과 같은 진행)의 후반 보스 체력 배수 — 센 판 기준 아노코 약 50초(60초 「화남」 전) · 세이렌 약 90초(기획 2026-11-18). 무한 1단계부터는 단계 보정이 따로 있어 곱하지 않는다
 const RAGE_T = 60   // 보스 · 중간보스가 이만큼(초) 살아 있으면 화낸다 — 빨라지고(×1.5) 기술 간격 60% · 몸통 피해 ×1.4
 // 보스가 나오는 때 — [초, 종류, 중간보스면 1]. FINAL_T 에 세이렌 + 인어 셋(finale)
 // 무한 — 세이렌을 쓰러뜨리면 단계(lv)가 오른다. 단계마다 강해진 보스가 lv+1 마리씩 INF.gap 초마다(종류는 섞어서 BOSS 여섯이 다 나올 때까지), 다 쓰러뜨리면 세이렌 lv+1 명(인어 셋씩). INF.dark 초 안에 못 쓰러뜨리면 검은 별똥별
@@ -697,7 +707,7 @@ const RK_COL = ['', 't3', 't2', 't1']   // 1 · 2 · 3등 — 금 · 은 · 동
 const icSafe = id => { try { return ic(id) } catch { return null } }   // 랭킹 기록은 서버 것 — 예전 판의 없어진 id 여도 화면이 멈추지 않게
 /** 랭킹 화면 — 전체 TOP 100(사람마다 최고 하나) · 캐릭터별 TOP 10. 줄을 누르면 자세히 */
 let rankW = true   // 랭킹 맵 — 겨울(기본) · 풀밭. 맵마다 따로(사람마다 맵마다 최고 하나)
-let rankTab = 'inf', rankDiff = 'normal'   // 랭킹 탭(토벌 · 모의 토벌) · 모의 토벌 난이도
+let rankTab = 'inf', rankDiff = 'inf'   // 랭킹 탭(토벌 · 모의 토벌) · 모의 토벌 난이도
 async function ranking(only = null, w = rankW, tab = rankTab, diff = rankDiff) {
   mode = 'rank'; G = null; rankW = w; rankTab = tab; rankDiff = diff
   const tabs = h('div', { class: 'wr-mode rk-tabs', role: 'tablist' }, [['inf', [ic('inf'), tr` 토벌 랭킹`]], ['sim', tr`모의 토벌 랭킹`]].map(([k, s]) =>
@@ -724,9 +734,10 @@ async function ranking(only = null, w = rankW, tab = rankTab, diff = rankDiff) {
 }
 /** 모의 토벌 랭킹 — 이번 주 전장 · 판(보통 · 어려움 · 무한 × 맵)마다 TOP 100. 줄을 누르면 자세히(작전 · [이 작전 써 보기]) */
 async function simRanking(w, diff, tabs, mapPick) {
+  if (!SIM_RK.includes(diff)) diff = rankDiff = SIM_RK[0]
   const W = simWeek(), list = h('ol', { class: 'list rank rk-sim scroll' }, h('li', { class: 'wait' }, tr`불러오는 중…`)), mine = h('div', { class: 'mine rk-sim' })
   const ghost = (txt, b) => h('li', { class: 'ghost' }, h('span', {}, txt), b || h('span', {}))
-  const dp = h('div', { class: 'rk-diff', role: 'radiogroup', 'aria-label': tr`난이도` }, SIM_RK.map(k => h('button', { type: 'button', role: 'radio', 'aria-checked': String(diff === k), class: `${k}${diff === k ? ' on' : ''}`, onclick: () => diff !== k && ranking(null, w, 'sim', k) }, ic(k), DIFF[k].name)))
+  const dp = SIM_RK.length > 1 ? h('div', { class: 'rk-diff', role: 'radiogroup', 'aria-label': tr`난이도` }, SIM_RK.map(k => h('button', { type: 'button', role: 'radio', 'aria-checked': String(diff === k), class: `${k}${diff === k ? ' on' : ''}`, onclick: () => diff !== k && ranking(null, w, 'sim', k) }, ic(k), DIFF[k].name))) : null   // 판이 하나(무한)면 고르기 없음
   show(h('div', { class: 'panel wide pick rank' }, tabs, mapPick, dp, h('p', { class: 'sub rk-week' }, tr`이번 주 전장 #${W.field} · 새 전장까지 ${simLeft()}`), mine, list, h('div', { class: 'row' }, btn(tr`← 처음으로`, title))))
   const [rows, me] = await Promise.all([rpc('top_sims', { on_diff: diff, on_winter: w }), auth ? rpc('my_sim', { on_diff: diff, on_winter: w }) : null])
   if (mode !== 'rank' || rankTab !== 'sim') return
@@ -3230,13 +3241,13 @@ function weapons(dt) {
         if ((w.pt -= dt) <= 0) { w.pt = 0.8; near(pl.x, pl.y, 58 * A, e => { hurt(e, D * 0.5, pl.x, pl.y, 150) }); fx({ k: 'ring', x: pl.x, y: pl.y, R: 58 * A, T: 0.3, col: '#ffc2e0' }) }   // 연주하는 동안 0.8초마다 몸에 붙은 적을 살짝 밀쳐 낸다(음표 원 안쪽은 음표가 못 닿으니)
         if ((w.on -= dt) <= 0) w.t = st.cd * CD
       } else if ((w.t -= dt) <= 0) {
-        const n = st.n + S.amount; w.on = st.dur * S.dur; w.fire = G.t; w.pt = 0
+        const n = st.n + (PROJ.has(w.id) ? S.amount : 0); w.on = st.dur * S.dur; w.fire = G.t; w.pt = 0
         for (let i = 0; i < n; i++) G.shots.push({ src: SRC, k: 'orb', w, i, n, R: 80 * A, r: 10 * Math.sqrt(A), dmg: D, life: w.on, hit: new Map(), x: pl.x, y: pl.y, t: 0 })
       }
       continue
     }
     if (w.q > 0) { if ((w.qt -= dt) <= 0) { SHOT[w.id](w, st, w.n - w.q, A, D); w.q--; w.qt = 0.12; w.fire = G.t } }
-    else if ((w.t -= dt) <= 0) { w.n = w.q = st.n + S.amount; w.qt = 0; w.t = st.cd * CD; w.list = ['sasu', 'kanpai', 'nantoka', 'weed'].includes(w.id) ? closest(w.n) : w.id === 'momo' ? strongest(w.n) : [] }
+    else if ((w.t -= dt) <= 0) { w.n = w.q = st.n + (PROJ.has(w.id) ? S.amount : 0); w.qt = 0; w.t = st.cd * CD; w.list = ['sasu', 'kanpai', 'nantoka', 'weed'].includes(w.id) ? closest(w.n) : w.id === 'momo' ? strongest(w.n) : [] }
   }
 }
 
@@ -3246,7 +3257,7 @@ const dmgK = m => 1 + 0.055 * Math.min(m, 20) + 0.02 * clamp(m - 20, 0, 5) + 0.1
 const hpK = m => { const i = Math.min(5, m / 5 | 0); return HPK[i] + (HPK[i + 1] - HPK[i]) * Math.min(1, m / 5 - i) }
 function spawn(type, x, y) {
   const F = FOES[type], m = G.t / 60, mm = Math.min(m, 30), big = type in BOSS
-  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP) * (HARD_HP[type] && (G.diff === 'hard' || (G.inf && !G.loop.lv)) ? HARD_HP[type] : 1) : hpK(mm) * (G.inf ? 1 + INF.foe * G.loop.lv : 1)) * G.D.hp * (big ? 1 : G.crowd || 1)
+  const hp = F.hp * (big ? (1 + mm * 0.25) * (type === 'siren' || type === 'mermaid' ? 1 : BOSS_HP * (G.diff === 'hard' || G.inf ? 1.5 : 1)) * (HARD_HP[type] && (G.diff === 'hard' || (G.inf && !G.loop.lv)) ? HARD_HP[type] : 1) : hpK(mm) * (G.inf ? 1 + INF.foe * G.loop.lv : 1)) * G.D.hp * (big ? 1 : G.crowd || 1)
   const e = {
     type, v: 0, x: 0, y: 0, r: F.r, hp, max: hp, spd: F.spd * (0.9 + rnd() * 0.2), dmg: F.dmg * dmgK(m), xp: F.xp * (big ? 1 : G.crowd || 1),
     vx: 0, vy: 0, kx: 0, ky: 0, flash: 0, slow: 0, fx: 1, seed: rnd() * 10, cd: 1 + rnd() * 2, st: 'walk', stT: 3, dx: 0, dy: 0, age: 0, z: 0,
@@ -3261,11 +3272,13 @@ function summon(kind, mid = false) {
   const e = spawn(kind), B = BOSS[kind]
   if (mid) { e.mid = true; e.max *= 0.4; e.hp = e.max; e.r *= 0.8; e.sc = 0.8; e.xp = Math.round(e.xp * 0.3) }
   Object.assign(e, { castT: G.t + 6 + rnd() * 4, patT: 2.5 + rnd(), pat: 0 })
+  if (G.inf && kind !== 'siren' && kind !== 'mermaid') e.loop = 0.5   // 무한 — 0단계부터 변형 기술(참). 단계 무리는 infStep 이 단계 수(1 ~)로 덮는다 — 1단계부터 기술 하나 더(e.loop ≥ 1 · 사용자 · 기획 2026-11-22)
   bubble(e, B.line, '#fff'); kind === 'siren' ? SND.siren() : SND.boss()   // 세이렌은 따로 — 파도 · 하프 · 노랫소리
   say(mid ? tr`중간보스 — ${B.name}` : tr`${B.name} 등장!`, 2.2, mid ? '#ffb35e' : '#ff6b6b'); shake = Math.max(shake, mid ? 4 : 8)
   return e
 }
 const bubble = (e, s, col) => fx({ k: 'shout', e, s, col, T: 1.8 })
+const newMove = (e, s) => { if (e.newSk?.has(s)) return; (e.newSk ||= new Set()).add(s); fx({ k: 'shout', e, s, col: 'new', T: 2.2 }) }   // 무한 새 기술 — 처음 쓸 때 머리 위에 이름(처음 보는 기술에 억울하게 맞지 않게)
 /** 최종보스 — 세이렌 + 둘레를 도는 인어 셋. 인어가 살아 있는 동안 세이렌은 받는 피해 -50% */
 function infStep() {   // 무한 — 보스 무리(일정 시간마다) → 다 쓰러뜨리면 세이렌 여럿
   const L = G.loop
@@ -3303,7 +3316,7 @@ function progress() {   // 진행 시계 — 어느 세이렌이든 페이즈를
 }
 function stageClear(e) {   // 무한 — 세이렌을 모두 쓰러뜨렸다 → 다음 단계(보스 무리부터)
   const L = G.loop
-  L.lv++; L.queue = [...INF.kinds].sort(() => rnd() - 0.5); L.spawned = []; L.next = G.t + INF.rest
+  L.lv++; L.queue = shuffle([...INF.kinds]); L.spawned = []; L.next = G.t + INF.rest
   G.final = null; SND.play(fieldSong(), false, G.ch.id)
   for (const f of G.foes) if (!f.dead) kill(f, true)   // 잠깐 숨 돌리게 — 남은 적은 모두 도망친다
   item(e.x, e.y, 'chest'); fx({ k: 'pillar', T: 1 })
@@ -3540,7 +3553,10 @@ const ACT = {
   slamAt(e, a) { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 95, t: 0, T: 0.9, dmg: pct(0.18), col: '#8a8f99' }); if (e.loop && (a.n ?? 3) > 1) e.act = { k: 'slamAt', t: 0.35, n: (a.n ?? 3) - 1 } },   // 쇠공 팔로 내 자리를 내려찍는다(무한 3연속)
   papers(e, a) { const n = 12, o = ((e.pat + (a.second ? 1 : 0)) % 2) * Math.PI / n; for (let i = 0; i < n; i++) { const q = o + i / n * TAU; G.eshots.push({ k: 'paper', x: e.x, y: e.y, vx: Math.cos(q) * 180, vy: Math.sin(q) * 180, t: 0, life: 3.2, dmg: pct(0.06), r: 7 }) }
     if (e.loop && !a.second) e.act = { k: 'papers', t: 0.35, second: true } },   // 무한 — 0.35초 뒤 반 칸 돌려 한 겹 더
-  pepper(e) { for (let i = 0, n = e.loop ? 14 : 9; i < n; i++) { const a = rnd() * TAU, d = i ? 40 + rnd() * 160 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 38, t: -i * 0.07, T: 1, dmg: pct(0.08), col: '#5b4a42' }) } },
+  pepper(e, a = {}) {   // 요리사 「후추 톡톡」 — 나 둘레에 작은 후추 장판. 무한 1단계부터 0.6초 뒤 토르티야(돌돌)가 이어진다
+    for (let i = 0, n = e.loop ? 14 : 9; i < n; i++) { const q = rnd() * TAU, d = i ? 40 + rnd() * 160 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(q) * d, y: pl.y + Math.sin(q) * d, R: 38, t: -i * 0.07, T: 1, dmg: pct(0.08), col: '#5b4a42' }) }
+    if (e.loop >= 1 && !a.combo) { newMove(e, tr`후추 다음엔 돌돌!`); e.act = { k: 'wrap', t: 0.6, combo: true } }
+  },
   wrap(e) { G.haz.push({ k: 'bomb', x: pl.x, y: pl.y, R: e.loop ? 140 : 115, t: 0, T: 1.25, dmg: pct(0.2), col: '#e9b949' }) },   // 토르티야로 돌돌 — 밖으로 피하기
   sweep(e) { G.haz.push({ k: 'bomb', x: e.x, y: e.y, R: 150, t: 0, T: 1, dmg: pct(0.18), col: '#4f9a8c' }); if (e.loop) e.act = { k: 'lunge', t: 1 } },   // 용 꼬리로 둘레를 휩쓴다 — 멀리 벗어나기(무한 — 터지면 바로 돌진)
   lunge(e) { const dx = pl.x - e.x, dy = pl.y - e.y, d = Math.hypot(dx, dy) || 1; Object.assign(e, { st: 'wind', stT: 0.7, dx: dx / d, dy: dy / d }) },
@@ -3549,24 +3565,31 @@ const ACT = {
     for (let i = 0; i < 5; i++) { const a = rnd() * TAU, d = i ? 70 + rnd() * 150 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 55, t: 0, T: 0.9, dmg: pct(0.06), col: '#4a86e8', tear: true, kind: e.kind }) }
   },
   duel(e) {   // 가위바위보 「가위바위보 승부!」 — 보스 손을 이기는 손 원에 2초 안에 들어가기. 그 원만 안전, 둘레 320 은 쾅. 원 셋은 똑같이(정답을 미리 티 내지 않게), 땅에 고정
-    const H = ['rock', 'scissors', 'paper'], hand = H[rnd() * 3 | 0], win = { rock: 'paper', scissors: 'rock', paper: 'scissors' }[hand], o = rnd() * TAU, order = [...H].sort(() => rnd() - 0.5)
-    G.haz.push({ k: 'duel', x: pl.x, y: pl.y, R: 320, t: 0, T: 2, dmg: pct(0.25), col: '#ff4d4d', hand, win, kind: e.kind, opts: order.map((k, i) => ({ hand: k, x: pl.x + Math.cos(o + i * TAU / 3) * 150, y: pl.y + Math.sin(o + i * TAU / 3) * 150 * 0.8 })) })
-    fx({ k: 'hand', e, hand, T: 2 }); e.act = { k: 'hold', t: 2 }
+    const H = ['rock', 'scissors', 'paper'], hand = H[rnd() * 3 | 0], win = { rock: 'paper', scissors: 'rock', paper: 'scissors' }[hand], o = rnd() * TAU, order = shuffle([...H])
+    if (e.loop >= 1) newMove(e, tr`자리 바꾸기!`)
+    G.haz.push({ k: 'duel', swap: e.loop >= 1, x: pl.x, y: pl.y, R: 320, t: 0, T: e.loop >= 1 ? 2.6 : 2, dmg: pct(0.25), col: '#ff4d4d', hand, win, kind: e.kind, opts: order.map((k, i) => ({ hand: k, x: pl.x + Math.cos(o + i * TAU / 3) * 150, y: pl.y + Math.sin(o + i * TAU / 3) * 150 * 0.8 })) })
+    fx({ k: 'hand', e, hand, T: e.loop >= 1 ? 2.6 : 2 }); e.act = { k: 'hold', t: e.loop >= 1 ? 2.6 : 2 }
   },
   sauce(e, a) { e.spray = { t: 0, acc: 0, a: Math.atan2(pl.y - e.y, pl.x - e.x), dir: a.dir }; e.act = { k: 'hold', t: 2.4 } },   // 요리사 괴물 「빙글빙글 소스」 — 0.9초 국자를 돌린 뒤 2.4초
   // ---- 무한 새 기술 — 띠(band): 몸에서 뻗는 긴 띠가 차오른 뒤 쾅. 겨눈 뒤로는 따라오지 않는다
-  trident(e) {   // 아노코 「세 갈래 꼬리」 — 나를 겨눈 청록 띠 셋(가운데 · 좌우 25°)
+  trident(e) {   // 아노코 「세 갈래 꼬리」 — 나를 겨눈 청록 띠 셋(가운데 · 좌우 25°). 무한 1단계부터 넷(사이로 피하기)
     const q = Math.atan2(pl.y - e.y, pl.x - e.x)
-    for (const o of [-25, 0, 25]) G.haz.push({ k: 'band', x: e.x, y: e.y, a: q + o * Math.PI / 180, L: 450, W: 70, t: 0, T: 1, dmg: pct(0.22), col: '#4f9a8c', kind: e.kind })
+    if (e.loop >= 1) newMove(e, tr`네 갈래!`)
+    for (const o of e.loop >= 1 ? [-36, -12, 12, 36] : [-25, 0, 25]) G.haz.push({ k: 'band', x: e.x, y: e.y, a: q + o * Math.PI / 180, L: 450, W: 70, t: 0, T: 1, dmg: pct(0.22), col: '#4f9a8c', kind: e.kind })
     e.act = { k: 'hold', t: 1 }
   },
-  quake(e) {   // 데카츠요 「쿵쿵 충격파」 — 제자리에서 세 번, 몸에서 붉은 띠 넷(+ → × → +), 사이 0.5초
-    for (let k = 0; k < 3; k++) for (let j = 0; j < 4; j++) G.haz.push({ k: 'band', x: e.x, y: e.y, a: (k % 2) * Math.PI / 4 + j * Math.PI / 2, L: 500, W: 60, t: -k * 1.4, T: 0.9, dmg: pct(0.18), col: '#ff3c3c', kind: e.kind })
-    e.act = { k: 'hold', t: 2 * 1.4 + 0.9 }
+  quake(e, a = {}) {   // 데카츠요 「쿵쿵 충격파」 — 제자리에서 세 번, 몸에서 붉은 띠 넷(+ → × → +), 사이 0.5초. 무한 1단계부터 한 번 더(반 칸 돌려)
+    for (let k = 0; k < 3; k++) for (let j = 0; j < 4; j++) G.haz.push({ k: 'band', x: e.x, y: e.y, a: ((k + (a.second ? 1 : 0)) % 2) * Math.PI / 4 + j * Math.PI / 2, L: 500, W: 60, t: -k * 1.4, T: 0.9, dmg: pct(0.18), col: '#ff3c3c', kind: e.kind })
+    if (e.loop >= 1 && !a.second) { newMove(e, tr`충격파 두 번!`); e.act = { k: 'quake', t: 2 * 1.4 + 0.9 + 0.4, second: true } }
+    else e.act = { k: 'hold', t: 2 * 1.4 + 0.9 }
   },
-  lane() {   // 고블린 대장 「돌격대 출동!」 — 화면 끝에서 나를 지나는 주황 줄 → 1초 뒤 돌격대 6마리가 그 줄로 달려 지나간다
-    const a = rnd() * TAU, c = Math.cos(a), s = Math.sin(a), d = Math.min(VW / 2 / Math.max(0.01, Math.abs(c)), VH / 2 / Math.max(0.01, Math.abs(s))) + 40
-    G.haz.push({ k: 'band', x: pl.x - c * d, y: pl.y - s * d, a, L: d * 2, W: 80, t: 0, T: 1, dmg: pct(0.14), col: '#ff8a2b', lane: 6 })
+  lane(e) {   // 고블린 대장 「돌격대 출동!」 — 화면 끝에서 나를 지나는 주황 줄 → 1초 뒤 돌격대 6마리가 그 줄로 달려 지나간다. 무한 1단계부터 줄 둘(엇갈려)
+    const a0 = rnd() * TAU
+    for (const a of e.loop >= 1 ? [a0, a0 + Math.PI / 2] : [a0]) {
+      const c = Math.cos(a), s = Math.sin(a), d = Math.min(VW / 2 / Math.max(0.01, Math.abs(c)), VH / 2 / Math.max(0.01, Math.abs(s))) + 40
+      G.haz.push({ k: 'band', x: pl.x - c * d, y: pl.y - s * d, a, L: d * 2, W: 80, t: a === a0 ? 0 : -0.4, T: 1, dmg: pct(0.14), col: '#ff8a2b', lane: 6 })
+    }
+    if (e.loop >= 1) newMove(e, tr`돌격대 두 줄!`)
   },
   vines(e) { for (let i = 0, n = e.ph >= 2 ? 10 : 7; i < n; i++) { const a = rnd() * TAU, d = i ? 50 + rnd() * 180 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(a) * d, y: pl.y + Math.sin(a) * d, R: 55, t: -i * 0.12, T: 1.15, dmg: pct(0.12) * (e.dmgK || 1), col: '#58b947' }) } },   // 노래로 땅에서 덩굴을 솟게 한다(무한 2페이즈부터 10)
   slam(e) { G.haz.push({ k: 'land', x: pl.x, y: pl.y, R: 100, t: 0, T: 1, dmg: pct(0.2) * (e.dmgK || 1), col: '#ff4d4d' }) },   // 큰 꼬리로 내려친다
@@ -3596,7 +3619,9 @@ function leap(e) {
 function leapStep(e, dt) {
   const L = e.leap, u = Math.min(1, (L.t += dt) / L.T)
   e.vx = e.vy = 0; e.x = L.x0 + (L.x1 - L.x0) * u; e.y = L.y0 + (L.y1 - L.y0) * u; e.z = Math.sin(u * Math.PI) * 140
-  if (u >= 1) { e.leap = null; e.z = 0; if (e.loop && !e.again) { e.again = true; leap(e) } else e.again = false }   // 무한 — 내려앉자마자 한 번 더
+  if (u >= 1) { e.leap = null; e.z = 0
+    if (e.loop >= 1) { newMove(e, tr`파편 조심!`); const o = rnd() * TAU; for (let i = 0; i < 3; i++) G.haz.push({ k: 'bomb', x: e.x + Math.cos(o + i * TAU / 3) * 140, y: e.y + Math.sin(o + i * TAU / 3) * 112, R: 60, t: 0, T: 0.9, dmg: pct(0.14), col: '#c9b8e0' }) }   // 무한 1단계부터 — 내려앉은 자리 둘레에 파편 장판 셋
+    if (e.loop && !e.again) { e.again = true; leap(e) } else e.again = false }   // 무한 — 내려앉자마자 한 번 더
 }
 const sick = id => G.sts[id] > G.t
 function afflict(id) {
@@ -3662,10 +3687,11 @@ function fall(src) { pl.hp = 0; G.dying = 1.2; G.killer = killerName(src); G.kil
 // ---- 경험치 · 줍는 것
 const GEM_MAX = 150
 function gem(x, y, v) {
-  if (G.gems.length >= GEM_MAX) {   // 바닥에 너무 많으면 새로 만들지 않고 떨어진 자리에서 가장 가까운 보석에 더한다 — 경험치 · 자리는 그대로(기획: 모든 기기 같게, 그리기가 무거워서). 끌려오는 것(자석)은 빼고
-    let near = null, nd = Infinity
-    for (const g of G.gems) { if (g.pull) continue; const d = (g.x - x) ** 2 + (g.y - y) ** 2; if (d < nd) { nd = d; near = g } }
+  if (G.gems.length >= GEM_MAX) {   // 바닥에 너무 많으면(그리기가 무거워서) 새로 만들지 않는다 — 가까운(60px) 보석에 더하고, 없으면 나에게서 가장 먼 보석을 이 자리로 옮겨 더한다(개수 · 경험치 그대로, 늘 처치한 자리에 보석)
+    let near = null, nd = 3600, far = null, fd = -1   // 예전엔 「가장 가까운 보석」이 화면 밖이어도 거기에 더해서, 150개가 찬 뒤로 보석이 안 떨어지는 것처럼 보였다(사용자 · 2026-11-22). 끌려오는 것(자석)은 빼고
+    for (const g of G.gems) { if (g.pull || g.dead) continue; const d = (g.x - x) ** 2 + (g.y - y) ** 2; if (d < nd) { nd = d; near = g } const q = (g.x - pl.x) ** 2 + (g.y - pl.y) ** 2; if (q > fd) { fd = q; far = g } }
     if (near) { near.v += v; return }
+    if (far) { far.x = x + (rnd() - 0.5) * 8; far.y = y + (rnd() - 0.5) * 8; far.v += v; return }
   }
   G.gems.push({ x: x + (rnd() - 0.5) * 8, y: y + (rnd() - 0.5) * 8, v, pull: false, sp: 0 })
 }
@@ -3681,7 +3707,7 @@ function item(x, y, k = { earplug: G.t >= 600 ? 15 : 0, onigiri: G.t >= 600 ? 17
   G.items.push({ x, y, k, t: 0 })
 }
 const USE = {
-  onigiri: () => { const v = Math.round(S.maxHp * 0.3); pl.hp = Math.min(S.maxHp, pl.hp + v); num(pl.x, pl.y - 48, `+${v}`, 'heal') },
+  onigiri: () => { const v = Math.round(S.maxHp * ONI()[1]); pl.hp = Math.min(S.maxHp, pl.hp + v); num(pl.x, pl.y - 48, `+${v}`, 'heal') },
   magnet: () => { for (const g of G.gems) g.pull = true; say(tr`자석 — 경험치를 다 모은다`, 1.2) },
   momonga: () => { G.freeze = 6; say(tr`모몽가의 귀여운 척! — 적이 멈췄다`, 1.6, '#ffc2e0') },
   firework: () => {
@@ -3822,6 +3848,10 @@ function step(dt) {
       if ((z.t += dt) >= z.T) z.dead = true
       else if (z.t > 1.2 && !z.hit) { const p = z.from + z.dir * 240 * (z.t - 1.2), q = ((z.horiz ? pl.x : pl.y) - p) * z.dir; if (q <= 0 && q > -80 && Math.abs((z.horiz ? pl.y : pl.x) - z.gap) >= 70) { z.hit = true; ouch(z.dmg, z) } }
       continue
+    }
+    if (z.k === 'duel' && z.swap && !z.swapped && z.t + dt >= 1.1) {   // 무한 1단계부터 — 정답 자리가 한 번 바뀐다(원 셋이 한 칸씩 돌아 다시 표시)
+      const P = z.opts.map(o => [o.x, o.y]); z.opts.forEach((o, i) => { [o.x, o.y] = P[(i + 1) % P.length] }); z.swapped = true
+      for (const o of z.opts) fx({ k: 'puff', x: o.x, y: o.y, R: 62, T: 0.4 })   // 옮긴 자리를 하얗게 번쩍
     }
     if ((z.t += dt) < z.T) continue
     z.dead = true
@@ -3964,7 +3994,7 @@ const cheerMax = () => G.inf ? Infinity : 25   // 응원 한도(번) — 무한�
 function label(o) {
   if (o.t === 'a') { const a = AW[o.id]; return { name: a.name, lv: tr`각성 · ${WEAP[o.id].name} Lv 8 → ★`, note: `${upText(a.up)} · ${a.note}` } }
   if (o.t === 'f' && o.id === 'cheer') return { name: FILL.cheer.name, lv: tr`Lv ${G.cheer} → ${G.cheer + 1} · 보너스`, note: G.inf ? tr`공격력 +${G.cheer * 2}% → +${G.cheer * 2 + 2}%` : tr`공격력 +${G.cheer * 2}% → +${G.cheer * 2 + 2}% · 최대 +50%` }   // 지금 단계 → 다음(무한은 한도 없음)
-  if (o.t === 'f') { const p = Math.round(pl.hp / S.maxHp * 100); return { name: FILL.onigiri.name, lv: tr`보너스`, note: [tr`체력 40% 회복 · `, h('span', { class: p <= 40 ? 'low' : '' }, tr`지금 ${p}%`)] } }   // 지금 체력 — 40% 이하면 빨강
+  if (o.t === 'f') { const p = Math.round(pl.hp / S.maxHp * 100); return { name: FILL.onigiri.name, lv: tr`보너스`, note: [tr`체력 ${Math.round(ONI()[0] * 100)}% 회복 · `, h('span', { class: p <= 40 ? 'low' : '' }, tr`지금 ${p}%`)] } }   // 지금 체력 — 40% 이하면 빨강
   if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id), d = WEAP[o.id]; return { name: d.name, ...(w ? { lv: `Lv ${w.lv} → ${w.lv + 1} · ${d.how}`, note: Object.entries(d.ups[w.lv - 1]).map(([k, v]) => UP[k](v)).join(' · ') } : { lv: tr`새 스킬 · ${d.how}`, note: d.note }) } }
   const lv = G.passives[o.id], p = PASS[o.id]; return { name: p.name, lv: lv ? `Lv ${lv} → ${lv + 1}` : tr`새 아이템`, note: p.note }
 }
@@ -3973,7 +4003,7 @@ function take(o) {
   if (o.t === 'a') awaken(o.id)
   else if (o.t === 'w') { const w = G.weapons.find(x => x.id === o.id); if (w) { w.lv++; w.st = wstat(w) } else addWeapon(o.id) }
   else if (o.t === 'p') { G.passives[o.id] = (G.passives[o.id] || 0) + 1; stats() }
-  else if (o.id === 'onigiri') pl.hp = Math.min(S.maxHp, pl.hp + S.maxHp * 0.4)
+  else if (o.id === 'onigiri') pl.hp = Math.min(S.maxHp, pl.hp + S.maxHp * ONI()[0])
   else { G.cheer++; stats() }
   guardOut()
 }
@@ -4057,7 +4087,7 @@ function openBox() {
   const root = h('div', { class: `panel box${jack ? ' jackpot' : ''}${aw ? ' awaken' : ''}` },
     h('p', { class: 'box-title' }, aw ? [ic('awaken'), tr` 각성!`] : chest ? [ic('chest'), tr` 보물상자!`] : `LEVEL UP! Lv ${G.lvl - G.queue.filter(q => q === 'level').length}`),
     jack && h('p', { class: 'jack' }, 'JACKPOT!!'), box.why && h('p', { class: 'lvl-note' }, h('b', {}, tr`작전에 있는 스킬이 나오지 않았어요`), tr`새로 나온 것 중에서 직접 골라 주세요`), cards, hint, h('div', { class: 'row' }, takeBtn, btns))
-  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}${box.ban && owned(o) ? ' keep' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, L.lv), h('b', {}, L.name), h('span', { class: 'note' }, L.note), syn, h('kbd', {}, i + 1)) }
+  const card = (o, i) => { const L = label(o), syn = synCard(o); return h('button', { type: 'button', class: `card ${o.t}${syn ? ' synergy' : ''}${box.ban && owned(o) ? ' keep' : ''}`, style: `--i:${i}`, onclick: () => pick(i) }, h('span', { class: 'ic' }, ic(o.id)), h('small', {}, o.t === 'w' && PROJ.has(o.id) && h('mark', { class: 'proj lead' }, tr`투사체`), L.lv), h('b', {}, L.name), h('span', { class: 'note' }, o.id === 'double' && o.t === 'p' ? [h('mark', { class: 'proj' }, tr`투사체`), ' ', tr`스킬 개수 +1`] : L.note), syn, h('kbd', {}, i + 1)) }
   const sync = () => {
     cards.replaceChildren(...box.opts.map(card)); root.classList.toggle('banning', box.ban)
     hint.textContent = aw ? tr`Lv 8 스킬 하나를 각성시켜요 — 스킵 · 제외는 없어요${awCan().length > 3 ? tr` (리롤로 다른 스킬도)` : ''}` : box.ban ? tr`이번 판에서 뺄 카드를 고르세요 — 가진 스킬은 못 빼요 (제외를 다시 누르면 취소)` : jack ? (box.opts.length === 3 ? tr`셋 다 가져요!` : tr`다 가져요!`) : tr`하나를 고르세요`
@@ -4523,9 +4553,9 @@ function effect(c, f, ox, oy) {
     case 'shout': {   // 말풍선
       if (f.e.dead) break
       c.globalAlpha = 1 - Math.max(0, u - 0.8) / 0.2
-      c.font = `14px ${FONT}`; const tw = c.measureText(f.s).width + 16, x = f.e.x, y = f.e.y - f.e.r * 2.6 * (f.e.sc || 1) - 30
-      c.fillStyle = '#fff'; c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); c.roundRect ? c.roundRect(x - tw / 2, y - 14, tw, 24, 10) : c.rect(x - tw / 2, y - 14, tw, 24); c.fill(); c.stroke()
-      c.fillStyle = f.col === '#fff' ? OUT : f.col; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(f.s, x, y - 2); c.textBaseline = 'alphabetic'
+      c.font = `14px ${FONT}`; const tw = c.measureText(f.s).width + 16, x = Math.max(cam.x - VW / 2 + tw / 2 + 8, Math.min(cam.x + VW / 2 - tw / 2 - 8, f.e.x)), y = f.e.y - f.e.r * 2.6 * (f.e.sc || 1) - 30, hot = f.col === 'new'   // 화면 끝에서 안 잘리게 · 무한 새 기술은 노란 풍선(디자인)
+      c.fillStyle = hot ? '#ffd23f' : '#fff'; c.strokeStyle = OUT; c.lineWidth = hot ? 2.5 : 2; c.beginPath(); c.roundRect ? c.roundRect(x - tw / 2, y - 14, tw, 24, 10) : c.rect(x - tw / 2, y - 14, tw, 24); c.fill(); c.stroke()
+      c.fillStyle = hot || f.col === '#fff' ? OUT : f.col; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(f.s, x, y - 2); c.textBaseline = 'alphabetic'
       break
     }
     case 'bye': c.globalAlpha = 1 - u; put(c, f.s, f.x, f.y - 6 - u * 90); break   // 세이렌이 쓰러지면 세이렌 · 검은 별똥별이 떠오르며 사라진다
@@ -4745,7 +4775,7 @@ const dmOn = () => Object.assign(Math, DM), dmOff = () => Object.assign(Math, MA
 const SIM_VIEW = [728, 455]
 function simCalc(f) { const vw = VW, vh = VH, keep = rnd; VW = SIM_VIEW[0]; VH = SIM_VIEW[1]; rnd = SIM.rng; try { return f() } finally { VW = vw; VH = vh; rnd = keep } }   // 모의 토벌 판 동안만(simNew → simClose). 진짜 판은 늘 원래 Math(startGame 에서 한 번 더 되돌림)
 /** 이번 주 전장(모의 토벌 랭킹) — 2026-11-16(월) 0시 KST 부터 몇째 주 · 전장 = 1 + (주 × 617 + 211) % 999(서버 sim_wk · sim_field 와 같은 식). 월요일 0시 KST 에 바뀐다 */
-const SIM_W0 = Date.UTC(2026, 10, 16) - 9 * 3600e3, SIM_RK = ['normal', 'hard', 'inf']
+const SIM_W0 = Date.UTC(2026, 10, 16) - 9 * 3600e3, SIM_RK = ['inf']   // 랭킹 판 — 무한만(사용자 2026-11-22)
 const simWeek = (now = Date.now()) => { const wk = Math.floor((now - SIM_W0) / (7 * 864e5)); return { wk, field: 1 + ((wk * 617 + 211) % 999 + 999) % 999, ends: SIM_W0 + (wk + 1) * 7 * 864e5 } }
 const simLeft = () => { const m = Math.max(0, (simWeek().ends - Date.now()) / 6e4 | 0), d = m / 1440 | 0, hh = (m % 1440) / 60 | 0; return d ? tr`${d}일 ${hh}시간` : tr`${hh}시간 ${m % 60}분` }   // 새 전장까지 — 시간대와 상관없이 남은 시간으로(디자인)
 const simStore = () => { try { return JSON.parse(localStorage.getItem(SIM_KEY)) || {} } catch { return {} } }
@@ -4962,7 +4992,7 @@ const simSetRow = plan => h('div', { class: 'sim-set' }, h('span', {}, portrait(
 function simPlan(again) {
   mode = 'simplan'; G = null
   const ch = again ? CHARS.find(c => c.id === again.ch) : CHARS[pickCi], d = simStore(), keep = d.plans?.[ch.id]
-  const plan = again ? { ...again, w: [...again.w], p: [...again.p] } : { ch: ch.id, diff: save.diff, winter: save.theme === 'winter', s: STYLE[keep?.s] ? keep.s : 'move', seed: 0,
+  const plan = again ? { ...again, w: [...again.w], p: [...again.p] } : { ch: ch.id, diff: save.diff, winter: save.theme === 'winter', s: STYLE[keep?.s] ? keep.s : 'move', seed: 0, week: SIM_RK.includes(save.diff),   // 랭킹 판이면 이번 주 전장이 기본(새 전장은 골라야 — 「새 전장」 기본이라 아무도 못 올렸다)
     w: [ch.w, ...(keep?.w || []).filter(id => id !== ch.w && WEAP[id])].slice(0, 6), p: (keep?.p || []).filter(id => PASS[id]).slice(0, 6) }   // 기본 무기는 1번 칸에 고정
   let info = tr`빈칸은 AI 대원이 알아서 골라요`
   const box = h('div', { class: 'scroll' }), say2 = s => { info = s; draw() }
@@ -4984,7 +5014,7 @@ function simPlan(again) {
     box.replaceChildren(
       h('div', { class: 'sim-opt' }, h('span', {}, tr`성향`), h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`토벌 성향` }, Object.keys(STYLE).map(k => h('button', { type: 'button', role: 'radio', class: plan.s === k ? 'on' : '', 'aria-checked': String(plan.s === k), onclick: () => { plan.s = k; keepPlan(); draw() } }, STYLE[k].name))),
         h('span', {}, tr`전장`), h('div', { class: 'theme sim-style', role: 'radiogroup', 'aria-label': tr`전장` }, [[false, plan.seed && !plan.week ? tr`전장 ${plan.seed}` : tr`새 전장`], [true, tr`이번 주 #${simWeek().field}`]].map(([v, name]) => h('button', { type: 'button', role: 'radio', class: `${!!plan.week === v ? 'on' : ''}${v && plan.pop ? ' new' : ''}`, 'aria-checked': String(!!plan.week === v), onclick: () => { plan.week = v; plan.pop = false; draw() } }, name)))),
-      h('p', { class: 'sim-style-note' }, STYLE[plan.s].note, h('br'), h('span', { class: 'fld' }, plan.diff === 'easy' ? tr`쉬움은 랭킹이 없어요` : plan.week ? tr`끝까지 보면 이번 주 랭킹에 올라가요` : tr`랭킹은 이번 주 전장에서만 올라가요`)),
+      h('p', { class: 'sim-style-note' }, STYLE[plan.s].note, h('br'), h('span', { class: 'fld' }, !SIM_RK.includes(plan.diff) ? tr`모의 토벌 랭킹은 무한만 있어요` : plan.week ? tr`끝까지 보면 이번 주 랭킹에 올라가요` : tr`랭킹은 이번 주 전장에서만 올라가요`)),
       h('p', { class: 'sim-lab' }, tr`무기 순서 ${plan.w.length}/6`), slots('w', plan.w),
       h('p', { class: 'sim-lab' }, tr`보조 순서 ${plan.p.length}/6`), slots('p', plan.p),
       h('p', { class: 'sim-info', 'aria-live': 'polite' }, info),
@@ -5134,7 +5164,7 @@ function privacy(back = title) {
         tr`통계를 너무 자주 보내는 것을 막으려고 접속 IP 를 되돌릴 수 없게 변환한 값을 잠깐 보관하고 2시간 안에 지웁니다.`),
       sec(tr`2. 로그인하면 (카카오 · 구글, 선택)`, tr`저장: 로그인 서비스의 사용자 고유 번호, 직접 정한 닉네임, 게임 저장(보상금 · 의상 · 업적), 무한 모드 랭킹 기록(플레이한 언어 포함), 이용약관 동의 기록(약관 시행일 · 동의한 시각)`,
         tr`쿠폰 사용 기록(계정 번호 · 쿠폰 · 받은 때): 쿠폰을 한 계정에 한 번만 드리려고 보관하며, 쿠폰 기간이 끝나고 7일 뒤 또는 계정을 지우면 지웁니다.`,
-        tr`모의 토벌 랭킹 기록(계정 번호 · 닉네임 · 작전 · 결과 · 판 번호): 랭킹을 보여 주려고 보관하며, 그 주가 끝나고 2주 뒤 또는 계정을 지우면 지웁니다.`,
+        tr`모의 토벌 랭킹(무한) 기록(계정 번호 · 닉네임 · 작전 · 결과 · 판 번호): 랭킹을 보여 주려고 보관하며, 그 주가 끝나고 2주 뒤 또는 계정을 지우면 지웁니다.`,
         tr`저장하지 않음: 이메일 · 이름 · 프로필 사진. 로그인 과정에서 받더라도 바로 지웁니다.`, tr`랭킹에는 닉네임과 게임 기록만 보입니다.`,
         tr`로그인 중에는 랭킹 기록 확인을 위해 익명 플레이 통계를 항상 보냅니다(끌 수 없습니다).`),
       sec(tr`3. 부정 이용 방지`, tr`부정 플레이가 의심되는 판의 기록과, 접속 IP 를 되돌릴 수 없게 변환한 값을 남기며 90일 뒤 지웁니다.`,
@@ -5199,7 +5229,7 @@ function guide() {
     h('ul', { class: 'list' }, CHARS.map(ch => li(portrait(ch.id), `${ch.name} — ${ch.trait}`, ch.note, [tr`시작 스킬: `, ic(ch.w), ` ${WEAP[ch.w].name}`]))),
     sec('skills', 'sasu', tr`스킬 (최고 Lv 8)`),
     h('p', { class: 'legend' }, h('span', { class: 'tag mate' }, h('i', {}, ic('syn'), tr` 짝꿍`)), tr`함께 가지면 둘 다 세져요`, h('span', { class: 'tag aw' }, h('i', {}, ic('awaken'), tr` 각성`)), tr`Lv 8 + 보스 → 더 세져요`),
-    h('ul', { class: 'list' }, Object.keys(WEAP).map(id => h('li', {}, ic(id), h('div', {}, h('b', {}, WEAP[id].name), h('span', {}, WEAP[id].note), mate(id), awk(id))))),
+    h('ul', { class: 'list' }, Object.keys(WEAP).map(id => h('li', {}, ic(id), h('div', {}, h('b', {}, WEAP[id].name, PROJ.has(id) && h('mark', { class: 'proj' }, tr`투사체`)), h('span', {}, WEAP[id].note), mate(id), awk(id))))),   // 투사체 꼬리표 — 「둘이서 같이」가 +1 하는 스킬
     sec('syn', 'syn', tr`짝꿍 시너지`),
     h('p', { class: 'lead' }, tr`두 스킬을 함께 가지면 둘 다 세져요`),
     h('ul', { class: 'list' }, SYN.map(s => { const [a, b] = Object.keys(s[1]); return h('li', { class: 'pair' }, h('div', { class: 'duo' }, ic(a), h('i', {}, '+'), ic(b)), h('div', {}, h('b', {}, `「${s[0]}」`), h('span', {}, `${WEAP[a].name} + ${WEAP[b].name}`), h('em', {}, synText(s)))) })),
@@ -5235,7 +5265,7 @@ function skillInfo(kind, id) {
     return [h('p', { class: 't' }, ic(id), ` ${d.name}`, h('small', {}, ` Lv${lv}/${d.max}`)), h('p', {}, tr`레벨마다 ${d.note}`), kv([[tr`지금`, d.note.replace(/[\d.]+/, x => r1(x * lv))]], true), h('p', { class: 'next' }, lv < d.max ? tr`다음 Lv${lv + 1} — ${d.note.replace(/[\d.]+/, x => r1(x * (lv + 1)))}` : tr`최대 레벨이에요`)]
   }
   const w = G.weapons.find(x => x.id === id), d = WEAP[id], st = w.st, max = d.ups.length + 1
-  const rows = [[tr`피해`, r1(st.dmg * S.might)], [tr`쿨타임`, tr`${r1(st.cd * S.cdr)}초`], [tr`개수`, st.n + S.amount], [tr`범위`, `${Math.round(st.area * S.area * 100)}%`]]
+  const rows = [[tr`피해`, r1(st.dmg * S.might)], [tr`쿨타임`, tr`${r1(st.cd * S.cdr)}초`], [tr`개수`, st.n + (PROJ.has(w.id) ? S.amount : 0)], [tr`범위`, `${Math.round(st.area * S.area * 100)}%`]]
   if (st.dur) rows.push([tr`지속`, tr`${r1(st.dur * S.dur)}초`])
   if (st.pierce) rows.push([tr`관통`, st.pierce])
   if (st.bounce) rows.push([tr`튕김`, st.bounce])

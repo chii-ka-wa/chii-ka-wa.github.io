@@ -508,14 +508,13 @@ alter table public.sim_ranks enable row level security;
 revoke all on public.sim_ranks from anon, authenticated;
 create index if not exists sim_ranks_board on public.sim_ranks (wk, diff, winter);
 create index if not exists sim_ranks_same on public.sim_ranks (wk, diff, winter, ch, s, w, p, v);
+alter table public.sim_ranks add column if not exists ok_at timestamptz;   -- 2단계 재현 확인(Actions)에서 같은 결과가 나온 때 — 이 결과가 같은 답 맞추기에서 이긴다
+alter table public.sim_ranks add column if not exists bad boolean not null default false;   -- 재현 확인에서 결과가 달랐음 — 다시 보이지 않고 다수결에도 안 센다
 -- 순서 열쇠(클수록 위) — 보통 · 어려움: 격파 → 격파 시각 ↑(빠를수록) / 버틴 시간 ↓ → 처치 ↓, 무한: 단계 ↓ → 보스 ↓ → 버틴 시간 ↓. 같으면 먼저 세운 기록(at ↑)
 create or replace function public.sim_key(r sim_ranks) returns numeric[] language sql immutable as $$
   select case when r.diff = 'inf' then array[r.lv, r.bosses, r.t, 0]::numeric[] else array[(r.kind = 'win')::int, case when r.kind = 'win' then -r.t else r.t end, r.kills, 0]::numeric[] end
 $$;
--- 이번 주 → { wk, field, ends } — 누구나(로그인 없이 랭킹 위 글)
-create or replace function public.sim_week() returns json language sql stable as $$
-  select json_build_object('wk', sim_wk(), 'field', sim_field(sim_wk()), 'ends', ((date '2026-11-16' + (sim_wk() + 1) * 7)::timestamp at time zone 'Asia/Seoul'))
-$$;
+drop function if exists public.sim_week();   -- 예전 판에서 만든 「이번 주」 알림(게임은 simWeek 로 계산 — 안 써서 지움)
 -- 관전 시작 — 그 주(넘어가는 판은 시작한 주로 받는다) → { wk, field }
 create or replace function public.sim_start() returns json language sql security definer set search_path = public as $$
   insert into sim_starts (uid, wk) select auth.uid(), sim_wk() where auth.uid() is not null on conflict (uid) do update set at = now(), wk = sim_wk()
@@ -531,20 +530,20 @@ begin
   delete from sim_starts x where x.uid = auth.uid() returning x.at, x.wk into st, wk0;   -- 한 판에 한 번
   if st is null then return json_build_object('r', 'nostart'); end if;
   if split_part(submit_sim.w, ' ', 1) is distinct from (json_build_object('chiikawa', 'sasu', 'hachiware', 'guitar', 'usagi', 'stick', 'momonga', 'momo', 'kurimanju', 'kanpai', 'rakko', 'sword', 'kani', 'book', 'shisa', 'ramen') ->> submit_sim.ch)   -- 첫 무기는 그 캐릭터 기본 무기
-    or submit_sim.diff = 'inf' and submit_sim.kind = 'win'
+    or submit_sim.diff is distinct from 'inf' or submit_sim.kind = 'win'   -- 랭킹은 무한만(사용자 2026-11-22)
     or submit_sim.kills > 100 * submit_sim.t + 100 or submit_sim.lvl > submit_sim.t / 4 + 20 or submit_sim.lv > 0 and submit_sim.diff <> 'inf' then return json_build_object('r', 'bad'); end if;
   if now() - st < make_interval(secs => submit_sim.t / 3.0 - 30) then return json_build_object('r', 'fast'); end if;   -- 3배속 관전(건너뛰면 몇 초) — 거절만
   if now() - st > interval '3 hours' then return json_build_object('r', 'old'); end if;
   begin
     nw := row(auth.uid(), wk0, submit_sim.diff, submit_sim.winter, submit_sim.ch, submit_sim.s, submit_sim.w, coalesce(submit_sim.p, ''), submit_sim.kind, submit_sim.t, submit_sim.kills, submit_sim.bosses,
-      coalesce(submit_sim.lv, 0), submit_sim.lvl, submit_sim.v, round(extract(epoch from now() - st)), false, now())::sim_ranks;
+      coalesce(submit_sim.lv, 0), submit_sim.lvl, submit_sim.v, round(extract(epoch from now() - st)), false, now(), null, false)::sim_ranks;
   exception when others then return json_build_object('r', 'bad'); end;
   select * into old from sim_ranks r where r.uid = nw.uid and r.wk = nw.wk and r.diff = nw.diff and r.winter = nw.winter; had := found;
   if had and not old.hidden and sim_key(old) >= sim_key(nw) then
     return json_build_object('r', 'kept', 'rank', (select k.rank from my_sim(nw.diff, nw.winter) k));
   end if;
   insert into sim_ranks values (nw.*) on conflict on constraint sim_ranks_pkey do update set ch = excluded.ch, s = excluded.s, w = excluded.w, p = excluded.p, kind = excluded.kind, t = excluded.t, kills = excluded.kills,
-    bosses = excluded.bosses, lv = excluded.lv, lvl = excluded.lvl, v = excluded.v, real = excluded.real, hidden = excluded.hidden, at = excluded.at;
+    bosses = excluded.bosses, lv = excluded.lv, lvl = excluded.lvl, v = excluded.v, real = excluded.real, hidden = excluded.hidden, at = excluded.at, ok_at = null, bad = false;
   if had then perform sim_vote(old); end if;   -- 예전 작전 묶음에서 빠졌으니 그쪽도 다시 센다
   perform sim_vote(nw);
   if (select r.hidden from sim_ranks r where r.uid = nw.uid and r.wk = nw.wk and r.diff = nw.diff and r.winter = nw.winter) then return json_build_object('r', 'odd'); end if;
@@ -556,14 +555,45 @@ create or replace function public.sim_vote(k sim_ranks) returns void language pl
 declare w record; r record;
 begin
   select x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl into w from sim_ranks x
-  where x.wk = k.wk and x.diff = k.diff and x.winter = k.winter and x.ch = k.ch and x.s = k.s and x.w = k.w and x.p = k.p and x.v = k.v
-  group by x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl order by count(*) desc, min(x.at) limit 1;
+  where x.wk = k.wk and x.diff = k.diff and x.winter = k.winter and x.ch = k.ch and x.s = k.s and x.w = k.w and x.p = k.p and x.v = k.v and not x.bad
+  group by x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl order by bool_or(x.ok_at is not null) desc, count(*) desc, min(x.at) limit 1;   -- 재현 확인을 통과한 결과가 먼저
   if not found then return; end if;
-  for r in select * from sim_ranks x where x.wk = k.wk and x.diff = k.diff and x.winter = k.winter and x.ch = k.ch and x.s = k.s and x.w = k.w and x.p = k.p and x.v = k.v
+  for r in select * from sim_ranks x where x.wk = k.wk and x.diff = k.diff and x.winter = k.winter and x.ch = k.ch and x.s = k.s and x.w = k.w and x.p = k.p and x.v = k.v and not x.bad
     and x.hidden = ((x.kind, x.t, x.kills, x.bosses, x.lv, x.lvl) = (w.kind, w.t, w.kills, w.bosses, w.lv, w.lvl)) loop   -- 표시가 틀린 줄만(이긴 쪽인데 숨김 · 진 쪽인데 보임)
     update sim_ranks x set hidden = not r.hidden where x.uid = r.uid and x.wk = r.wk and x.diff = r.diff and x.winter = r.winter;
     insert into cheat_log (uid, ip_h, reason, detail) values (r.uid, null, 'sim', json_build_object('diff', r.diff, 'w', r.w, 'v', r.v, 't', r.t, 'kills', r.kills, 'act', case when r.hidden then 'restore' else 'hide' end)::jsonb);
   end loop;
+end $$;
+-- 2단계 재현 확인(GitHub Actions .github/workflows/sim-audit.yml · test/sim-audit.cjs — 하루 한 번): 이번 주 판마다 상위 10 중 아직 확인 안 한 줄을 받아,
+--   그 판 번호의 game.js(저장소 기록)로 같은 작전 · 전장을 다시 계산한다. 같으면 ok_at, 다르면 bad + 내림 + 'sim'(audit) — 정지 셈 없음
+--   비밀 값 — 저장소에 두지 않는다. 처음 Run 하면 아무 값이 들어가고, GitHub 비밀 SIM_AUDIT 과 같은 값으로 직접 바꾼다:
+--     update public.sim_audit_key set v = '<GitHub 비밀 SIM_AUDIT 과 같은 값>';      (이 줄은 저장소에 적지 말 것)
+create table if not exists public.sim_audit_key (id int primary key default 1 check (id = 1), v text not null default gen_random_uuid()::text);
+insert into public.sim_audit_key default values on conflict do nothing;
+alter table public.sim_audit_key enable row level security;
+revoke all on public.sim_audit_key from anon, authenticated;
+create or replace function public.sim_audit(key text)
+returns table (uid uuid, wk int, field int, diff text, winter boolean, ch text, s text, w text, p text, kind text, t int, kills int, bosses int, lv int, lvl int, v text, at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select b.uid, b.wk, sim_field(b.wk), b.diff, b.winter, b.ch, b.s, b.w, b.p, b.kind, b.t, b.kills, b.bosses, b.lv, b.lvl, b.v, b.at from (
+    select r.*, row_number() over (partition by r.diff, r.winter order by sim_key(r) desc, r.at) as n from sim_ranks r where r.wk = sim_wk() and not r.hidden and not r.bad
+  ) b where b.n <= 10 and b.ok_at is null and key = (select k.v from sim_audit_key k)
+$$;
+-- 확인 결과 넣기 → 'ok' | 'gone'(그사이 기록이 바뀜) | 'no'(비밀 값 다름)
+create or replace function public.sim_flag(key text, u uuid, wk int, diff text, winter boolean, at timestamptz, same boolean, got text default null)
+returns text language plpgsql security definer set search_path = public as $$
+declare r sim_ranks;
+begin
+  if key is distinct from (select k.v from sim_audit_key k) then return 'no'; end if;
+  select * into r from sim_ranks x where x.uid = u and x.wk = sim_flag.wk and x.diff = sim_flag.diff and x.winter = sim_flag.winter and x.at = sim_flag.at;
+  if not found then return 'gone'; end if;
+  if same then update sim_ranks x set ok_at = now() where x.uid = u and x.wk = r.wk and x.diff = r.diff and x.winter = r.winter;
+  else
+    update sim_ranks x set bad = true, hidden = true where x.uid = u and x.wk = r.wk and x.diff = r.diff and x.winter = r.winter;
+    insert into cheat_log (uid, ip_h, reason, detail) values (u, null, 'sim', json_build_object('diff', r.diff, 'w', r.w, 'v', r.v, 't', r.t, 'kills', r.kills, 'act', 'audit', 'got', left(got, 200))::jsonb);
+  end if;
+  perform sim_vote(r);   -- 확인된 결과가 이기도록 묶음을 다시 센다
+  return 'ok';
 end $$;
 -- 이번 주 TOP 100(판마다) · 내 순위 — 내린 기록 · 차단된 계정 빼고
 create or replace function public.top_sims(on_diff text, on_winter boolean)
@@ -585,8 +615,8 @@ language sql stable security definer set search_path = public as $$
   from sim_ranks m join players pl on pl.uid = m.uid left join board b on b.uid = m.uid
   where m.uid = auth.uid() and m.wk = sim_wk() and m.diff = on_diff and m.winter = on_winter
 $$;
-revoke all on function public.sim_vote, public.sim_wk, public.sim_field, public.sim_key, public.sim_week, public.sim_start, public.submit_sim, public.top_sims, public.my_sim from public, anon, authenticated;
-grant execute on function public.sim_week, public.top_sims to anon, authenticated;
+revoke all on function public.sim_audit, public.sim_flag, public.sim_vote, public.sim_wk, public.sim_field, public.sim_key, public.sim_start, public.submit_sim, public.top_sims, public.my_sim from public, anon, authenticated;
+grant execute on function public.top_sims, public.sim_audit, public.sim_flag to anon, authenticated;   -- 재현 확인 둘은 비밀 값으로 막는다(Actions 는 공개 키로 부른다)
 grant execute on function public.sim_start, public.submit_sim, public.my_sim to authenticated;
 -- 지난 기록 — 그 주가 끝나고 2주 뒤 지운다(처리방침). gc 가 부른다
 create or replace function public.sim_gc() returns void language sql security definer set search_path = public as $$

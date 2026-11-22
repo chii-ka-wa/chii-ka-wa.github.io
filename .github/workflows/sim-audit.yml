@@ -1,0 +1,21 @@
+# 모의 토벌 랭킹 재현 확인 — 하루 한 번, 이번 주 판마다 상위 10 중 아직 확인 안 한 기록을 그 판 번호의 game.js 로 다시 계산해 같음 / 다름을 서버에 넣는다(test/sim-audit.cjs)
+#   준비(한 번): Settings › Secrets and variables › Actions 에 SIM_AUDIT(아무 긴 값) — Supabase 에서 같은 값을 update public.sim_audit_key set v = '…' 로
+#   비밀이 없으면 아무것도 안 하고 끝난다
+name: sim-audit
+on:
+  schedule: [{ cron: '23 18 * * *' }]   # 매일 03:23 KST
+  workflow_dispatch:
+permissions: { contents: read }
+concurrency: { group: sim-audit, cancel-in-progress: false }
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # 판 번호마다 그때의 game.js 를 꺼내야 해서 기록 전부
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm i --no-save --no-audit --no-fund playwright@1.49.1 && npx playwright install --with-deps chromium
+      - run: node test/sim-audit.cjs
+        env: { SIM_AUDIT: '${{ secrets.SIM_AUDIT }}' }

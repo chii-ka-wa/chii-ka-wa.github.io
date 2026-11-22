@@ -537,6 +537,9 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 .tag .ico { width: 22px; height: 22px; vertical-align: -6px }
 .tag small { color: var(--soft); font-size: 13px }
 .tag.mate { background: #e8f7ea; border: 2px solid #a7dcb1 }
+mark.proj { display: inline-block; padding: 0 7px; background: #fff; border: 1.5px solid #8fb8e8; border-radius: 999px; color: #2f5f96; font: inherit; font-size: 11px; line-height: 1.5; white-space: nowrap; vertical-align: 2px }   /* 투사체 스킬 — 「둘이서 같이」 +1(도감 이름 옆 · 레벨업 카드 갈래 줄 끝 · 디자인) */
+.dex mark.proj { margin-left: 6px }
+mark.proj.lead { margin-right: 4px }   /* 레벨업 카드 — 갈래 줄 맨 앞(카드마다 같은 자리 · 디자인) */
 .tag.mate i { background: #3fae5a }
 .tag.aw { background: #fff0f7; border: 2px solid #ffbfdc }
 .tag.aw i { background: #ff5ba7 }
@@ -685,6 +688,6 @@ button.chip:hover, button.chip.on { box-shadow: 0 0 0 3px var(--pink) }
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611220218"></script>
+<script type="module" src="game.js?v=202611230137"></script>
 </body>
 </html>

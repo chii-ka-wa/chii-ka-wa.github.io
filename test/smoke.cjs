@@ -8,6 +8,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
 ;(async () => {
   const browser = await chromium.launch()
   const errors = []
+  if (/sort\([^)]*\)\s*=>[^)]*rnd\(\)/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'))) errors.push('[shuffle] 비교 함수에 rnd 를 쓰는 sort — 엔진마다 모의 토벌 결과가 갈림, shuffle() 을 쓸 것')   // QA 2026-11-22
   const run = async (name, viewport, fn) => {
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) return   // ONLY=sync,ban — 그것만
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2, locale: 'ko-KR' })   // 고른 말이 없으면 브라우저 언어 — 점검은 한국어 브라우저로
@@ -187,6 +188,15 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await sim(page, 312, { god: true })
     const mg = await page.evaluate(() => ({ left: window.__mjg.G.gems.filter(g => g.far).length, kills: window.__mjg.G.kills }))
     if (mg.left || !mg.kills) errors.push('[magnet] 자석으로 끌려오던 먼 구슬이 남음 ' + JSON.stringify(mg))
+  })
+
+  await run('gemcap', { width: 1280, height: 800 }, async page => {   // 보석 150개(가득) — 새 경험치는 가까운(60px) 보석에 더하거나, 없으면 가장 먼 보석을 처치 자리로 옮긴다(예전엔 먼 곳에 쌓여 안 보였다 · 사용자 2026-11-22)
+    const v = await page.evaluate(() => { const M = window.__mjg; M.startGame(0); const G = M.G; G.gems.length = 0
+      for (let i = 0; i < 150; i++) G.gems.push({ x: M.pl.x + 2000 + i, y: M.pl.y, v: 1, pull: false, sp: 0 })
+      const e = M.spawn('goblin', M.pl.x + 300, M.pl.y + 200); M.kill(e); const at = G.gems.filter(g => Math.hypot(g.x - e.x, g.y - e.y) < 10)
+      const e2 = M.spawn('goblin', e.x + 20, e.y); M.kill(e2)
+      return { n: G.gems.length, at: at.length, sum: G.gems.reduce((a, g) => a + g.v, 0), xp: e.xp + e2.xp, near: G.gems.filter(g => Math.hypot(g.x - e.x, g.y - e.y) < 10).map(g => g.v) } })
+    if (v.n !== 150 || v.at !== 1 || v.sum !== 150 + v.xp || v.near.length !== 1 || v.near[0] !== 1 + v.xp) errors.push('[gemcap] 가득 찬 보석 ' + JSON.stringify(v))
   })
 
   await run('shop', { width: 390, height: 844 }, async page => {   // 토벌 보상금 · 영구 강화 상점 — 판이 끝나면 돈이 쌓이고, 사면 다음 판 능력치에 더해진다
@@ -401,7 +411,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   await run('awaken-key', { width: 1280, height: 800 }, async page => {   // 각성 상자 — 첫 카드가 골라져 있어 Enter · Space 로 받는다
     for (const key of ['Enter', 'Space']) {
       await page.evaluate(() => { const M = window.__mjg; M.startGame(1); const w = M.G.weapons[0]; w.lv = 8; w.st = M.wstat(w); M.G.queue.push('awaken'); M.pl.inv = 9; M.step(1 / 30) })
-      await page.waitForTimeout(600); await page.keyboard.press(key); await page.waitForTimeout(100)
+      await page.waitForSelector('#ui .panel.box.ready', { timeout: 8000 }); await page.keyboard.press(key)   // 준비된 뒤에 누른다(숫자 기다리기 대신 상태 — QC)
+      await page.waitForFunction(() => window.__mjg.mode === 'play', null, { timeout: 5000 }).catch(() => {})
       const r = await page.evaluate(() => ({ mode: window.__mjg.mode, aw: [...window.__mjg.G.aw] }))
       if (r.mode !== 'play' || r.aw[0] !== 'guitar') errors.push(`[awaken-key] ${key} ${JSON.stringify(r)}`)
     }
@@ -426,22 +437,22 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.route(/supabase\.co/, r => { const u = r.request().url(), body = r.request().postDataJSON?.() || {}, j = x => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(x) })
       if (u.includes('rpc/')) sent.push(u.split('rpc/')[1].split('?')[0] + (body.on_diff ? ':' + body.on_diff : ''))
       if (u.includes('agreed')) return j({ day: '2026-11-18' }); if (u.includes('my_nick')) return j({ nick: '치이카와팬', next: '2026-11-24' })
-      if (u.includes('top_sims')) return j([{ rank: 1, nick: '하치팬', ch: 'hachiware', s: 'stay', w: 'guitar pochette', p: 'manju', kind: 'win', t: 1500, kills: 40000, bosses: 7, lv: 0, lvl: 80, v: 'x', me: false }])
+      if (u.includes('top_sims')) return j(body.on_diff === 'inf' ? [{ rank: 1, nick: '하치팬', ch: 'hachiware', s: 'stay', w: 'guitar pochette', p: 'manju', kind: 'dead', t: 1700, kills: 40000, bosses: 9, lv: 1, lvl: 80, v: 'x', me: false }] : [])
       if (u.includes('my_sim')) return j([]); if (u.includes('sim_start')) return j({ wk: 0, field: 212 }); if (u.includes('submit_sim')) { sent.push('submit:' + JSON.stringify(body)); return j({ r: 'ok', rank: 1 }) }
       if (u.includes('saves?select')) return j([]); if (u.includes('top_ranks') || u.includes('my_rank')) return j([]); return r.fulfill({ status: 204 }) })
-    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter' })); localStorage.setItem('mjg.sim', JSON.stringify({ seen2: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
+    await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: false, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'inf', theme: 'winter' })); localStorage.setItem('mjg.sim', JSON.stringify({ seen2: 1 })); localStorage.setItem('mjg.auth', JSON.stringify({ at: 'a.e30.b', rt: 'r', exp: Date.now() / 1000 + 9999, uid: 'u1', prov: 'google' })) })
     await page.reload(); await page.waitForTimeout(900)
     await page.locator('#ui .row .btn', { hasText: '랭킹' }).click(); await page.waitForTimeout(400); await page.locator('.rk-tabs button').nth(1).click(); await page.waitForTimeout(500)
-    const v = await page.evaluate(() => { const li = document.querySelector('.list.rk-sim li'), r = n => li.querySelector(n)?.getBoundingClientRect(); return { rows: document.querySelectorAll('.list.rk-sim li').length, on: document.querySelector('.rk-diff button.on')?.textContent, sub: document.querySelector('.panel.rank .sub').textContent, two: r('.bd').top > r('.nm').bottom - 2, win: li.querySelector('.win')?.textContent } })
+    const v = await page.evaluate(() => { const li = document.querySelector('.list.rk-sim li'), r = n => li.querySelector(n)?.getBoundingClientRect(); return { rows: document.querySelectorAll('.list.rk-sim li').length, pills: document.querySelectorAll('.rk-diff button').length, sub: document.querySelector('.panel.rank .sub').textContent, two: r('.bd').top > r('.nm').bottom - 2, lv: li.querySelector('.lvpill')?.textContent } })
     await page.locator('.list.rk-sim li').first().click(); await page.waitForTimeout(300); await page.locator('.modal .btn.main').click(); await page.waitForTimeout(400)
     const plan = await page.evaluate(() => ({ mode: window.__mjg.mode, on: [...document.querySelectorAll('.sim-opt .theme button.on')].map(b => b.textContent).join('|'), w: document.querySelectorAll('.slots')[0].querySelectorAll('button.on').length }))
     await page.locator('#ui .row .btn.main').click(); await page.waitForTimeout(600)
     const run = await page.evaluate(async () => { const M = window.__mjg, sin0 = Math.sin; const during = String(Math.sin).includes('native'); let n = 0; while (M.SIM && !M.SIM.end && n++ < 80000) M.simStep(); await new Promise(r => setTimeout(r, 1800)); return { during, after: String(Math.sin).includes('native'), seed: M.SIM?.seed, rk: document.querySelector('.rk-up')?.textContent || null } })
     console.log('simrank', JSON.stringify(v), JSON.stringify(plan), JSON.stringify(run), sent.filter(x => !x.startsWith('submit')).join(' '))
     const sub = sent.find(x => x.startsWith('submit:')), body = sub && JSON.parse(sub.slice(7))
-    if (v.rows !== 1 || !/보통/.test(v.on) || !v.sub.includes('#212') && !/#\d+/.test(v.sub) || !v.two || !/격파 25:00/.test(v.win)) errors.push('[simrank] 랭킹 줄 ' + JSON.stringify(v))
+    if (v.rows !== 1 || v.pills !== 0 || !/#\d+/.test(v.sub) || !v.two || !/1단계/.test(v.lv || '')) errors.push('[simrank] 랭킹 줄(무한만 · 난이도 고르기 없음) ' + JSON.stringify(v))
     if (plan.mode !== 'simplan' || !plan.on.includes('이번 주') || plan.on.split('|')[0] !== '정착형' || plan.w !== 2) errors.push('[simrank] 이 작전 써 보기 ' + JSON.stringify(plan))
-    if (run.during || !run.after || !/1위/.test(run.rk || '') || !body || body.ch !== 'hachiware' || body.w !== 'guitar pochette' || body.s !== 'stay' || !sent.includes('sim_start')) errors.push('[simrank] 올리기 · Math ' + JSON.stringify(run) + ' ' + sub)
+    if (run.during || !run.after || !/1위/.test(run.rk || '') || !body || body.ch !== 'hachiware' || body.w !== 'guitar pochette' || body.s !== 'stay' || body.diff !== 'inf' || !sent.includes('sim_start')) errors.push('[simrank] 올리기 · Math ' + JSON.stringify(run) + ' ' + sub)
   })
 
   await run('autobox', { width: 1280, height: 720 }, async page => {   // 작전대로 자동 선택 — 각성 상자(목록 순서) · 보물상자 · 잭팟(다 받기)도 창 없이(QC)
@@ -545,18 +556,19 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.goto(URL + '?guard'); await page.waitForTimeout(600)
     await page.evaluate(() => { localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1 })) }); await page.reload(); await page.waitForTimeout(600)
     await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForTimeout(1500)
-    await page.evaluate(() => { window.__mjg.G.queue.push('level', 'level') }); await page.waitForTimeout(700)   // 상자 둘 — 다음 step 이 연다
-    for (let i = 0; i < 2; i++) { await page.keyboard.press('Digit1'); await page.waitForTimeout(600) }
+    await page.evaluate(() => { window.__mjg.G.queue.push('level', 'level') })   // 상자 둘 — 다음 step 이 연다
+    for (let i = 0; i < 2; i++) { await page.waitForSelector('#ui .panel.box.ready', { timeout: 8000 }); await page.keyboard.press('Digit1'); await page.waitForFunction(n => window.__mjg.mode === 'play' || document.querySelectorAll('#ui .panel.box.ready').length === 0, i, { timeout: 5000 }).catch(() => {}) }
+    await page.waitForFunction(() => window.__mjg.mode === 'play', null, { timeout: 5000 }).catch(() => {})
     await page.keyboard.press('KeyP'); await page.waitForTimeout(200); await page.keyboard.press('KeyP'); await page.waitForTimeout(800)
     const ok = await page.evaluate(() => ({ bad: window.__mjg.G.bad || null, mode: window.__mjg.mode, lvl: window.__mjg.G.weapons.map(w => w.lv).join() }))
-    await page.evaluate(() => { window.__mjg.pl.hp = 99999 }); await page.waitForTimeout(300)
+    await page.evaluate(() => { window.__mjg.pl.hp = 99999 }); await page.waitForFunction(() => window.__mjg.G.bad, null, { timeout: 5000 }).catch(() => {})   // 다음 프레임이 잡을 때까지
     const bad = await page.evaluate(() => window.__mjg.G.bad)
     console.log('guard', { ok, bad })
     if (ok.bad || ok.mode !== 'play' || !bad?.includes('seal')) errors.push('[guard] ' + JSON.stringify({ ok, bad }))
   })
   await run('ctrl', { width: 1280, height: 800 }, async page => {   // PC 첫 판 조작법 — 처음 1번(save.ctrlSeen) · 아래 가운데 카드 4칸 · 눌리지 않음 · 일시정지엔 숨김 · 15초 뒤 사라짐 · 휴대폰은 안 보임
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true }))); await page.reload(); await page.waitForTimeout(400)
-    await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForTimeout(1200)
+    await page.evaluate(() => window.__mjg.startGame(0)); await page.waitForFunction(() => +getComputedStyle(document.getElementById('ctrl') || document.body).opacity >= 0.9 && document.getElementById('ctrl'), null, { timeout: 8000 }).catch(() => {})   // 다 나타날 때까지(고정 1.2초 대신 — 부하에 흔들리지 않게)
     const a = await page.evaluate(() => { const c = document.getElementById('ctrl'), r = c?.getBoundingClientRect(); return c && { n: c.querySelectorAll('.cc').length, zrow: !!c.querySelector('.cc:last-of-type .zm .ico'), op: +getComputedStyle(c).opacity, pe: getComputedStyle(c).pointerEvents, bottom: innerHeight - r.bottom, mid: Math.abs(r.left + r.width / 2 - innerWidth / 2), seen: JSON.parse(localStorage.getItem('mjg.v1')).ctrlSeen, txt: c.innerText.replace(/\s+/g, ' ') } })
     await page.screenshot({ path: OUT + 'ctrl.png' })
     await page.keyboard.press('Escape'); await page.waitForTimeout(150); const paused = await page.evaluate(() => getComputedStyle(document.getElementById('ctrl')).visibility)
@@ -567,7 +579,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (!a || a.n !== 4 || !a.zrow || a.op < 0.9 || a.pe !== 'none' || a.bottom < 20 || a.mid > 2 || a.seen !== 1 || !a.txt.includes('스킬은 저절로 나가요') || paused !== 'hidden' || !gone || again) errors.push('[ctrl] ' + JSON.stringify({ a, paused, gone, again }))
     const m = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'ko-KR' }); await m.goto(URL); await m.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true }))); await m.reload(); await m.waitForTimeout(400)
     await m.evaluate(() => window.__mjg.startGame(0)); await m.waitForTimeout(1500); const p0 = await m.evaluate(() => +getComputedStyle(document.getElementById('ctrl')).opacity)   // 세로 휴대폰은 「토벌 시작!」 글이 사라진 뒤(2.5초)
-    await m.waitForTimeout(1800); const phone = await m.evaluate(() => { const c = document.getElementById('ctrl'), r = c?.getBoundingClientRect(), s = JSON.parse(localStorage.getItem('mjg.v1')); return c && { touch: c.classList.contains('touch'), n: c.querySelectorAll('.cc').length, op: +getComputedStyle(c).opacity, top: Math.round(r.top), w: Math.round(r.width), pzi: !!c.querySelector('p .pzi svg'), mid: r.bottom < innerHeight / 2 - 30, right: innerWidth - r.right, seen: [s.ctrlSeen ?? null, s.touchSeen ?? null], txt: c.innerText.replace(/\s+/g, ' ') } })
+    await m.waitForFunction(() => +getComputedStyle(document.getElementById('ctrl') || document.body).opacity >= 0.9 && document.getElementById('ctrl'), null, { timeout: 8000 }).catch(() => {}); const phone = await m.evaluate(() => { const c = document.getElementById('ctrl'), r = c?.getBoundingClientRect(), s = JSON.parse(localStorage.getItem('mjg.v1')); return c && { touch: c.classList.contains('touch'), n: c.querySelectorAll('.cc').length, op: +getComputedStyle(c).opacity, top: Math.round(r.top), w: Math.round(r.width), pzi: !!c.querySelector('p .pzi svg'), mid: r.bottom < innerHeight / 2 - 30, right: innerWidth - r.right, seen: [s.ctrlSeen ?? null, s.touchSeen ?? null], txt: c.innerText.replace(/\s+/g, ' ') } })
     await m.screenshot({ path: OUT + 'ctrl-phone.png' }); await m.close()
     console.log('ctrl phone', { p0, phone })
     if (p0 > 0.05 || !phone?.touch || phone.n !== 3 || !phone.pzi || phone.op < 0.9 || phone.top < 140 || phone.top > 160 || phone.right < 10 || phone.seen.join() !== ',1' || !phone.mid || !phone.txt.includes('화면 배율')) errors.push('[ctrl] 휴대폰 ' + JSON.stringify({ p0, phone }))
@@ -587,8 +599,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const c5 = nm.cap, c3 = inf.cap
     if (c5.one !== 5 || c5.swap !== 1 || c5.both.join() !== '5,2' || c5.boss !== 6 || c5.pj !== 2 || c5.pjBoss !== 1 || c5.rand > 3 || c5.chest !== 7) errors.push('[cap] 한도 오니기리 5 · 그 밖 2 ' + JSON.stringify(c5))
     if (c3.one !== 3 || c3.swap !== 1 || c3.both.join() !== '3,1' || c3.boss !== 4 || c3.pj !== 1 || c3.pjBoss !== 1 || c3.rand > 2 || c3.chest !== 7) errors.push('[cap] 무한 한도 오니기리 3 · 그 밖 1 ' + JSON.stringify(c3))
-    if (Math.abs(hd.hp[0] / nm.hp[0] / (1 / 0.8) - 6) > 0.01 || Math.abs(hd.hp[1] / nm.hp[1] / (1 / 0.8) - 10) > 0.01) errors.push('[cap] 어려움 보스 체력 ' + JSON.stringify({ nm: nm.hp, hd: hd.hp }))
-    if (Math.abs(inf.hp[0] / hd.hp[0] - 1.5) > 0.01 || Math.abs(inf.hp[1] / hd.hp[1] - 1.5) > 0.01 || Math.abs(inf.hp1[0] / inf.hp[0] - 1 / 6) > 0.01 || Math.abs(inf.hp1[1] / inf.hp[1] - 0.1) > 0.01) errors.push('[cap] 무한 보스 체력 ' + JSON.stringify(inf))
+    if (Math.abs(hd.hp[0] / nm.hp[0] / (1 / 0.8) - 4 * 1.5) > 0.01 || Math.abs(hd.hp[1] / nm.hp[1] / (1 / 0.8) - 10) > 0.01) errors.push('[cap] 어려움 보스 체력(아노코 ×4 × 어려움 ×1.5 = 예전 9배 · 세이렌 ×10 그대로) ' + JSON.stringify({ nm: nm.hp, hd: hd.hp }))
+    if (Math.abs(inf.hp[0] / hd.hp[0] - 1.5) > 0.01 || Math.abs(inf.hp[1] / hd.hp[1] - 1.5) > 0.01 || Math.abs(inf.hp1[0] / inf.hp[0] - 1 / 4) > 0.01 || Math.abs(inf.hp1[1] / inf.hp[1] - 0.1) > 0.01) errors.push('[cap] 무한 보스 체력 ' + JSON.stringify(inf))
   })
   await run('clear', { width: 420, height: 900 }, async page => {   // 쉬움 · 보통 클리어 보상 — 망토 넷 · 감기 무기 스킨 둘(위 단계로 깨면 아래도 · 「풀밭」 칸은 맵 상관없이 · 겨울 칸은 그 단계 이상 겨울), 보유 효과 +0.5% · 랏코 치명타, 결과 화면 알림
     const own = () => page.evaluate(() => { const M = window.__mjg, o = k => +M.owns(k), w = k => +M.ownsW(k); return ['e', 'ew', 'n', 'nw'].map(k => o('k_chiikawa_' + k)).join('') + '|' + ['e_chiikawa', 'y_chiikawa', 'v_chiikawa', 's_chiikawa'].map(w).join('') })
@@ -599,13 +611,13 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await set({ wwin: ['chiikawa'] }); const oldWin = await own()   // 예전 저장(겨울 보통 이상) → 겨울 칸 둘 · 겨울 무기 스킨
     await set({ wlv: { chiikawa: 1 } }); const easyWin = await own()
     await set({ best: { rakko: { t: 1, kills: 1, lvl: 1, clears: 1 } }, wlv: { rakko: 3 } })
-    const crit = await page.evaluate(() => { const M = window.__mjg; M.startGame(5); return +M.S.crit.toFixed(3) })   // 랏코 0.03 + 0.15 + 섬 화관 0.01 + 망토 넷 0.02
+    const crit = await page.evaluate(() => { const M = window.__mjg; M.startGame(5); return +M.S.crit.toFixed(3) })   // 랏코 0.03 + 0.10 + 섬 화관 0.01 + 망토 넷 0.02
     await set({}); await page.evaluate(() => { const M = window.__mjg; M.startGame(0); M.G.diff = 'easy'; M.G.D = { ...M.G.D }; M.G.winter = true; M.finish(true) }); await page.waitForTimeout(300)
     const res = await page.evaluate(() => ({ txt: document.querySelector('#ui .ach-new.dress')?.innerText.replace(/\s+/g, ' ') || '', wlv: JSON.parse(localStorage.getItem('mjg.v1')).wlv }))
     await page.evaluate(() => window.__mjg.shop('outfit', 0)); await page.waitForTimeout(200)
     const bon = await page.evaluate(() => [...document.querySelectorAll('.list.wr li.wr-clear .bon')].map(b => b.textContent))
     console.log('clear', { none, easy, hard, oldWin, easyWin, crit, res, bon: bon.slice(0, 2) })
-    if (none !== '0000|0000' || easy !== '1000|1000' || hard !== '1010|1010' || oldWin !== '0101|0101' || easyWin !== '0100|0100' || crit !== 0.21 || !/클리어 보상을 받았어요/.test(res.txt) || !res.txt.includes('새내기 토벌대 망토') || !res.txt.includes('털실 감기') || res.wlv?.chiikawa !== 1 || bon.length !== 4 || !bon.every(b => b.includes('+0.5%'))) errors.push('[clear] ' + JSON.stringify({ none, easy, hard, oldWin, easyWin, crit, res, bon }))
+    if (none !== '0000|0000' || easy !== '1000|1000' || hard !== '1010|1010' || oldWin !== '0101|0101' || easyWin !== '0100|0100' || crit !== 0.16 || !/클리어 보상을 받았어요/.test(res.txt) || !res.txt.includes('새내기 토벌대 망토') || !res.txt.includes('털실 감기') || res.wlv?.chiikawa !== 1 || bon.length !== 4 || !bon.every(b => b.includes('+0.5%'))) errors.push('[clear] ' + JSON.stringify({ none, easy, hard, oldWin, easyWin, crit, res, bon }))
     const crownRun = (diff, lv, win) => page.evaluate(([diff, lv, win]) => { const M = window.__mjg; M.startGame(0); const g = M.G; g.diff = diff; g.inf = diff === 'inf'; g.winter = false; g.loop.lv = lv; M.finish(win)   // 업적 의상(섬 화관) — 무한 1단계 이상 클리어도 어려움 이상(기획), 알림은 판 뒤에 새로 생겼을 때만
       return { note: !!document.querySelector('#ui .ach-new.dress')?.innerText.includes('업적 의상을 받았어요'), own: M.owns('a_chiikawa') } }, [diff, lv, win])
     await set({}); const inf1 = await crownRun('inf', 1, false); await page.reload(); await page.waitForTimeout(300); inf1.kept = await page.evaluate(() => window.__mjg.owns('a_chiikawa'))
