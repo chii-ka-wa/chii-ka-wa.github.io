@@ -487,6 +487,15 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     if (r.normal !== '×3' || r.clamp !== '×2+ inf' || r2.pre !== '×2' || r2.start !== '×2' || !r2.inf || r2.seq.join() !== '×2+,×2-,×2+') errors.push('[spdinf] ' + JSON.stringify([r, r2]))
   })
 
+  await run('simpin', { width: 1280, height: 800 }, async page => {   // 모의 토벌 고정 값 — 계산에 닿는 game.js 변경은 PATCH_ID(패치노트 줄)를 꼭 올린다(재현 확인이 판 번호로 커밋을 찾음 · QC 2026-11-22). 바뀌면: 패치노트 줄을 더하고 아래 v · r 을 새 값으로
+    const PIN = { v: '2026-11-23#1', r: 'dead|17105|51|1005|3|0' }   // 치이카와 · 정착형 · 겨울 · 무한 · 전장 212 · sasu pochette yaha / clover magnet (kind|kills|lvl|t|bosses|lv — 엔진 셋 같음)
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'), m = src.slice(src.indexOf('const PATCH = [')).match(/\[\s*'(\d{4}-\d{2}-\d{2})',\s*\[([\s\S]*?)\n  \]\],/)
+    const v = m && `${m[1]}#${(m[2].match(/^\s*\['(?:new|up|down|fix)'/gm) || []).length}`
+    const r = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'inf', winter: true, s: 'stay', w: ['sasu', 'pochette', 'yaha'], p: ['clover', 'magnet'], seed: 212 }); return [e.kind, e.kills, e.lvl, Math.floor(e.t), e.bosses, e.lv || 0].join('|') })
+    if (v === PIN.v && r !== PIN.r) errors.push(`[simpin] 모의 토벌 결과가 바뀌었는데 PATCH_ID(${v})는 그대로 — 패치노트 줄을 더하고 PIN 을 고칠 것 (${PIN.r} → ${r})`)
+    if (v !== PIN.v) errors.push(`[simpin] PATCH_ID 가 ${v} 로 바뀜 — PIN 을 { v: '${v}', r: '${r}' } 로 고칠 것`)
+  })
+
   await run('sim', { width: 360, height: 740 }, async page => {   // 모의 토벌 — 같은 전장 = 같은 결과 · 보상금(끝까지 본 판만 · 한 판 150 · 하루 3판) · 서버 안 부름 · 관전 3배속 · 그만두기 · 무한에서도
     const net = []; page.on('request', r => { if (/supabase|google-analytics|googletagmanager/.test(r.url())) net.push(r.url()) })
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter', coin: 77, up: { manju: 5 } }))); await page.reload(); await page.waitForTimeout(500); net.length = 0

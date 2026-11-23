@@ -148,4 +148,6 @@ node test/i18n.cjs   # 번역 점검
 - 준비(한 번): Settings › Pages › Build and deployment › Source 를 「GitHub Actions」로
 - 저장소가 공개라 GitHub 에서는 원본이 보입니다. 원본까지 숨기려면 저장소를 비공개로(비공개 저장소의 Pages 는 GitHub Pro 이상)
 
+⚠ 모의 토벌 재현 확인(`test/sim-audit.cjs`)은 원본 game.js 로 다시 계산해 배포본 결과와 한 자리까지 같아야 한다 — `test/build.cjs` 의 `numbersToExpressions` 와 terser `unsafe` 계열 옵션은 꺼 둘 것(2026-11-22 같음 확인). 계산에 닿는 game.js 변경은 패치노트 줄을 더해 PATCH_ID 를 올리고 스모크 `simpin` 의 고정 값도 고친다(안 그러면 예전 정직한 기록이 같은 판 번호의 새 코드로 다시 계산돼 bad).
+
 빌드 점검: `npm i --no-save terser@5.51.0 javascript-obfuscator@5.9.1 && KEEP_HOOK=1 node test/build.cjs` 뒤 `dist/` 를 띄워 `URL=http://127.0.0.1:<포트>/ node test/smoke.cjs` (KEEP_HOOK — 점검용 `window.__mjg` 를 남긴다)

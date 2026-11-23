@@ -1214,4 +1214,5 @@ export default {
   "파편 조심!": "Watch the shards!",
   "자리 바꾸기!": "Swap spots!",
   "스킬 개수 +1": "skills: count +1",
+  "밸런스 패치로 보스 · 회복이 바뀌고 보석 문제도 고쳐서, 무한 모드 랭킹을 처음부터 새로 시작해요": "The balance patch changed bosses and healing and fixed the gem issue, so the Endless ranking starts over from scratch",
 }
