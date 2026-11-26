@@ -408,8 +408,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     await page.evaluate(() => localStorage.clear())
   })
 
-  await run('awaken-key', { width: 1280, height: 800 }, async page => {   // 각성 상자 — 첫 카드가 골라져 있어 Enter · Space 로 받는다
-    for (const key of ['Enter', 'Space']) {
+  await run('awaken-key', { width: 1280, height: 800 }, async page => {   // 각성 상자 — 첫 카드가 골라져 있어 Enter · Space(넘버패드 Enter 도) 로 받는다
+    for (const key of ['Enter', 'Space', 'NumpadEnter']) {
       await page.evaluate(() => { const M = window.__mjg; M.startGame(1); const w = M.G.weapons[0]; w.lv = 8; w.st = M.wstat(w); M.G.queue.push('awaken'); M.pl.inv = 9; M.step(1 / 30) })
       await page.waitForSelector('#ui .panel.box.ready', { timeout: 8000 }); await page.keyboard.press(key)   // 준비된 뒤에 누른다(숫자 기다리기 대신 상태 — QC)
       await page.waitForFunction(() => window.__mjg.mode === 'play', null, { timeout: 5000 }).catch(() => {})
@@ -488,26 +488,28 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   })
 
   await run('simpin', { width: 1280, height: 800 }, async page => {   // 모의 토벌 고정 값 — 계산에 닿는 game.js 변경은 PATCH_ID(패치노트 줄)를 꼭 올린다(재현 확인이 판 번호로 커밋을 찾음 · QC 2026-11-22). 바뀌면: 패치노트 줄을 더하고 아래 v · r 을 새 값으로
-    const PIN = { v: '2026-11-23#1', r: 'dead|17105|51|1005|3|0' }   // 치이카와 · 정착형 · 겨울 · 무한 · 전장 212 · sasu pochette yaha / clover magnet (kind|kills|lvl|t|bosses|lv — 엔진 셋 같음)
+    const PIN = { v: '2026-11-26#14', r: ['dead|10136|42|822|1|0', 'dead|44671|75|1539|6|0'] }   // kind|kills|lvl|t|bosses|lv — 엔진 셋 같음
+    const PLANS = [{ ch: 'chiikawa', diff: 'inf', winter: true, s: 'stay', w: ['sasu', 'pochette', 'yaha'], p: ['clover', 'magnet'], seed: 212 },   // 치이카와 · 정착형 · 겨울 · 무한 · 전장 212
+      { ch: 'rakko', diff: 'inf', winter: false, s: 'move', w: ['sword', 'sasu', 'curry', 'guitar', 'ura', 'nantoka'], p: ['license', 'manju', 'clock', 'mega', 'armor', 'double'], seed: 77 }]   // 25분 넘게 가는 판 — 15분 뒤 체력 표 · 16 · 22분 새 보스 · 짧은 일섬 · 먼 곳 피해(farK — 카레 · 어떻게든)까지 지난다(인프라 2026-11-26)
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'), m = src.slice(src.indexOf('const PATCH = [')).match(/\[\s*'(\d{4}-\d{2}-\d{2})',\s*\[([\s\S]*?)\n  \]\],/)
     const v = m && `${m[1]}#${(m[2].match(/^\s*\['(?:new|up|down|fix)'/gm) || []).length}`
-    const r = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'inf', winter: true, s: 'stay', w: ['sasu', 'pochette', 'yaha'], p: ['clover', 'magnet'], seed: 212 }); return [e.kind, e.kills, e.lvl, Math.floor(e.t), e.bosses, e.lv || 0].join('|') })
-    if (v === PIN.v && r !== PIN.r) errors.push(`[simpin] 모의 토벌 결과가 바뀌었는데 PATCH_ID(${v})는 그대로 — 패치노트 줄을 더하고 PIN 을 고칠 것 (${PIN.r} → ${r})`)
-    if (v !== PIN.v) errors.push(`[simpin] PATCH_ID 가 ${v} 로 바뀜 — PIN 을 { v: '${v}', r: '${r}' } 로 고칠 것`)
+    const r = await page.evaluate(async P => { const o = []; for (const plan of P) { const e = await window.__mjg.simRun(plan); o.push([e.kind, e.kills, e.lvl, Math.floor(e.t), e.bosses, e.lv || 0].join('|')) } return o }, PLANS)
+    if (v === PIN.v && r.join() !== PIN.r.join()) errors.push(`[simpin] 모의 토벌 결과가 바뀌었는데 PATCH_ID(${v})는 그대로 — 패치노트 줄을 더하고 PIN 을 고칠 것 (${PIN.r} → ${r})`)
+    if (v !== PIN.v) errors.push(`[simpin] PATCH_ID 가 ${v} 로 바뀜 — PIN 을 { v: '${v}', r: ${JSON.stringify(r).replace(/"/g, "'")} } 로 고칠 것`)
   })
 
   await run('sim', { width: 360, height: 740 }, async page => {   // 모의 토벌 — 같은 전장 = 같은 결과 · 보상금(끝까지 본 판만 · 한 판 150 · 하루 3판) · 서버 안 부름 · 관전 3배속 · 그만두기 · 무한에서도
     const net = []; page.on('request', r => { if (/supabase|google-analytics|googletagmanager/.test(r.url())) net.push(r.url()) })
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter', coin: 77, up: { manju: 5 } }))); await page.reload(); await page.waitForTimeout(500); net.length = 0
     const r = await page.evaluate(async () => { const M = window.__mjg, save = () => JSON.parse(localStorage.getItem('mjg.v1')), before = localStorage.getItem('mjg.v1')
-      const plan = { ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 11, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }
+      const plan = { ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 12, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }   // 시드 12 — 리롤 · 스킵을 다 쓰면 AI 가 목록 밖 카드도 받아서(simBox) 시드에 따라 작전 무기를 못 받는 판이 있다(2026-11-26 계산이 바뀌어 11 이 그런 판이 됨 — okW)
       const key = e => [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|')
       const a = await M.simRun(plan), b = await M.simRun(plan), same = localStorage.getItem('mjg.v1') === before, c = await M.simRun({ ...plan, s: 'move' })
       const pays = []; for (let i = 0; i < 4; i++) { const c0 = save().coin, e = await M.simRun({ ...plan, seed: 0 }, true); pays.push([e.pay.coin, save().coin - c0, e.pay.n, e.pay.why || '']) }
       const inf = await M.simRun({ ...plan, diff: 'inf', seed: 22 })   // 무한 — 쓰러질 때까지(30분에 끊지 않는다) · 도달 단계 · 상점 강화 최대 기준
       return { inf: [inf.kind, Math.round(inf.t), inf.lv], a: key(a), b: key(b), c: key(c), same, pays, day: save().simPay, up: save().up.manju, ach: save().ach?.coin || 0, sim: M.SIM, G: !!M.G, okW: plan.w.every(id => a.w.includes(id)) } })
     await page.setViewportSize({ width: 1280, height: 800 }); await page.waitForTimeout(300)   // 창 크기가 달라도 같은 결과(계산용 화면 크기 고정 — QA)
-    r.wide = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 11, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }); return [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|') })
+    r.wide = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 12, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }); return [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|') })
     await page.setViewportSize({ width: 360, height: 740 }); await page.waitForTimeout(300)
     if (r.wide !== r.a) errors.push('[sim] 창 크기에 따라 결과가 다름 ' + r.a + ' / ' + r.wide)
     console.log('sim', JSON.stringify(r))
@@ -608,8 +610,8 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const c5 = nm.cap, c3 = inf.cap
     if (c5.one !== 5 || c5.swap !== 1 || c5.both.join() !== '5,2' || c5.boss !== 6 || c5.pj !== 2 || c5.pjBoss !== 1 || c5.rand > 3 || c5.chest !== 7) errors.push('[cap] 한도 오니기리 5 · 그 밖 2 ' + JSON.stringify(c5))
     if (c3.one !== 3 || c3.swap !== 1 || c3.both.join() !== '3,1' || c3.boss !== 4 || c3.pj !== 1 || c3.pjBoss !== 1 || c3.rand > 2 || c3.chest !== 7) errors.push('[cap] 무한 한도 오니기리 3 · 그 밖 1 ' + JSON.stringify(c3))
-    if (Math.abs(hd.hp[0] / nm.hp[0] / (1 / 0.8) - 4 * 1.5) > 0.01 || Math.abs(hd.hp[1] / nm.hp[1] / (1 / 0.8) - 10) > 0.01) errors.push('[cap] 어려움 보스 체력(아노코 ×4 × 어려움 ×1.5 = 예전 9배 · 세이렌 ×10 그대로) ' + JSON.stringify({ nm: nm.hp, hd: hd.hp }))
-    if (Math.abs(inf.hp[0] / hd.hp[0] - 1.5) > 0.01 || Math.abs(inf.hp[1] / hd.hp[1] - 1.5) > 0.01 || Math.abs(inf.hp1[0] / inf.hp[0] - 1 / 4) > 0.01 || Math.abs(inf.hp1[1] / inf.hp[1] - 0.1) > 0.01) errors.push('[cap] 무한 보스 체력 ' + JSON.stringify(inf))
+    if (Math.abs(hd.hp[0] / nm.hp[0] / (1 / 0.8) - 3.4 * 1.5) > 0.01 || Math.abs(hd.hp[1] / nm.hp[1] / (1 / 0.8) - 10) > 0.01) errors.push('[cap] 어려움 보스 체력(아노코 ×3.4 × 어려움 ×1.5 — 2026-11-26 · 세이렌 ×10 그대로) ' + JSON.stringify({ nm: nm.hp, hd: hd.hp }))
+    if (Math.abs(inf.hp[0] / hd.hp[0] - 1.5) > 0.01 || Math.abs(inf.hp[1] / hd.hp[1] - 1.5) > 0.01 || Math.abs(inf.hp1[0] / inf.hp[0] - 1 / 3.4) > 0.01 || Math.abs(inf.hp1[1] / inf.hp[1] - 0.1) > 0.01) errors.push('[cap] 무한 보스 체력 ' + JSON.stringify(inf))
   })
   await run('clear', { width: 420, height: 900 }, async page => {   // 쉬움 · 보통 클리어 보상 — 망토 넷 · 감기 무기 스킨 둘(위 단계로 깨면 아래도 · 「풀밭」 칸은 맵 상관없이 · 겨울 칸은 그 단계 이상 겨울), 보유 효과 +0.5% · 랏코 치명타, 결과 화면 알림
     const own = () => page.evaluate(() => { const M = window.__mjg, o = k => +M.owns(k), w = k => +M.ownsW(k); return ['e', 'ew', 'n', 'nw'].map(k => o('k_chiikawa_' + k)).join('') + '|' + ['e_chiikawa', 'y_chiikawa', 'v_chiikawa', 's_chiikawa'].map(w).join('') })
