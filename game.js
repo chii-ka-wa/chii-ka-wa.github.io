@@ -119,9 +119,13 @@ const upText = up => Object.entries(up).map(([k, v]) => UP[k](v)).join(' · ')
 // 패치노트 — 유치원 · 초등학생도 읽기 쉽게: 한 줄에 그림 하나(ic) · 꼬리표 하나 · 짧은 문장 하나. 새 항목을 맨 위에.
 //   꼬리표 new 새로워요 · up 세졌어요 · down 약해졌어요 · fix 바뀌었어요. 처음 화면 「패치노트」에 NEW(본 것은 save.seen — 날짜 + 항목 수)
 const PATCH = [
+  ['2026-11-27', [   // 키메라 하치와레 정정(기획서 ④) · 모의 토벌 AI — 작전 밖 새것으로 작전 칸을 막지 않기(simBlock · 기획서 ③ · 사용자)
+    ['fix', 'chimeraChiikawa', tr`22분 새 보스는 키메라 치이카와가 아니라 키메라 하치와레였어요 — 이름 · 모습 · 잘 듣는 스킬을 고쳤어요`],   // 사용자 정정 — 어제 만난 사람에게 알리려고 맨 위(기획서 ④)
+    ['fix', 'chest', tr`모의 토벌 AI 대원이 작전에 있는 스킬 · 아이템 자리를 비워 두어요 — 작전에 없는 새것만 나오면 리롤 · 제외 · 스킵을 쓰고, 다 쓰면 받지 않고 넘어가요`],
+  ]],
   ['2026-11-26', [   // 밸런스 패치 — 레벨 성장 · 잘 듣는/덜 듣는 상대(AF) · 15분 뒤 체력 곡선(HPK) · 스킬 조정 + 새 보스 키메라 우사기 · 치이카와(사용자 · 기획 · 디자인). 무한 랭킹은 그대로(사용자)
     ['new', 'chimeraUsagi', tr`새 보스 키메라 우사기가 16분에 나와요`],
-    ['new', 'chimeraChiikawa', tr`새 보스 키메라 치이카와가 22분에 나와요`],
+    ['new', 'chimeraChiikawa', tr`새 보스 키메라 하치와레가 22분에 나와요`],
     ['new', 'goblin', tr`스킬마다 잘 듣는 적 · 덜 듣는 적이 생겼어요 — 도감에서 볼 수 있어요`],
     ['up', 'mega', tr`스킬이 레벨이 오를 때마다 조금씩 넓어져요`],
     ['fix', 'sword', tr`랏코의 일섬은 짧아진 대신 세지고, 레벨이 오를수록 길어져요`],
@@ -357,7 +361,7 @@ const BOSS = {
   anoko: { name: tr`아노코`, line: '…!!', note: tr`「커다란 토벌」의 대상 — 돌진하고 · 용 같은 꼬리로 둘레를 휩쓸고(청록 원) · 꼬깔콘 같은 주황 발톱을 던진다` },
   mermaid: { name: tr`인어`, line: tr`라~♪`, note: tr`세이렌의 코러스 — 곁을 돌다가 날카로운 이빨로 달려들어 문다. 살아 있는 동안 세이렌은 받는 피해 -50%` },
   chimeraUsagi: { name: tr`키메라 우사기`, line: tr`……야하.`, note: tr`키메라가 된 우사기 — 처진 귀 · 박쥐 날개 · 주황 갈고리 발톱. 「야하!」 하고 내 자리를 세 번 통통 내려찍고(붉은 원) · 날개로 돌진하고(갈 길이 붉게) · 「우라!」 하고 둘레를 쾅(멀리 벗어나기)` },
-  chimeraChiikawa: { name: tr`키메라 치이카와`, line: tr`와아…!`, note: tr`키메라가 된 치이카와 — 하늘색 털 · 뾰족한 귀 · 박쥐 날개. 「와아…」 울며 눈물비를 뿌리고(작은 원 여럿) · 세 갈래로 할퀴고(붉은 띠 셋) · 꼬마 키메라를 불러 에워싼다` },
+  chimeraChiikawa: { name: tr`키메라 하치와레`, line: tr`……어떻게든 돼라.`, note: tr`키메라가 된 하치와레 — 파란 하치와레 무늬 · 끝이 흰 뾰족한 귀 · 박쥐 날개. 「어떻게든 돼라~!」 하고 별을 비처럼 떨어뜨리고(작은 원 여럿) · 세 갈래로 할퀴고(붉은 띠 셋) · 꼬마 키메라를 불러 에워싼다` },   // id 는 옛 이름 — 기록(slain)에 저장돼 그대로, 보이는 것은 키메라 하치와레(사용자 정정 2026-11-27)
   siren: { name: tr`세이렌`, line: tr`내 노래를 들어 봐…`, note: tr`노래(매혹)로 끌어당기고 · 음표를 사방으로 · 땅에서 덩굴 · 큰 꼬리로 내려치기. 체력이 절반 아래면 눈이 붉어지고 더 빨라진다`, st: 'charm', stCd: 14 },
 }
 // 잘 듣는 / 덜 듣는 상대 — 적 종류마다 [▲ 스킬(× AF_UP), ▼ 스킬(× AF_DN)], 표에 없는 짝 ×1. 보통 적 · 중간보스(같은 종류 보스와 같은 줄) · 보스 모두, 각성 · 시너지도 같은 표. 친구 · 폭죽은 스킬이 아니라 ×1, 돌격대는 스킬에 안 맞는다(사용자 · 기획 2026-11-26)
@@ -368,7 +372,7 @@ const AF = {
   spiker: [['tears'], ['stick']], fugu: [['curry'], ['tears']], octo: [['curry'], ['tears']], parttimer: [['pile', 'momo', 'nantoka'], []], golden: [['sasu', 'nantoka', 'momo'], []],
   dekatsuyo: [['pile', 'pochette', 'sword'], ['ramen']], goblinKing: [['sasu', 'tears'], []], bigChimera: [['yaha', 'pochette'], ['ramen']], rps: [['stick', 'nantoka'], []],
   chef: [['ramen', 'momo'], []], anoko: [['pochette', 'sword'], ['ramen']], mermaid: [['ura', 'guitar', 'curry', 'kanpai'], ['tears']], siren: [['guitar', 'curry'], ['tears']],
-  chimeraUsagi: [['sasu', 'guitar'], ['stick', 'yaha', 'ura']], chimeraChiikawa: [['stick', 'guitar'], ['sasu', 'weed']],   // 키메라가 된 친구 — 친구들의 스킬이 잘 듣고 자기 스킬은 덜 듣는다
+  chimeraUsagi: [['sasu', 'guitar'], ['stick', 'yaha', 'ura']], chimeraChiikawa: [['sasu', 'stick'], ['guitar', 'nantoka']],   // 키메라가 된 친구 — 친구들의 스킬이 잘 듣고 자기 스킬은 덜 듣는다(하치와레 — 기타 · 어떻게든 돼라! · 기획서 ④)
 }
 const afOf = (type, id) => AF[type]?.[0].includes(id) ? AF_UP : AF[type]?.[1].includes(id) ? AF_DN : 1
 /** 스킬 쪽에서 본 같은 표 — [▲ 적들, ▼ 적들](도감 · 레벨업 카드 · 일시정지) */
@@ -376,10 +380,10 @@ const afFoes = id => [0, 1].map(k => Object.keys(AF).filter(t => t in FOES && AF
 const foeName = t => BOSS[t]?.name || FOES[t].name
 /** 도감 — 왜 잘 듣는지 / 덜 듣는지 한 줄(스킬마다 [▲, ▼]) */
 const AF_WHY = {
-  book: [tr`얇은 책장은 작은 떼를 벤다`, tr`껍데기에 튕긴다`], pile: [tr`크고 느린 녀석이 걸려 넘어진다`, tr`날쌔게 지나간다`], sasu: [tr`고블린 잡이 사스마타`, tr`자기 사스마타는 잘 안다`],
+  book: [tr`얇은 책장은 작은 떼를 벤다`, tr`껍데기에 튕긴다`], pile: [tr`크고 느린 녀석이 걸려 넘어진다`, tr`날쌔게 지나간다`], sasu: [tr`고블린 잡이 사스마타`, ''],
   stick: [tr`단단한 것을 부순다`, tr`날쌔고 날아다닌다`], yaha: [tr`작은 떼를 날린다 · 점프 대결`, tr`밀리지 않는다`], ura: [tr`몸에 붙는 녀석`, tr`자기 기합에는 끄떡없다`],
-  weed: [tr`풀숲 벌레 · 발이 넷이라 잘 걸린다`, tr`빨라서 비킨다`], tears: [tr`멀리서 던지는 녀석에게 멀리`, tr`바다 녀석은 물이 덜 아프다`], guitar: [tr`노래 대결 · 친구의 음악`, ''],
-  nantoka: [tr`운에 맡겨! · 별에는 별`, ''], ramen: [tr`요리 대결 · 느린 녀석`, tr`돌진 · 점프로 금방 벗어난다`], curry: [tr`바다 녀석은 매운 맛에 약하다`, ''],
+  weed: [tr`풀숲 벌레 · 발이 넷이라 잘 걸린다`, tr`빨라서 비킨다`], tears: [tr`멀리서 던지는 녀석에게 멀리`, tr`바다 녀석은 물이 덜 아프다`], guitar: [tr`노래 대결 · 친구의 음악`, tr`자기 기타는 잘 안다`],
+  nantoka: [tr`운에 맡겨! · 별에는 별`, tr`자기 입버릇에는 끄떡없다`], ramen: [tr`요리 대결 · 느린 녀석`, tr`돌진 · 점프로 금방 벗어난다`], curry: [tr`바다 녀석은 매운 맛에 약하다`, ''],
   pochette: [tr`큰 몸에 오가며 두 번`, tr`작고 빠르다`], momo: [tr`반짝이 · 디저트 · 음식 내놔!`, tr`낚아챌 게 없다`], kanpai: [tr`몰려 다니는 녀석 사이로 튕긴다`, tr`단단해서 잔이 깨진다`],
   sword: [tr`토벌 랭킹 1위의 상대`, tr`자잘한 녀석은 상대 안 한다`],
 }
@@ -392,7 +396,7 @@ const INF = { gap: 60, rest: 12, dark: 180, foe: 0.2, kinds: ['dekatsuyo', 'gobl
 // 무한 세이렌(1단계부터) — 한 명 한 명이 3페이즈. hp · dmg 는 단계 보정한 체력 · 기술 피해에 곱한다. col — 페이즈 색(HUD 점 · 링 · 외침)
 const SIREN_PH = [{ hp: 1.5, dmg: 1, col: '#ff8fb1' }, { hp: 1.5, dmg: 1.2, col: '#a94fd0', line: tr`…용서 못 해!`, name: tr`화난 세이렌!` }, { hp: 2, dmg: 1.4, col: '#3f68b3', line: tr`바다여, 나에게 힘을!`, name: tr`폭풍의 세이렌!` }]
 const PLAN = [[300, 'dekatsuyo'], [450, 'goblinKing', 1], [600, 'goblinKing'], [720, 'rps', 1], [840, 'bigChimera'], [960, 'chimeraUsagi'], [1080, 'chef', 1], [1200, 'anoko'],
-  [1320, 'chimeraChiikawa'], [1410, 'bigChimera', 1]]   // 20~25분은 보스 셋(예전 넷 — 24분 중간보스 데카츠요는 뺐다). 16 · 22분은 키메라 우사기 · 치이카와(예전 가위바위보 · 요리사 두 번째 칸 — 25분 전 보스 수 6 그대로라 서버 검사 그대로 · 2026-11-26)
+  [1320, 'chimeraChiikawa'], [1410, 'bigChimera', 1]]   // 20~25분은 보스 셋(예전 넷 — 24분 중간보스 데카츠요는 뺐다). 16 · 22분은 키메라 우사기 · 하치와레(id chimeraChiikawa — 예전 가위바위보 · 요리사 두 번째 칸 — 25분 전 보스 수 6 그대로라 서버 검사 그대로 · 2026-11-26)
 // 영구 강화(처음 화면 「상점」) — 판마다 받는 토벌 보상금으로 산다. 한 칸이 같은 아이템 한 레벨의 1/5쯤, 다 사도 아이템 한 레벨 몫이라 판의 밸런스가 무너지지 않는다
 //   id = 같은 일을 하는 아이템(아이콘) · per = 한 칸 · max = 칸 수 · cost = 첫 칸 값(n 번째 칸은 cost × n)
 //   ⚠ max 를 늘리거나 새 강화를 넣을 때는 supabase/account.sql 의 save_bad(서버 칸 수 검사 — 넘으면 바로 정지 · IP 차단)를 먼저 올려 Run 하고, game.js 는 그다음에 올린다. 거꾸로 하면 정직한 사람이 모두 정지된다(기획)
@@ -1789,7 +1793,7 @@ function anoko(g, p = {}) {
     },
   }, p)
 }
-// 키메라가 된 주인공(키메라 우사기 · 키메라 치이카와) — 큰 머리 · 작은 몸은 그대로, 등 뒤 짙은 회색 박쥐 날개 · 손발 갈고리 발톱 · 하얀 복슬 가슴털
+// 키메라가 된 주인공(키메라 우사기 · 키메라 하치와레 — id chimeraChiikawa) — 큰 머리 · 작은 몸은 그대로, 등 뒤 짙은 회색 박쥐 날개 · 손발 갈고리 발톱 · 하얀 복슬 가슴털
 /** 박쥐 날개 한 쪽(s = ±1) — 위 테두리가 휘어 올라 뾰족한 끝, 아래는 물결 둘 · 손가락 뼈 셋. f 걸음마다 둘이 같이 오르내린다(펄럭) · dy 아래로 */
 function batWing(g, s, f, dy = 0) {
   g.save(); g.scale(s, 1); g.translate(8, -12 + dy); g.rotate(-f * 0.14); g.translate(-8, 12)
@@ -1846,38 +1850,44 @@ function chimeraUsagi(g, p = {}) {
   o.front = (g, p) => hookClaws(g, o, p, AN)
   mochi(g, o, { ...p, arm: p.arm ?? f })   // 걸을 때 팔도 엇갈려
 }
-// 키메라 치이카와 — 하얀 몸(연보라 그늘), 이마까지 덮은 하늘색 복슬 털 · 위로 뾰족한 하늘색 귀(끝은 흰 털), 크고 동그란 반짝 눈, 연보라 코, 송곳니 하나 · 분홍 혀가 보이는 웃는 입, 하늘색 갈고리 발톱
+// 키메라 하치와레(id 는 chimeraChiikawa 그대로 — 랭킹 기록) — 하얀 몸(연보라 그늘), 머리 위를 덮은 하늘색 복슬 털(이마 가운데가 위로 뾰족 갈라진 하치와레 무늬) · 위로 뾰족한 고양이 귀(끝은 흰 털), 크고 동그란 반짝 눈, 연보라 코, 송곳니 하나 · 분홍 혀가 보이는 웃는 입, 굵은 하늘색 꼬리, 하늘색 갈고리 발톱
 function chimeraChiikawa(g, p = {}) {
-  const H = 26, y = f => at(H, f), sky = '#7fd0f0', f = p.foot || 0
+  const H = 25.5, y = f => at(H, f), sky = '#74b6e6', deep = '#4d8fc4', f = p.foot || 0
   const fur = g.createRadialGradient(-3, y(0.3), 2, 0, y(0.5), 17); fur.addColorStop(0, '#ffffff'); fur.addColorStop(0.65, '#fbfaff'); fur.addColorStop(1, '#e9e3f5')
   const o = {
     fur, limb: '#fbfaff', W: 26, H, mid: 0.42, thin: true, neck: 0.7, jw: 0.84,
-    back: g => { for (const s of [-1, 1]) batWing(g, s, f) },
+    back: g => {
+      const sw = f * 0.8; g.lineCap = 'round'   // 굵은 하늘색 꼬리 — 하치와레 꼬리처럼 뒤(왼쪽)로 뻗어 끝이 위로 말리고 걸을 때 살랑(키메라라 굵게)
+      for (const [c, lw] of [[OUT, 3.4 + LW * 2], [sky, 3.4]]) { g.strokeStyle = c; g.lineWidth = lw; g.beginPath(); g.moveTo(-8, -3.4); g.bezierCurveTo(-13.6, -3.2, -16.4 + sw * 0.4, -5.2, -15.2 + sw * 0.6, -9.6); g.stroke() }
+      g.strokeStyle = deep; g.lineWidth = 0.45; g.beginPath(); for (const [x0, y0] of [[-11.6, -4.1], [-14.2, -5.2], [-15.6 + sw * 0.5, -7.4]]) { g.moveTo(x0, y0 - 0.9); g.lineTo(x0 - 0.5, y0 + 0.7) } g.stroke()   // 털결
+      for (const s of [-1, 1]) batWing(g, s, f)
+    },
     cap: g => {
-      const edge = () => { g.moveTo(-14, y(0.2)); for (const [x, d] of [[-10, 0.24], [-6.4, 0.23], [-3.2, 0.27], [0, 0.25], [3.2, 0.27], [6.4, 0.23], [10, 0.24], [14, 0.2]]) g.quadraticCurveTo(x - 1.6, y(d + 0.03), x, y(d)) }   // 이마까지 덮은 털 — 끝이 몽글몽글(가운데 앞머리가 조금 더 내려온다)
+      const P = [[-14, 0.2], [-11, 0.25], [-8, 0.28], [-5.2, 0.285], [-3, 0.25], [-1.5, 0.16], [0, 0.085]], pts = [...P, ...P.slice(0, -1).reverse().map(([x, d]) => [-x, d])]   // 하치와레 무늬 — 양옆이 둥글게 내려오고 가운데는 위로 뾰족한 홈, 끝은 몽글몽글
+      const edge = () => { g.moveTo(pts[0][0], y(pts[0][1])); for (let i = 1; i < pts.length; i++) { const [x0, d0] = pts[i - 1], [x1, d1] = pts[i], deepCut = Math.abs(x1) < 2 || Math.abs(x0) < 2; g.quadraticCurveTo((x0 + x1) / 2, y((d0 + d1) / 2 + (deepCut ? 0 : 0.035)), x1, y(d1)) } }
       g.fillStyle = sky; g.beginPath(); edge(); g.lineTo(14, y(-0.1)); g.lineTo(-14, y(-0.1)); g.fill()
       g.strokeStyle = OUT; g.lineWidth = 0.55; g.beginPath(); edge(); g.stroke()
-      g.strokeStyle = '#4fb2dc'; g.lineWidth = 0.45; g.lineCap = 'round'; g.beginPath(); for (const [x, f0] of [[-7, 0.08], [-3, 0.04], [2, 0.05], [6.4, 0.09], [-9.6, 0.15], [9.4, 0.15]]) { g.moveTo(x, y(f0)); g.quadraticCurveTo(x + 0.6, y(f0 + 0.05), x + 0.2, y(f0 + 0.1)) } g.stroke()   // 털결
+      g.strokeStyle = deep; g.lineWidth = 0.45; g.lineCap = 'round'; g.beginPath(); for (const [x, f0] of [[-7, 0.08], [-3.4, 0.05], [3.4, 0.05], [7, 0.08], [-10, 0.15], [10, 0.15]]) { g.moveTo(x, y(f0)); g.quadraticCurveTo(x + 0.6, y(f0 + 0.05), x + 0.2, y(f0 + 0.1)) } g.stroke()   // 털결
       chestFluff(g, y, 'rgba(120,100,150,.35)')
     },
     ears: g => {
-      for (const s of [-1, 1]) {   // 위로 뾰족한 귀 — 끝은 흰 털
-        const pts = [[s * 3, y(0.08)], [s * 3.3, y(-0.1)], [s * 5.8, y(-0.27)], [s * 8.4, y(-0.08)], [s * 9.8, y(0.12)]]
+      for (const s of [-1, 1]) {   // 위로 선 뾰족한 고양이 귀(하치와레처럼 밑이 넓다) — 끝은 흰 털
+        const pts = [[s * 10.8, y(0.16)], [s * 10.6, y(-0.08)], [s * 7.4, y(-0.3)], [s * 4.6, y(-0.1)], [s * 2.8, y(0.06)]]
         spike(g, pts, sky)
         const E = new Path2D(); E.moveTo(...pts[0]); E.quadraticCurveTo(...pts[1], ...pts[2]); E.quadraticCurveTo(...pts[3], ...pts[4]); E.closePath()
-        g.save(); g.clip(E); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(s * 2, y(-0.3)); g.lineTo(s * 10, y(-0.3)); g.lineTo(s * 10, y(-0.15)); for (let i = 1; i <= 4; i++) g.lineTo(s * (10 - i * 1.6), y(i % 2 ? -0.11 : -0.16)); g.lineTo(s * 2, y(-0.14)); g.fill(); g.restore()
+        g.save(); g.clip(E); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(s * 2, y(-0.34)); g.lineTo(s * 12, y(-0.34)); g.lineTo(s * 12, y(-0.18)); for (let i = 1; i <= 4; i++) g.lineTo(s * (12 - i * 2), y(i % 2 ? -0.14 : -0.19)); g.lineTo(s * 2, y(-0.17)); g.fill(); g.restore()
         g.lineWidth = LW; g.strokeStyle = OUT; g.beginPath(); g.moveTo(...pts[0]); g.quadraticCurveTo(...pts[1], ...pts[2]); g.quadraticCurveTo(...pts[3], ...pts[4]); g.stroke()   // 흰 끝을 덮은 뒤 테두리를 다시
       }
     },
     face: g => {
       for (const s of [-1, 1]) {   // 크고 동그란 눈 — 반짝 둘
-        const ex = s * 4.1, ey = y(0.36)
-        g.fillStyle = '#3b2a26'; g.beginPath(); g.ellipse(ex, ey, 1.9, 2.15, 0, 0, TAU); g.fill()
-        g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - s * 0.55, ey - 0.75, 0.72, 0, TAU); g.fill(); g.beginPath(); g.arc(ex + s * 0.6, ey + 0.85, 0.34, 0, TAU); g.fill()
+        const ex = s * 4.2, ey = y(0.405)
+        g.fillStyle = '#3b2a26'; g.beginPath(); g.ellipse(ex, ey, 1.85, 2.1, 0, 0, TAU); g.fill()
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - s * 0.55, ey - 0.75, 0.7, 0, TAU); g.fill(); g.beginPath(); g.arc(ex + s * 0.6, ey + 0.85, 0.33, 0, TAU); g.fill()
       }
-      hatch(g, y(0.45), 7.4, 0.85)
-      blob(g, 0, y(0.425), 0.85, 0.65, '#b9a3e3', 0.45)   // 연보라 코
-      const m = y(0.465), M = new Path2D(); M.moveTo(-1.7, m); M.quadraticCurveTo(0, m + 0.5, 1.7, m); M.quadraticCurveTo(1.2, m + 2.3, 0, m + 2.4); M.quadraticCurveTo(-1.2, m + 2.3, -1.7, m); M.closePath()   // 웃는 입
+      hatch(g, y(0.5), 7.6, 0.85)
+      blob(g, 0, y(0.47), 0.85, 0.65, '#b9a3e3', 0.45)   // 연보라 코
+      const m = y(0.505), M = new Path2D(); M.moveTo(-1.7, m); M.quadraticCurveTo(0, m + 0.5, 1.7, m); M.quadraticCurveTo(1.2, m + 2.3, 0, m + 2.4); M.quadraticCurveTo(-1.2, m + 2.3, -1.7, m); M.closePath()   // 웃는 입
       g.fillStyle = '#7a3442'; g.fill(M); g.save(); g.clip(M); g.fillStyle = '#f48a9a'; g.beginPath(); g.ellipse(0, m + 2.3, 1.3, 0.95, 0, 0, TAU); g.fill()
       g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0.5, m + 0.1); g.lineTo(1.4, m + 0.1); g.lineTo(0.95, m + 1.3); g.closePath(); g.fill(); g.restore()   // 송곳니 하나
       g.lineWidth = 0.55; g.strokeStyle = OUT; g.stroke(M)
@@ -2061,7 +2071,7 @@ const XMAS = {
   spiker: ['hat', 2.8, -19.6, 11, -0.1], bug: ['hat', 0, -21, 13], beetle: ['hat', 0, -19.6, 13, -0.06], star: ['hat', -1.8, -18.4, 10, -0.22],
   fugu: ['hat', 0, -18.4, 12, -0.1], octo: ['hat', 0, -19.2, 12, -0.1], parttimer: ['hat', 0, -24.4, 16, -0.06],
   rps: ['hat', 0, -25.4, 14, -0.06], chef: ['holly', 3.4, -24.9, 10], dekatsuyo: ['hat', 0, -26, 14, -0.06], anoko: ['hat', 0, -28.8, 12, -0.06],
-  chimeraUsagi: ['antler', 0, -26.4, 12], chimeraChiikawa: ['holly', 0, -25.6, 10],   // 키메라 우사기 — 금 사슬 위 뿔(키메라 무리와 같게) · 키메라 치이카와 — 뾰족한 두 귀 사이 털에 호랑가시
+  chimeraUsagi: ['antler', 0, -26.4, 12], chimeraChiikawa: ['hat', 0, -26.4, 9, -0.08],   // 키메라 우사기 — 금 사슬 위 뿔(키메라 무리와 같게) · 키메라 하치와레 — 뾰족한 두 귀 사이에 작은 산타 모자(호랑가시는 갈라진 무늬 꼭대기에 초록 띠처럼 보였다)
   mermaid: ['hat', 0, -16.6, 10, -0.1], mermaid1: ['hat', 0, -16.6, 10, -0.1], mermaid2: ['hat', 0, -16.6, 10, -0.1], siren: ['hat', 0, -31, 16, -0.08], sirenAngry: ['hat', 0, -31, 16, -0.08], sirenStorm: ['hat', 0, -31, 16, -0.08],
 }
 function xmas(g, kind, x, y, w, a = 0) {   // 산타 모자 · 루돌프 뿔(가운데 호랑가시) · 호랑가시 잎과 열매 — 12 너비로 그려 w 에 맞춘다
@@ -3682,7 +3692,7 @@ function bossAI(e, dt, dx, dy, d) {
       () => { e.patT = 4; e.act = { k: 'sauce', t: 0.9, dir: rnd() < 0.5 ? 1 : -1 }; bubble(e, tr`소스 듬뿍!`, '#ff6b3d') }][e.pat++ % (e.loop ? 4 : 3)](); break
     case 'chimeraUsagi': e.patT = 2.3; [() => { e.act = { k: 'hop', t: 0.3 }; bubble(e, tr`야하! 야하!`, '#fff') }, () => { Object.assign(e, { st: 'wind', stT: 0.6, dx, dy }); bubble(e, tr`날개 돌진!`, '#fff') }, () => { e.act = { k: 'uraBoom', t: 0.3 }; bubble(e, tr`우라!`, '#ff8a3d') },
       () => { newMove(e, tr`프루루루 회오리!`); e.act = { k: 'whirl', t: 0.4 } }][e.pat++ % (e.loop ? 4 : 3)](); break   // [통통 셋 · 날개 돌진 · 둘레 쾅] — 무한은 발톱 회오리 하나 더(기획 2026-11-26)
-    case 'chimeraChiikawa': e.patT = 2.6; [() => { e.act = { k: 'tearRain', t: 0.4 }; bubble(e, tr`와아…`, '#7cc6ff') }, () => { e.act = { k: 'claws', t: 0.3 }; bubble(e, tr`할퀴기!`, '#ff6b6b') }, () => { e.act = { k: 'friends', t: 0.6 }; bubble(e, tr`친구들아…`, '#fff') },
+    case 'chimeraChiikawa': e.patT = 2.6; [() => { e.act = { k: 'tearRain', t: 0.4 }; bubble(e, tr`어떻게든 돼라~!`, '#d18f00') }, () => { e.act = { k: 'claws', t: 0.3 }; bubble(e, tr`할퀴기!`, '#ff6b6b') }, () => { e.act = { k: 'friends', t: 0.6 }; bubble(e, tr`친구들아…`, '#fff') },
       () => { newMove(e, tr`웃는 송곳니!`); Object.assign(e, { st: 'wind', stT: 0.7, dx, dy }) }][e.pat++ % (e.loop ? 4 : 3)](); break   // [눈물비 · 세 갈래 할퀴기 · 꼬마 키메라 부르기] — 무한은 돌진 하나 더
     case 'siren': {   // 무한 세이렌(ph) — 1 [음표 · 덩굴 · 꼬리치기] → 2 + 음표 울타리 → 3 + 큰 파도(간격 1.8초)
       const ph = e.ph || 1; e.patT = ph >= 3 ? 1.8 : e.angry ? 2 : 2.6
@@ -3735,9 +3745,9 @@ const ACT = {
   },
   uraBoom(e) { G.haz.push({ k: 'bomb', x: e.x, y: e.y, R: 140, t: 0, T: 0.9, dmg: pct(0.16), col: '#ff8a3d', kind: e.kind }) },   // 키메라 우사기 「우라!」 — 둘레를 쾅(멀리 벗어나기)
   whirl(e) { const o = rnd() * TAU; for (let i = 0; i < 10; i++) { const q = o + i / 10 * TAU; G.eshots.push({ k: 'claw', col: AN, x: e.x, y: e.y, vx: Math.cos(q) * 180, vy: Math.sin(q) * 180, t: 0, life: 3.2, dmg: pct(0.06), r: 6 }) } },   // r 6 — 열 개의 빨간 테가 보스를 덮지 않게(디자인 · 기획)   // 키메라 우사기 「프루루루 회오리」(무한) — 발톱 열 개를 사방으로
-  tearRain(e) { for (let i = 0, n = e.loop ? 14 : 9; i < n; i++) { const q = rnd() * TAU, d = i ? 40 + rnd() * 160 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(q) * d, y: pl.y + Math.sin(q) * d, R: 40, t: -i * 0.08, T: 1.1, dmg: pct(0.08), col: '#7cc6ff', kind: e.kind }) } },   // 키메라 치이카와 「와아…」 눈물비 — 첫 원은 내 자리(무한 열넷)
-  claws(e) { const q = Math.atan2(pl.y - e.y, pl.x - e.x); for (const o of e.loop ? [-45, -15, 15, 45] : [-30, 0, 30]) G.haz.push({ k: 'band', x: e.x, y: e.y, a: q + o * Math.PI / 180, L: 280, W: 50, t: 0, T: 0.8, dmg: pct(0.14), col: '#ff6b6b', kind: e.kind }); e.act = { k: 'hold', t: 0.8 } },   // 키메라 치이카와 「할퀴기!」 — 나를 겨눈 띠 셋(무한 넷 — 사이로 피하기)
-  friends(e) { const n = e.loop ? 10 : 7; for (let i = 0; i < n; i++) { const q = i / n * TAU, c = spawn('chimera', pl.x + Math.cos(q) * 230, pl.y + Math.sin(q) * 230); fx({ k: 'puff', x: c.x, y: c.y - c.r, R: c.r * 1.4, T: 0.4 }) } },   // puff — 어디서 나왔는지 보이게(디자인)   // 키메라 치이카와 「친구들아…」 — 꼬마 키메라가 나를 에워싼다(보통 적 — 보스로 안 센다 · 인프라)
+  tearRain(e) { for (let i = 0, n = e.loop ? 14 : 9; i < n; i++) { const q = rnd() * TAU, d = i ? 40 + rnd() * 160 : 0; G.haz.push({ k: 'bomb', x: pl.x + Math.cos(q) * d, y: pl.y + Math.sin(q) * d, R: 40, t: -i * 0.08, T: 1.1, dmg: pct(0.08), col: '#ffc83d', star: true, kind: e.kind }) } },   // 키메라 하치와레 「어떻게든 돼라~!」 별비 — 첫 원은 내 자리(무한 열넷 · 기술 id 는 옛 이름)
+  claws(e) { const q = Math.atan2(pl.y - e.y, pl.x - e.x); for (const o of e.loop ? [-45, -15, 15, 45] : [-30, 0, 30]) G.haz.push({ k: 'band', x: e.x, y: e.y, a: q + o * Math.PI / 180, L: 280, W: 50, t: 0, T: 0.8, dmg: pct(0.14), col: '#ff6b6b', kind: e.kind }); e.act = { k: 'hold', t: 0.8 } },   // 키메라 하치와레 「할퀴기!」 — 나를 겨눈 띠 셋(무한 넷 — 사이로 피하기)
+  friends(e) { const n = e.loop ? 10 : 7; for (let i = 0; i < n; i++) { const q = i / n * TAU, c = spawn('chimera', pl.x + Math.cos(q) * 230, pl.y + Math.sin(q) * 230); fx({ k: 'puff', x: c.x, y: c.y - c.r, R: c.r * 1.4, T: 0.4 }) } },   // puff — 어디서 나왔는지 보이게(디자인)   // 키메라 하치와레 「친구들아…」 — 꼬마 키메라가 나를 에워싼다(보통 적 — 보스로 안 센다 · 인프라)
   sauce(e, a) { e.spray = { t: 0, acc: 0, a: Math.atan2(pl.y - e.y, pl.x - e.x), dir: a.dir }; e.act = { k: 'hold', t: 2.4 } },   // 요리사 괴물 「빙글빙글 소스」 — 0.9초 국자를 돌린 뒤 2.4초
   // ---- 무한 새 기술 — 띠(band): 몸에서 뻗는 긴 띠가 차오른 뒤 쾅. 겨눈 뒤로는 따라오지 않는다
   trident(e) {   // 아노코 「세 갈래 꼬리」 — 나를 겨눈 청록 띠 셋(가운데 · 좌우 25°). 무한 1단계부터 넷(사이로 피하기)
@@ -4479,6 +4489,7 @@ function world(c, ox, oy) {
     c.globalAlpha = 0.9; c.strokeStyle = z.col; c.lineWidth = 2; oval(c, z.x, z.y, z.R - 3, z.R * 0.8 - 3); c.stroke()
     c.strokeStyle = '#ff2e2e'; c.lineWidth = 3.5; c.setLineDash([10, 7]); c.lineDashOffset = -G.t * 40; oval(c, z.x, z.y, z.R, z.R * 0.8); c.stroke(); c.setLineDash([]); c.lineDashOffset = 0; c.globalAlpha = 1   // 적 공격은 늘 빨간 점선 + ! — 내 스킬 장판과 헷갈리지 않게
     if (z.k !== 'duel') txt(c, '!', z.x, z.y + Math.min(10, z.R * 0.25), Math.min(30, 12 + z.R * 0.15), '#ff3b3b')   // 결투는 가운데에 상대 손이 있다
+    if (z.star && u > 0.667) { const p = (u - 0.667) / 0.333; c.save(); c.translate(z.x, z.y - 260 * (1 - p) - 8); c.rotate(p * 4); c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 6 : 14; c.lineTo(Math.cos(a) * r, Math.sin(a) * r) } c.closePath(); c.fillStyle = '#ffd23f'; c.fill(); c.strokeStyle = '#d99a00'; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke(); c.restore() }   // 별이 떨어진다(키메라 하치와레 「별비」 — 하치와레 「어떻게든 돼라!」의 별, 금메달 색)
     if (z.tear && u > 0.667) { const p = (u - 0.667) / 0.333; c.save(); c.translate(z.x, z.y - 260 * (1 - p) - 8); c.scale(1.8, 1.8); tearP(c); c.fillStyle = '#4a86e8'; c.fill(); c.strokeStyle = '#2c5aa8'; c.lineWidth = 1.5; c.stroke(); c.restore() }   // 눈물이 떨어진다(진한 파랑 — 내 스킬 눈물과 다르게)
     if (z.k === 'duel') {   // 손 원 셋(똑같이) — 상대 손은 몸 위 층에서 나를 따라다닌다
       for (const o of z.opts) handAt(c, o.x, o.y, o.hand, 42, '#4a3b35', 'rgba(255,255,255,.55)', 70)
@@ -4811,14 +4822,15 @@ function hud(c) {
   c.fillStyle = '#7fd3ff'; c.fillRect(0, 0, W * Math.min(1, G.xp / G.next), 10)
   txt(c, `Lv ${G.lvl}`, 34, 32, 17)
   let [nl, nc] = nextLine(); c.font = `14px ${FONT}`
-  const place = () => { const half = c.measureText(nl).width / 2 + 4; return Math.max(half, Math.min(W / 2, W - 172 - half)) }   // 좁은 화면 — 가운데 글자를 왼쪽으로 비켜 오른쪽 위 단추 셋(배속 · 소리 · 일시정지)과 안 겹치게
+  const NLW = W - 176, place = () => { const half = c.measureText(nl).width / 2 + 4; return Math.max(half, Math.min(W / 2, W - 172 - half)) }   // 좁은 화면 — 가운데 글자를 왼쪽으로 비켜 오른쪽 위 단추 셋(배속 · 소리 · 일시정지)과 안 겹치게. NLW — 다음 보스 줄이 쓸 수 있는 폭(단추 왼쪽까지)
   let cx = place(), pill = null
   if (G.inf && G.loop.lv) {   // 무한 — 타이머 왼쪽 보라 알약 「∞ N단계」. 자리가 없으면(좁은 폰) 아래 줄 앞에 붙인다
     const ps = `∞ ${tr`${G.loop.lv}단계`}`; c.font = `15px ${FONT}`; const w = c.measureText(ps).width + 18; c.font = `26px ${FONT}`
     const x = cx - c.measureText(fmt(G.t)).width / 2 - 8 - w; c.font = `14px ${FONT}`
     if (x >= 74) pill = [ps, x, w]; else { nl = `${ps} · ${nl}`; cx = place() }
   }
-  txt(c, fmt(G.t), cx, 38, 26); txt(c, nl, cx, 57, 14, nc); txt(c, tr`처치 ${G.kills}`, cx, 74, 12)
+  const nw = Math.min(c.measureText(nl).width, NLW)   // 그래도 넓으면(320 · 360 폭 「다음 보스 키메라 하치와레 0:29」) 단추 왼쪽까지 가로로 줄이고 그 줄만 왼쪽으로 — 남은 시간이 ×2 단추 밑에 가려지지 않게. 타이머 · 처치는 제자리(Lv 글자와 안 겹치게 · 디자인)
+  txt(c, fmt(G.t), cx, 38, 26); txt(c, nl, Math.min(cx, W - 172 - nw / 2), 57, 14, nc, NLW); txt(c, tr`처치 ${G.kills}`, cx, 74, 12)
   if (pill) { const [ps, x, w] = pill; c.fillStyle = '#9b6bff'; c.strokeStyle = OUT; c.lineWidth = 2.5; c.beginPath(); c.roundRect(x, 20, w, 24, 12); c.fill(); c.stroke(); txt(c, ps, x + w / 2, 37.5, 15) }
   const top = W < 700 ? 84 : 44   // 좁은 화면(휴대폰)은 스킬 줄을 타이머 · 다음 보스 · 처치 글자 아래로 — 안 겹치게
   let x = 10
@@ -4940,7 +4952,7 @@ function chars() {
 //   전장(시드) — 판마다 무작위, 「같은 전장에서 다시」면 그대로(같은 작전 · 같은 전장 = 같은 결과). 기준 조건(상점 강화 · 의상 보유 효과 · 스킨 없이 · 기본 옷)
 //   보상금: 끝까지 지켜본 판만 — 진짜 판 정산식(버틴 시간 · 처치 · 보스 · 클리어 × 난이도)의 20%, 한 판 150 · 하루 3판(기기 날짜). 건너뛰기 · 그만두기는 0
 //   그 밖은 없음: 업적 · 클리어 의상 · 랭킹 · 통계 · 서버 요청 — finish 를 타지 않는다(보상금은 보통 저장으로만). 부정 신호(foul · guard)는 끈다(보상은 한 판 · 하루 상한으로 막는다)
-//   고르기: 목록에서 가장 앞 → 가진 것 레벨업 → 목록 밖 새 것은 예약하지 않은 빈칸이 있을 때만 → 리롤 → 스킵 → 그래도 없으면 받기(「목록 밖」). 각성 · 상자는 늘 받는다
+//   고르기: 목록에서 가장 앞 → 가진 것 레벨업 → 목록 밖 새 것은 예약하지 않은 빈칸이 있을 때만 → 리롤 → 제외 → 스킵 → 그래도 없으면 넘기기(목록 밖 새것으로 작전 칸을 막지 않는다 — simBlock · 2026-11-27). 각성은 늘 받고, 잭팟은 막는 카드만 빼고 받는다
 const SIM_DT = 1 / 20, SIM_AI = 0.1, SIM_X = 3, SIM_INF_T = 60 * 60, SIM_PAY = { cut: 0.2, max: 150, day: 3 }, SIM_KEY = 'mjg.sim'
 /** 엔진마다 같은 값 — 모의 토벌 계산 동안만 Math 의 sin · cos · atan2 · hypot · exp 를 + − × ÷ · sqrt 로만 짠 것(fdlibm 계수)으로 바꿔 끼운다.
  *  크롬(V8) · 사파리(JSC) · 파이어폭스는 이 함수들의 마지막 자리가 달라 몇만 걸음 뒤 결과가 갈렸다(모의 토벌 랭킹 「같은 작전 · 전장 = 같은 결과」 · 기획) */
@@ -4980,6 +4992,7 @@ const simPaid = () => save.simPay?.d === simDay() ? save.simPay.n : 0   // 오�
 const SIM_TAG = { book: tr`부채꼴`, pile: tr`덫`, sasu: tr`꿰뚫기`, stick: tr`양끝 폭발`, yaha: tr`충격파`, ura: tr`둘레 피해`, weed: tr`발밑 폭발`, tears: tr`물폭탄`, guitar: tr`도는 음표`, nantoka: tr`번개`, ramen: tr`느린 장판`, curry: tr`큰 폭발`, pochette: tr`부메랑`, momo: tr`보스 한 방`, kanpai: tr`튕기기`, sword: tr`일직선 베기`, license: tr`힘↑`, armor: tr`받는 피해↓`, manju: tr`체력↑`, pudding: tr`회복↑`, clock: tr`더 자주`, mega: tr`범위↑`, slipper: tr`이동↑`, wind: tr`탄 속도↑`, bento: tr`더 오래`, double: tr`개수 +1`, pouch: tr`줍기↑`, clover: tr`행운↑`, wage: tr`경험치↑` }   // 작전 짜기 아이콘 밑 짧은 글 — 그 스킬만의 특징 · 서로 안 헷갈리게 · 아이가 읽게(사용자 · 기획 · 디자인 — ko · ja · zh 한 줄 4자 · en 8자, 두 줄까지)
 const STYLE = { move: { name: tr`이동형`, note: tr`넓게 돌며 보석과 아이템을 줍고, 적 떼를 끌고 다녀요.` }, stay: { name: tr`정착형`, note: tr`한자리를 지키며 다가오는 것만 피해요. 줍기 범위 · 자석 빌드와 잘 맞아요.` } }
 function simFree(t) { const list = t === 'w' ? SIM.plan.w : SIM.plan.p, own = t === 'w' ? G.weapons.map(w => w.id) : Object.keys(G.passives); return 6 - own.length - list.filter(id => !own.includes(id)).length > 0 }   // 목록이 예약하지 않은 빈칸
+const simBlock = o => (o.t === 'w' || o.t === 'p') && !simHas(o) && !simInList(o) && !simFree(o.t)   // 막는 카드 — 작전 밖 새것이 작전이 예약한 칸을 먹는다. 받지 않는다(기획서 ③ · 진짜 판 autoBox 처럼)
 function simChoose(opts) {
   const order = [...SIM.plan.w.map(id => 'w' + id), ...SIM.plan.p.map(id => 'p' + id)]
   let best = null, bi = 1e9
@@ -5012,12 +5025,14 @@ function simBox() {   // 상자 창 대신 — 작전대로 고르고 이어 간
     if (kind === 'level') pl.hp = Math.min(S.maxHp, pl.hp + Math.round(S.maxHp * 0.1))
     const jack = rnd() < (kind === 'chest' ? 0.5 : 0.01 * S.luck * (G.ch.mod.jackpot ? 2 : 1))
     let opts = offers()
-    if (jack) { G.jackpots++; opts.forEach(simTake); continue }
+    if (jack) { G.jackpots++; for (const o of opts) if (!simBlock(o)) simTake(o); continue }   // 잭팟 — 상자 순서대로, 막는 카드만 빼고(빈칸은 한 장 받을 때마다 다시 센다)
     for (;;) {
       const o = simChoose(opts); if (o) { simTake(o); break }
       if (G.rr > 0) { G.rr--; opts = offers(); continue }
-      if (G.skips > 0) { G.skips--; break }
-      if (opts[0]) simTake(opts[0]); break   // 드물게 — 목록 밖이어도 받는다
+      const b = opts.findIndex(simBlock)
+      if (G.bans > 0 && b >= 0) { const x = opts[b]; G.bans--; G.banned.add(x.t + x.id); opts = offers(opts.filter(y => y !== x)); opts.splice(b, 0, opts.pop()); continue }   // 제외 — 첫 막는 카드를 빼고 그 자리에 새 카드(autoBox 와 같은 줄)
+      if (G.skips > 0) G.skips--
+      break   // 스킵까지 다 썼으면 넘기기 — 아무것도 받지 않는다(남은 카드는 다 막는 카드)
     }
   }
   breather()

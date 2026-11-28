@@ -57,7 +57,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
-:root:lang(ko) body { word-break: keep-all; overflow-wrap: break-word }   /* 한국어는 낱말 중간에서 줄을 끊지 않는다(일본어 · 중국어는 띄어쓰기가 없어 걸면 넘친다) · 긴 영문(메일 주소)은 끊어서 */
+:root:lang(ko) body { word-break: keep-all }   /* 한국어는 낱말 중간에서 줄을 끊지 않는다(일본어 · 중국어는 띄어쓰기가 없어 걸면 넘친다) */
+body { overflow-wrap: break-word }   /* 칸보다 긴 낱말(메일 주소 · 넓은 영문 닉네임 W×12)만 끊는다 — 모든 언어(예전엔 한국어만이라 en · ja · zh 랭킹 자세히 제목이 넘쳤다 · 디자인) */
 :root { --ink: #4a3b35; --soft: #7a655b; --pink: #ff8fab; --card: #fffdf8; --gold: #ffb400 }
 * { box-sizing: border-box }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page, #e6eff8); color: var(--ink); font-family: "Jua", var(--cjk, system-ui), system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none }
@@ -700,6 +701,6 @@ mark.proj.lead { margin-right: 4px }   /* 레벨업 카드 — 갈래 줄 맨 �
 <button type="button" id="snd" aria-label="소리 크기"></button>
 <button type="button" id="spd" aria-label="2배속" aria-pressed="false">×2</button>
 <div id="ui"><div class="panel"><p class="h">불러오는 중…</p></div></div>
-<script type="module" src="game.js?v=202611262012"></script>
+<script type="module" src="game.js?v=202611271057"></script>
 </body>
 </html>

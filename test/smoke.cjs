@@ -488,7 +488,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
   })
 
   await run('simpin', { width: 1280, height: 800 }, async page => {   // 모의 토벌 고정 값 — 계산에 닿는 game.js 변경은 PATCH_ID(패치노트 줄)를 꼭 올린다(재현 확인이 판 번호로 커밋을 찾음 · QC 2026-11-22). 바뀌면: 패치노트 줄을 더하고 아래 v · r 을 새 값으로
-    const PIN = { v: '2026-11-26#14', r: ['dead|10136|42|822|1|0', 'dead|44671|75|1539|6|0'] }   // kind|kills|lvl|t|bosses|lv — 엔진 셋 같음
+    const PIN = { v: '2026-11-27#2', r: ['dead|10136|42|822|1|0', 'dead|57484|77|1682|6|0'] }   // kind|kills|lvl|t|bosses|lv — 엔진 셋 같음
     const PLANS = [{ ch: 'chiikawa', diff: 'inf', winter: true, s: 'stay', w: ['sasu', 'pochette', 'yaha'], p: ['clover', 'magnet'], seed: 212 },   // 치이카와 · 정착형 · 겨울 · 무한 · 전장 212
       { ch: 'rakko', diff: 'inf', winter: false, s: 'move', w: ['sword', 'sasu', 'curry', 'guitar', 'ura', 'nantoka'], p: ['license', 'manju', 'clock', 'mega', 'armor', 'double'], seed: 77 }]   // 25분 넘게 가는 판 — 15분 뒤 체력 표 · 16 · 22분 새 보스 · 짧은 일섬 · 먼 곳 피해(farK — 카레 · 어떻게든)까지 지난다(인프라 2026-11-26)
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'game.js'), 'utf8'), m = src.slice(src.indexOf('const PATCH = [')).match(/\[\s*'(\d{4}-\d{2}-\d{2})',\s*\[([\s\S]*?)\n  \]\],/)
@@ -502,14 +502,14 @@ const URL = process.env.URL || 'http://127.0.0.1:8765/', M_DARK = 29 * 60, M_END
     const net = []; page.on('request', r => { if (/supabase|google-analytics|googletagmanager/.test(r.url())) net.push(r.url()) })
     await page.evaluate(() => localStorage.setItem('mjg.v1', JSON.stringify({ noStats: true, seen: 1, ctrlSeen: 1, touchSeen: 1, diff: 'normal', theme: 'winter', coin: 77, up: { manju: 5 } }))); await page.reload(); await page.waitForTimeout(500); net.length = 0
     const r = await page.evaluate(async () => { const M = window.__mjg, save = () => JSON.parse(localStorage.getItem('mjg.v1')), before = localStorage.getItem('mjg.v1')
-      const plan = { ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 12, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }   // 시드 12 — 리롤 · 스킵을 다 쓰면 AI 가 목록 밖 카드도 받아서(simBox) 시드에 따라 작전 무기를 못 받는 판이 있다(2026-11-26 계산이 바뀌어 11 이 그런 판이 됨 — okW)
+      const plan = { ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 11, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }   // 시드 11 — 예전에 AI 가 목록 밖 새 무기로 칸을 막던 판. 막는 카드는 받지 않아서(simBlock) 작전 무기는 늘 칸이 남는다(okW)
       const key = e => [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|')
       const a = await M.simRun(plan), b = await M.simRun(plan), same = localStorage.getItem('mjg.v1') === before, c = await M.simRun({ ...plan, s: 'move' })
       const pays = []; for (let i = 0; i < 4; i++) { const c0 = save().coin, e = await M.simRun({ ...plan, seed: 0 }, true); pays.push([e.pay.coin, save().coin - c0, e.pay.n, e.pay.why || '']) }
       const inf = await M.simRun({ ...plan, diff: 'inf', seed: 22 })   // 무한 — 쓰러질 때까지(30분에 끊지 않는다) · 도달 단계 · 상점 강화 최대 기준
       return { inf: [inf.kind, Math.round(inf.t), inf.lv], a: key(a), b: key(b), c: key(c), same, pays, day: save().simPay, up: save().up.manju, ach: save().ach?.coin || 0, sim: M.SIM, G: !!M.G, okW: plan.w.every(id => a.w.includes(id)) } })
     await page.setViewportSize({ width: 1280, height: 800 }); await page.waitForTimeout(300)   // 창 크기가 달라도 같은 결과(계산용 화면 크기 고정 — QA)
-    r.wide = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 12, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }); return [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|') })
+    r.wide = await page.evaluate(async () => { const e = await window.__mjg.simRun({ ch: 'chiikawa', diff: 'normal', winter: true, s: 'stay', seed: 11, w: ['sasu', 'sword', 'guitar'], p: ['manju', 'armor'] }); return [e.kind, Math.round(e.t * 20), e.lvl, e.bosses, e.w.join(' '), e.log.length].join('|') })
     await page.setViewportSize({ width: 360, height: 740 }); await page.waitForTimeout(300)
     if (r.wide !== r.a) errors.push('[sim] 창 크기에 따라 결과가 다름 ' + r.a + ' / ' + r.wide)
     console.log('sim', JSON.stringify(r))
